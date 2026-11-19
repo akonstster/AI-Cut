@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AI-Cut brings a multitrack editor, storyboard, 3D previs and node-based workflows together on Windows. The editor is free and open source under the MIT license.">
+<title>AI-Cut 2.1.0 · Desktop video studio</title>
+<link rel="alternate" hreflang="ru" href="ru/">
+<link rel="icon" href="brand/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<header class="bar wrap">
+<a class="brand" href="./"><img src="brand/icon.svg" width="32" height="32" alt="">AI-Cut</a>
+<nav aria-label="Sections"><a href="#features">Features</a><a href="#differences">What’s different</a><a href="#downloads">Downloads</a></nav>
+<a class="lang" href="ru/" lang="ru">Русский</a>
+</header>
+<main class="wrap">
+<section class="hero">
+<div>
+<h1>Plan, generate, and edit video in one desktop studio.</h1>
+<p class="intro">AI-Cut brings a multitrack editor, storyboard, 3D previs and node-based workflows together on Windows. The editor is free and open source under the MIT license.</p>
+<div class="actions"><a class="button primary" href="#downloads">Download for Windows</a><a class="button" href="https://github.com/akonstster/AI-Cut">Source on GitHub</a></div>
+</div>
+<div class="flow">
+<h2>From shot plan to timeline</h2>
+<ol><li>Storyboard</li><li>3D previs</li><li>Workflow</li><li>Timeline</li></ol>
+</div>
+</section>
+<p class="pricing">Free editor. No subscription or AI-Cut account. Optional cloud generation uses your own provider keys and may incur charges.</p>
+<section id="features"><h2>What you can do</h2><div class="cards"><article><h3>Edit on a multitrack timeline</h3><p>Trim and arrange video and audio, add transitions, text, shapes and masks, animate with keyframes and Bézier graphs, and grade color with scopes.</p></article>
+<article><h3>Plan shots and reusable references</h3><p>Reorder shots and edit durations, prompts and titles. Attach a first frame, a 3D scene, or a previs render. Save characters, places and props as project elements and reference them with @name.</p></article>
+<article><h3>Build workflows visually</h3><p>Connect prompts, media and generation nodes, reuse templates and import or export graphs. Model-specific ports, field help and launch checks explain missing inputs and reference limits. Takes help compare alternatives.</p></article>
+<article><h3>Block a scene locally</h3><p>Place stand-in characters, plan camera positions and movement, and render reference frames or clips locally. Use previs to guide composition and motion before spending on generation.</p></article>
+<article><h3>Generate with your own keys</h3><p>Use OpenRouter, fal or Runware for image, video, music, speech, sound, lip sync and text tasks where supported. Review model capabilities, estimated costs and recorded spending.</p></article>
+<article><h3>Find and preview media</h3><p>Analyze photos and frames, search by meaning across languages, refine the top results, and use visual and palette signals. Double-click a photo or video to open a large preview.</p></article>
+<article><h3>Use local AI tools</h3><p>Generate subtitles with Parakeet or Whisper, synthesize speech with Kokoro or Supertonic, make music with MusicGen and interpolate frames with RIFE. Manage model downloads in Settings.</p></article>
+<article><h3>Finish and deliver</h3><p>Render HTML graphics with Motifs, export video and FCPXML, normalize loudness, and export subtitles as SRT, VTT, TXT or JSON. Use word-by-word and karaoke captions.</p></article>
+<article><h3>Connect an agent through MCP</h3><p>Control the editor and timeline, work with storyboard, workflows, elements and 3D previs, and inspect or submit generation jobs. The editor shows the local endpoint and connection command.</p></article></div></section>
+<section id="differences"><h2>What AI-Cut changes</h2><div class="cards changes"><article><h3>Foundation from VideoSOS 2.1</h3><p>Storyboard, the node canvas, Takes, Motifs and 3D previs are adapted from upstream work. AI-Cut builds on these tools with the connections and project behavior below.</p></article>
+<article><h3>Storyboard, Workflow and previs stay connected</h3><p>Linked prompts stay in sync. From a shot, jump to its related workflow cards. Shot durations recalculate the positions of later shots, and first frames and previs are saved as shot references.</p></article>
+<article><h3>Creative state travels with the project</h3><p>Storyboard, Workflow, elements, previs, Motifs and generation drafts follow the project. Duplicate or export and reimport a project with media references remapped. Imported generation history is available as archival records.</p></article>
+<article><h3>More precise multilingual scene search</h3><p>Multilingual E5 matches queries against descriptions, CLIP adds a visual signal, and a local BGE reranker refines the strongest matches. Existing captions can be indexed without analyzing the media again.</p></article>
+<article><h3>Clearer generation and media controls</h3><p>Inspect model-specific inputs and options, see why a node cannot run, receive reference-limit warnings, and reuse existing project media without duplicating it. Copy file names and paths and preview media at full size.</p></article>
+<article><h3>Independent Windows distribution</h3><p>AI-Cut ships its own installer and portable package, with separate app data, a configurable local MCP port, and no upstream Studio Hub telemetry or updater. The public issue tracker accepts feedback through GitHub.</p></article></div>
+<p><a href="https://github.com/timoncool/videosos/tree/videosos-2-1">VideoSOS 2.1 source</a></p></section>
+<section id="downloads" class="downloads"><h2>Download AI-Cut 2.1.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.1.0">v2.1.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">All releases</a></p>
+<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64-setup.exe">EXE installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64_en-US.msi">MSI installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut-2.1.0-portable-windows-x64.zip">Portable ZIP</a></div></section>
+</main>
+<footer class="wrap"><p>Maintained by Andrey Konstantinov. Thanks to Ilya Timonin, the VideoSOS contributors and Walter Low for FreeCut.</p><p><a href="https://github.com/akonstster/AI-Cut/blob/main/NOTICE.md">MIT license and upstream notices</a> · <a href="https://github.com/akonstster/AI-Cut/issues/new/choose">Report an issue</a></p></footer>
+</body>
+</html>

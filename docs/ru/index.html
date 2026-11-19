@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AI-Cut объединяет многодорожечный монтаж, раскадровку, 3D-превиз и узловые сценарии в приложении для Windows. Редактор бесплатный, исходный код открыт по лицензии MIT.">
+<title>AI-Cut 2.1.0 · Настольная видеостудия</title>
+<link rel="alternate" hreflang="en" href="../">
+<link rel="icon" href="../brand/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../pages.css">
+</head>
+<body>
+<header class="bar wrap">
+<a class="brand" href="./"><img src="../brand/icon.svg" width="32" height="32" alt="">AI-Cut</a>
+<nav aria-label="Разделы"><a href="#features">Возможности</a><a href="#differences">Что изменилось</a><a href="#downloads">Скачать</a></nav>
+<a class="lang" href="../" lang="en">English</a>
+</header>
+<main class="wrap">
+<section class="hero">
+<div>
+<h1>Планируйте, генерируйте и монтируйте видео в одной студии.</h1>
+<p class="intro">AI-Cut объединяет многодорожечный монтаж, раскадровку, 3D-превиз и узловые сценарии в приложении для Windows. Редактор бесплатный, исходный код открыт по лицензии MIT.</p>
+<div class="actions"><a class="button primary" href="#downloads">Скачать для Windows</a><a class="button" href="https://github.com/akonstster/AI-Cut">Исходный код на GitHub</a></div>
+</div>
+<div class="flow">
+<h2>От плана кадра до монтажа</h2>
+<ol><li>Раскадровка</li><li>3D-превиз</li><li>Workflow</li><li>Таймлайн</li></ol>
+</div>
+</section>
+<p class="pricing">Редактор бесплатен. Подписка и аккаунт AI-Cut не нужны. Облачная генерация подключается по вашим ключам и может тарифицироваться провайдером.</p>
+<section id="features"><h2>Что можно делать</h2><div class="cards"><article><h3>Монтировать на многодорожечном таймлайне</h3><p>Подрезайте и собирайте видео и звук, добавляйте переходы, текст, фигуры и маски. Анимируйте параметры ключевыми кадрами и кривыми Безье, корректируйте цвет по скопам.</p></article>
+<article><h3>Планировать шоты и сохранять референсы</h3><p>Меняйте порядок, длительность, названия и промпты шотов. Привязывайте первый кадр, 3D-сцену или рендер превиза. Сохраняйте персонажей, локации и реквизит в элементах проекта и используйте @имя.</p></article>
+<article><h3>Создавать узловые сценарии</h3><p>Соединяйте промпты, медиа и карточки генерации, используйте шаблоны, импортируйте и экспортируйте графы. Входы зависят от модели, подсказки объясняют параметры, а проверки показывают, что блокирует запуск. Takes помогают сравнивать дубли.</p></article>
+<article><h3>Ставить сцены в 3D локально</h3><p>Расставляйте условных персонажей, планируйте позиции и движение камеры, рендерите кадры и ролики превиза локально. Проверяйте композицию и движение до платной генерации.</p></article>
+<article><h3>Генерировать со своими ключами</h3><p>Подключайте OpenRouter, fal или Runware для задач с изображениями, видео, музыкой, речью, звуком, липсинком и текстом по возможностям моделей. Смотрите оценки стоимости и расходы.</p></article>
+<article><h3>Искать и просматривать медиа</h3><p>Анализируйте фото и кадры, ищите по смыслу на разных языках и уточняйте выдачу с учётом изображения и палитры. Двойной клик открывает крупный просмотр фото или видео.</p></article>
+<article><h3>Использовать локальные модели</h3><p>Создавайте субтитры через Parakeet или Whisper, озвучку через Kokoro или Supertonic, музыку через MusicGen и промежуточные кадры через RIFE. Управляйте загрузками моделей в настройках.</p></article>
+<article><h3>Завершать монтаж и экспортировать</h3><p>Рендерите HTML-графику Motifs, экспортируйте видео и FCPXML, нормализуйте громкость. Выгружайте субтитры в SRT, VTT, TXT или JSON и оформляйте их по словам или в стиле караоке.</p></article>
+<article><h3>Подключать агента через MCP</h3><p>Управляйте редактором и таймлайном, работайте с раскадровкой, Workflow, элементами и 3D-превизом, проверяйте и запускайте задания генерации. Локальный адрес и команда подключения есть в настройках.</p></article></div></section>
+<section id="differences"><h2>Что изменилось в AI-Cut</h2><div class="cards changes"><article><h3>Основа из VideoSOS 2.1</h3><p>Раскадровка, узловой холст, Takes, Motifs и 3D-превиз адаптированы из upstream. AI-Cut развивает эти инструменты и связи между ними.</p></article>
+<article><h3>Раскадровка, Workflow и превиз связаны</h3><p>Промпты связанных шотов синхронизируются. Из шота можно перейти прямо к его карточкам Workflow. Изменение длительности пересчитывает позиции следующих шотов, а первые кадры и превиз сохраняются как ссылки шота.</p></article>
+<article><h3>Творческие данные переносятся с проектом</h3><p>Раскадровка, Workflow, элементы, превиз, Motifs и черновики генерации хранятся в проекте. При дублировании или импорте архива ссылки на медиа переназначаются. История генераций доступна в виде архивных записей.</p></article>
+<article><h3>Точнее многоязычный поиск сцен</h3><p>Multilingual E5 сопоставляет запрос с описаниями, CLIP добавляет визуальную оценку, а локальный BGE уточняет порядок лучших результатов. Старые описания можно проиндексировать без повторного анализа медиа.</p></article>
+<article><h3>Понятнее управление генерацией и медиа</h3><p>Входы и поля подстраиваются под модель. Workflow показывает причину блокировки и предупреждает о лимитах референсов. Можно использовать медиа проекта без дублирования, копировать имена и пути и открывать крупный предпросмотр.</p></article>
+<article><h3>Отдельная сборка для Windows</h3><p>У AI-Cut собственные установщики и portable-пакет, отдельная папка данных и настраиваемый локальный порт MCP. Телеметрия Studio Hub и автообновление upstream удалены. Обратная связь доступна через публичный GitHub Issues.</p></article></div>
+<p><a href="https://github.com/timoncool/videosos/tree/videosos-2-1">Исходники VideoSOS 2.1</a></p></section>
+<section id="downloads" class="downloads"><h2>Скачать AI-Cut 2.1.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.1.0">v2.1.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">Все релизы</a></p>
+<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64-setup.exe">Установщик EXE</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64_en-US.msi">Установщик MSI</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut-2.1.0-portable-windows-x64.zip">Портативный ZIP</a></div></section>
+</main>
+<footer class="wrap"><p>Проект поддерживает Andrey Konstantinov. Спасибо Илье Тимонину и участникам VideoSOS, а также Уолтеру Лоу за FreeCut.</p><p><a href="https://github.com/akonstster/AI-Cut/blob/main/NOTICE.md">Лицензия MIT и сведения об авторстве</a> · <a href="https://github.com/akonstster/AI-Cut/issues/new/choose">Сообщить об ошибке</a></p></footer>
+</body>
+</html>
