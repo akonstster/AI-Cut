@@ -1,0 +1,11 @@
+name: Bug report
+description: Report a problem in AI-Cut
+title: "[Bug] "
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened?
+      description: Include the AI-Cut version, operating system, steps, expected result and actual result. Remove API keys, private files and personal information.
+    validations:
+      required: true

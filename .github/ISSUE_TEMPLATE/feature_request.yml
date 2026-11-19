@@ -1,0 +1,11 @@
+name: Feature request
+description: Suggest an improvement to AI-Cut
+title: "[Idea] "
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to do in AI-Cut?
+      description: Describe your workflow and the improvement you would like.
+    validations:
+      required: true

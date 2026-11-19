@@ -1,0 +1,14 @@
+{
+  "build": {
+    "beforeBundleCommand": ""
+  },
+  "bundle": {
+    "active": true,
+    "resources": {
+      "staging/frontend/dist": "frontend/dist",
+      "staging/frontend/LICENSE": "frontend/LICENSE",
+      "staging/LICENSE": "LICENSE",
+      "staging/NOTICE.md": "NOTICE.md"
+    }
+  }
+}

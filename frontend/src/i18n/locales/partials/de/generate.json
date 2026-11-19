@@ -1,0 +1,238 @@
+{
+  "generate": {
+    "tabLabel": "Generate",
+    "serverError": "The AI-Cut server did not answer: {{reason}}",
+    "tasks": {
+      "image": "Image",
+      "image_edit": "Edit image",
+      "video": "Video",
+      "video_edit": "Edit video",
+      "lip_sync": "Lip sync",
+      "upscale": "Upscale",
+      "remove_background": "Remove background",
+      "music": "Music",
+      "speech": "Voice",
+      "sound": "Sound effects",
+      "transcribe": "Transcribe",
+      "text": "Text"
+    },
+    "media": {
+      "image": "an image",
+      "video": "a video",
+      "audio": "audio"
+    },
+    "model": {
+      "choose": "Choose a model",
+      "loading": "Reading the models…",
+      "search": "Search models",
+      "all": "All",
+      "refresh": "Read the catalogues again",
+      "none": "No model fits this search.",
+      "new": "new",
+      "deprecated": "retiring"
+    },
+    "keys": {
+      "missing": "No key for this provider",
+      "needed": "Add your {{provider}} key to run this model.",
+      "placeholder": "Paste the API key",
+      "save": "Save",
+      "ok": "The key works.",
+      "okBalance": "The key works. Balance: {{balance}}",
+      "failed": "The provider did not accept the key.",
+      "getOne": "Get a {{provider}} key",
+      "spent": "Mit diesem Schlüssel ausgegeben: {{spent}}.",
+      "balanceAdminOnly": "fal zeigt das Guthaben nur einem Admin-Schlüssel."
+    },
+    "form": {
+      "loading": "Reading the model's settings…",
+      "more": "More settings ({{count}})",
+      "default": "Model default",
+      "dropHere": "Drop {{kind}} from the library or a result here",
+      "pick": "Pick from the library",
+      "remove": "Remove",
+      "noMedia": "The library has no {{kind}} yet.",
+      "tooMany": "At most {{max}} files here.",
+      "wrongKind": "This slot takes {{kind}}.",
+      "missing": "Fill in: {{fields}}",
+      "searchOptions": "Suchen…",
+      "noOptions": "Nichts gefunden"
+    },
+    "placeOnTimeline": "Put on the timeline",
+    "repeat": "Runs",
+    "repeatHint": "How many times to run it; each run is a separate result and is paid separately",
+    "submit": "Generate",
+    "cost": {
+      "unknown": "price after the run",
+      "estimated": "Worked out before the run",
+      "billed": "As the provider billed it",
+      "failed": "Price unknown: {{reason}}"
+    },
+    "history": "Generations ({{count}})",
+    "status": {
+      "queued": "waiting",
+      "sending": "sending",
+      "running": "working",
+      "done": "done",
+      "failed": "failed",
+      "cancelled": "cancelled"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "place": "To timeline",
+      "placeHint": "Put the result at the playhead",
+      "copy": "Copy",
+      "placeText": "As text",
+      "reuse": "Edit",
+      "reuseHint": "Load this run's model and settings into the form",
+      "again": "Again",
+      "forgetHint": "Remove from the list and delete its files (media already in the library stays)",
+      "like": "Dieses Ergebnis markieren: die beste Version, zuerst gezeigt, wenn der Verlauf so sortiert ist",
+      "unlike": "Markierung entfernen"
+    },
+    "importFailed": "The result arrived but was not added to the library: {{reason}}",
+    "improve": {
+      "button": "Improve prompt",
+      "hint": "Rewrite the prompt for this model with an OpenRouter LLM (a fraction of a cent)",
+      "needsKey": "Needs an OpenRouter key",
+      "undo": "Back to mine"
+    },
+    "sort": {
+      "label": "Sortierung: {{order}}",
+      "title": "Sortierung",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "costliest": "Teuerste zuerst",
+      "cheapest": "Günstigste zuerst",
+      "liked": "Gemerkte zuerst"
+    },
+    "takes": {
+      "title": "Versionen ({{count}})",
+      "take": "Version {{n}}",
+      "inClip": "Im Clip",
+      "use": "Verwenden",
+      "useHint": "Diese Version an die Stelle des Clips setzen"
+    },
+    "canvas": {
+      "prompt": "Text",
+      "media": "Bild oder Video",
+      "generate": "Generierung",
+      "promptHint": "Was erstellt werden soll; es fließt in den Prompt der verbundenen Generierungen ein.",
+      "mediaHint": "Ziehe eine Datei aus der Mediathek oder ein Ergebnis hierher.",
+      "remove": "Knoten entfernen",
+      "task": "Aufgabe",
+      "run": "Starten",
+      "runAgain": "Erneut starten",
+      "waiting_one": "Wartet auf {{count}} Knoten davor",
+      "waiting_other": "Wartet auf {{count}} Knoten davor",
+      "noRoom_one": "{{count}} Datei hat in diesem Modell keinen Platz",
+      "noRoom_other": "{{count}} Dateien haben in diesem Modell keinen Platz",
+      "empty": "Füge einen Text, ein Bild und eine Generierung hinzu und verbinde sie: Text mit dem Prompt, Dateien mit den Slots des Modells. Ziehe Dateien aus der Mediathek auf die Arbeitsfläche.",
+      "input": {
+        "prompt": "Prompt",
+        "media": "Dateien"
+      },
+      "workflow": {
+        "templates": "Vorlagen",
+        "save": "Workflow speichern",
+        "open": "Workflow öffnen",
+        "failed": "Der Workflow konnte nicht geöffnet werden: {{reason}}",
+        "template": {
+          "frameToVideo": {
+            "name": "Bild zu Video",
+            "about": "Ein Prompt erzeugt ein Bild, aus dem Bild entsteht ein Video mit eigenem Bewegungs-Prompt.",
+            "prompts": {
+              "idea": "Ein Leuchtturm auf einer Klippe in der Abenddämmerung, unten brechen sich die Wellen, warmes Licht im Fenster",
+              "motion": "Langsame Annäherung, der Lichtstrahl des Leuchtturms streicht über das Meer"
+            }
+          },
+          "compareImages": {
+            "name": "Bildmodelle vergleichen",
+            "about": "Ein Prompt in drei Bildmodelle nebeneinander; das Modell des Panels und die Vergleichsmodelle sind bereits eingestellt.",
+            "prompts": {
+              "idea": "Porträt eines alten Fischers in einem gelben Regenmantel, weiches Licht bei bedecktem Himmel, 85 mm"
+            }
+          },
+          "promptWriter": {
+            "name": "Prompt-Autor",
+            "about": "Ein Sprachmodell schreibt aus einer Idee den Prompt, ein Bildmodell zeichnet ihn.",
+            "prompts": {
+              "idea": "Schreibe einen anschaulichen Prompt für ein Bildmodell: ein gemütlicher Ramen-Laden in einer regnerischen Nacht in Tokio. Antworte nur mit dem Prompt."
+            }
+          },
+          "productShot": {
+            "name": "Produktfoto",
+            "about": "Ein Produktfoto: Hintergrund entfernt, von einem Bearbeitungsmodell in eine neue Szene gesetzt, dann hochskaliert.",
+            "prompts": {
+              "scene": "Platziere das Produkt auf einem Marmortisch im Morgenlicht, weiche Schatten, geringe Schärfentiefe"
+            }
+          },
+          "talkingHead": {
+            "name": "Sprechender Kopf",
+            "about": "Text, den eine Stimme vorliest, und ein Gesicht aus der Mediathek, das ihn spricht.",
+            "prompts": {
+              "words": "Hallo! Heute zeige ich dir drei Tricks, mit denen du Videos schneller schneidest."
+            }
+          },
+          "soundtrack": {
+            "name": "Musik und Ton",
+            "about": "Ein Musikstück und ein Soundeffekt aus zwei Prompts.",
+            "prompts": {
+              "mood": "Ruhiges Ambient-Klavier mit sanften Streichern, langsames Tempo, hoffnungsvoll",
+              "effect": "Wellen an einem Kieselstrand, in der Ferne Möwen"
+            }
+          }
+        }
+      }
+    },
+    "motion": {
+      "tabLabel": "HTML-Grafik",
+      "hint": "Titel, Bauchbinden, Zähler und Badges in HTML und CSS: Die Animation läuft von selbst, und der Clip bleibt über dem Video darunter transparent.",
+      "templates": {
+        "title": "Titel",
+        "lowerThird": "Bauchbinde",
+        "counter": "Zähler",
+        "badge": "Badge"
+      },
+      "preview": "Vorschau",
+      "code": "HTML und CSS",
+      "seconds": "Sekunden",
+      "make": "Clip an der Abspielposition erstellen",
+      "rendering": "Frames werden gezeichnet… {{percent}} %",
+      "done": "„{{name}}“ liegt in der Mediathek und an der Abspielposition",
+      "failed": "Der Clip wurde nicht erstellt: {{reason}}",
+      "made": "Erstellt",
+      "edit": "Code öffnen",
+      "defaultName": "HTML-Grafik"
+    },
+    "previs": {
+      "tabLabel": "3D-Blocking",
+      "hint": "Lege die Einstellung in 3D an, bevor du dafür bezahlst: Beschreibe den Ort, wer sich wohin bewegt und wie die Kamera fährt; das Prompt-Modell baut Platzhalterformen und einen Kamerapfad (etwa zwei Cent). Sieh durch die Kamera, von oben oder von der Seite, gib dann ihr Bild an ein Video- oder Bildmodell weiter oder nimm die Kamerabewegung auf.",
+      "description": "Die Einstellung",
+      "placeholder": "Eine Frau geht durch einen schmalen Korridor auf eine Tür zu; die Kamera folgt ihr von hinten und schwenkt dann herum, bis sie ihr Gesicht zeigt, als sie stehen bleibt. 6 Sekunden, 35 mm, am Ende 50 mm.",
+      "build": "Blocking erstellen",
+      "change": "Aktuelles nach Beschreibung ändern",
+      "building": "Blocking wird erstellt…",
+      "example": "Mit einem Beispiel beginnen",
+      "failed": "Nicht geklappt: {{reason}}",
+      "views": "Ansicht",
+      "view": {
+        "camera": "Kamera",
+        "top": "Oben",
+        "orbit": "Umlauf"
+      },
+      "play": "Abspielen",
+      "pause": "Pause",
+      "time": "Moment der Einstellung",
+      "toVideo": "Bild → erstes Bild eines Videos",
+      "toPicture": "Bild → Referenz eines Bildes",
+      "video": "Kamerabewegung aufnehmen",
+      "recording": "Aufnahme… {{percent}} %",
+      "videoDone": "„{{name}}“ liegt in der Mediathek.",
+      "frameName": "{{title}}, Blocking-Bild",
+      "videoName": "{{title}}, Blocking",
+      "json": "Szene als JSON",
+      "apply": "Anwenden",
+      "badJson": "Der Text ist kein JSON: {{reason}}"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+name: Question or documentation
+description: Ask about AI-Cut or report a gap in the documentation
+title: "[Help] "
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What would you like help with?
+      description: Include the feature or documentation page and the steps you have tried.
+    validations:
+      required: true
