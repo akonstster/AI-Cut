@@ -51,7 +51,7 @@ const page = {
             ['Keyword', 'The exact words in a caption — good for a specific object or label.'],
             [
               'Semantic',
-              'Meaning, so "sunset over water" finds related scenes (first use downloads a small model, ~22 MB).',
+              'Multilingual meaning through E5, refined by BGE Reranker. CLIP supplies visual similarity. Prepare the local models in Settings → AI.',
             ],
             ['Color', 'A similar palette — pick a swatch from the library palette.'],
           ],

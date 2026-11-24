@@ -18,7 +18,7 @@ import {
   getTransitionBridgeAtHandle,
   hasTransitionBridgeAtHandle,
 } from '../../utils/transition-edit-guards'
-import { expandSelectionWithLinkedItems, getLinkedItemIds } from '../../utils/linked-items'
+import { expandSelectionWithLinkedItems, getSelectionIdsForItem } from '../../utils/linked-items'
 import { findHandleNeighborWithTransitions } from '../../utils/transition-linked-neighbors'
 import {
   resolveSmartBodyIntent,
@@ -153,7 +153,7 @@ export function useTimelineItemPointerHandlers({
         const linkedSelectionEnabled = useEditorStore.getState().linkedSelectionEnabled
         useSelectionStore
           .getState()
-          .selectItems(linkedSelectionEnabled ? getLinkedItemIds(items, item.id) : [item.id])
+          .selectItems(getSelectionIdsForItem(items, item.id, linkedSelectionEnabled))
         return
       }
 
@@ -177,7 +177,7 @@ export function useTimelineItemPointerHandlers({
       const { selectedItemIds, selectItems } = useSelectionStore.getState()
       const items = useItemsStore.getState().items
       const linkedSelectionEnabled = useEditorStore.getState().linkedSelectionEnabled
-      const targetIds = linkedSelectionEnabled ? getLinkedItemIds(items, item.id) : [item.id]
+      const targetIds = getSelectionIdsForItem(items, item.id, linkedSelectionEnabled)
       if (e.metaKey || e.ctrlKey) {
         const isLinkedSelectionActive = targetIds.some((id) => selectedItemIds.includes(id))
         if (isLinkedSelectionActive) {

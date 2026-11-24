@@ -13,7 +13,9 @@ vi.mock('./canvas-keyframes', () => ({
   getAnimatedCrop: vi.fn(),
 }))
 vi.mock('@/shared/utils/media-crop', () => ({ hasMediaCrop: vi.fn() }))
-vi.mock('@/runtime/renderer/deps/keyframes-contract', () => ({ resolveAnimatedColorEffects: vi.fn() }))
+vi.mock('@/runtime/renderer/deps/keyframes-contract', () => ({
+  resolveAnimatedColorEffects: vi.fn(),
+}))
 vi.mock('./canvas-effects', () => ({ getAdjustmentLayerEffects: vi.fn() }))
 
 const CANVAS_W = 1920

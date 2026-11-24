@@ -423,8 +423,8 @@ export const GpuCurvesPanel = memo(function GpuCurvesPanel({
   const channelControls = (
     <div
       className={cn(
-        'flex items-center gap-1 justify-end',
-        isDock ? 'min-w-0 flex-nowrap' : 'flex-wrap',
+        'flex gap-1',
+        isDock ? 'w-24 shrink-0 flex-col items-stretch' : 'items-center justify-end flex-wrap',
       )}
     >
       {CHANNELS.map((channel) => (
@@ -432,60 +432,72 @@ export const GpuCurvesPanel = memo(function GpuCurvesPanel({
           key={channel.key}
           variant={activeChannel === channel.key ? 'secondary' : 'outline'}
           size="sm"
-          className={cn('h-7 text-xs', isDock ? 'shrink-0 px-1.5' : 'px-2')}
+          className={cn('h-7 text-xs', isDock ? 'justify-start gap-1.5 px-2' : 'px-2')}
           onClick={() => setActiveChannel(channel.key)}
+          aria-pressed={activeChannel === channel.key}
         >
-          {t(channel.labelKey)}
+          {isDock && (
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: channel.color }}
+            />
+          )}
+          <span className="truncate">{t(channel.labelKey)}</span>
         </Button>
       ))}
       <Button
         variant="ghost"
-        size={isDock ? 'icon' : 'sm'}
-        className={cn('h-7 text-xs', isDock ? 'w-7 shrink-0' : 'px-2')}
+        size="sm"
+        className={cn('h-7 text-xs', isDock ? 'justify-start gap-1.5 px-2' : 'px-2')}
         onClick={handleResetChannel}
         disabled={!effect.enabled}
         title={resetChannelLabel}
         aria-label={resetChannelLabel}
       >
-        {isDock ? <RotateCcw className="h-3 w-3" /> : resetChannelLabel}
+        {isDock ? (
+          <>
+            <RotateCcw className="h-3 w-3 shrink-0" />
+            <span className="truncate">{t('effects.curves.resetShort')}</span>
+          </>
+        ) : (
+          resetChannelLabel
+        )}
       </Button>
     </div>
   )
 
   return (
     <div className={cn('space-y-0', isDock && 'flex h-full min-h-0 flex-col overflow-hidden')}>
-      <EffectPanelHeaderRow
-        label={getEffectDefinitionName(definition)}
-        effectId={effect.id}
-        enabled={effect.enabled}
-        isDefault={isDefault}
-        onReset={onReset}
-        onToggle={onToggle}
-        onRemove={onRemove}
-        onMove={onMove}
-        canMoveUp={canMoveUp}
-        canMoveDown={canMoveDown}
-        collapsed={allowCollapse ? collapsed : undefined}
-        onToggleCollapsed={allowCollapse ? () => setCollapsed((value) => !value) : undefined}
-        onEditInColor={onEditInColor}
-      />
+      {!isDock && (
+        <EffectPanelHeaderRow
+          label={getEffectDefinitionName(definition)}
+          effectId={effect.id}
+          enabled={effect.enabled}
+          isDefault={isDefault}
+          onReset={onReset}
+          onToggle={onToggle}
+          onRemove={onRemove}
+          onMove={onMove}
+          canMoveUp={canMoveUp}
+          canMoveDown={canMoveDown}
+          collapsed={allowCollapse ? collapsed : undefined}
+          onToggleCollapsed={allowCollapse ? () => setCollapsed((value) => !value) : undefined}
+          onEditInColor={onEditInColor}
+        />
+      )}
 
-      {showBody &&
-        (isDock ? (
-          <div className="flex h-9 shrink-0 items-center justify-between gap-2 px-2">
-            <span className="text-xs text-muted-foreground">{t('effects.curves.channel')}</span>
-            {channelControls}
-          </div>
-        ) : (
-          <PropertyRow label={t('effects.curves.channel')}>{channelControls}</PropertyRow>
-        ))}
+      {showBody && !isDock && (
+        <PropertyRow label={t('effects.curves.channel')}>{channelControls}</PropertyRow>
+      )}
 
       {showBody && (
-        <div className={cn('px-2', isDock && 'flex min-h-0 flex-1 pb-2')}>
+        <div className={cn('px-1 pb-1', isDock && 'flex min-h-0 flex-1 gap-2 px-2 py-1')}>
+          {isDock && channelControls}
           <div
             className={cn(
               'relative overflow-hidden rounded border border-border/70 bg-black/50',
-              isDock && 'flex min-h-0 flex-1',
+              isDock && 'flex aspect-square h-full max-w-full min-h-0 shrink-0',
             )}
           >
             <svg
@@ -496,7 +508,9 @@ export const GpuCurvesPanel = memo(function GpuCurvesPanel({
                 defaultValue: `${activeChannelLabel} curve editor`,
               })}
               viewBox={`0 0 ${CURVE_SIZE} ${CURVE_SIZE}`}
-              preserveAspectRatio={isDock ? 'none' : 'xMidYMid meet'}
+              // Keep the curve square: the dock pane is much wider than it is tall,
+              // and stretching the viewBox makes the diagonal look like a ramp.
+              preserveAspectRatio="xMidYMid meet"
               className={cn(
                 isDock ? 'h-full w-full' : 'aspect-square w-full',
                 effect.enabled ? 'cursor-crosshair' : 'cursor-default',

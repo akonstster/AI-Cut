@@ -5,7 +5,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { ShareMenu } from '../deps/studio'
-import { CheckCircle2, Clock, Download, HardDrive } from 'lucide-react'
+import { CheckCircle2, Clock, Download, FolderOpen, HardDrive, Play } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import type { ExportMode } from '@/types/export'
@@ -23,6 +23,13 @@ export interface ExportCompleteViewProps {
   onDownload: () => void
   /** The finished render as a file, for sharing; null when there is none. */
   resultFile: () => File | null
+  /** Where the window wrote the file on this computer, when it did. */
+  savedPath?: string | null
+  /** The remembered folder was unavailable, so the default folder was used. */
+  savedFallback?: boolean
+  isDesktop?: boolean
+  onRevealSaved?: () => void
+  onOpenSaved?: () => void
 }
 
 export function ExportCompleteView({
@@ -34,6 +41,11 @@ export function ExportCompleteView({
   onClose,
   onDownload,
   resultFile,
+  savedPath,
+  savedFallback = false,
+  isDesktop = false,
+  onRevealSaved,
+  onOpenSaved,
 }: ExportCompleteViewProps) {
   const shared = resultFile()
   const { t } = useTranslation()
@@ -48,6 +60,16 @@ export function ExportCompleteView({
           {mode === 'audio' ? t('export.complete.audioSuccess') : t('export.complete.videoSuccess')}
         </AlertDescription>
       </Alert>
+
+      {savedPath && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">{t('export.complete.savedTo')}</p>
+          <p className="break-all font-mono text-xs">{savedPath}</p>
+          {savedFallback && (
+            <p className="text-xs text-amber-500">{t('export.complete.folderFallback')}</p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         {fileSize && (
@@ -70,11 +92,32 @@ export function ExportCompleteView({
         <Button variant="outline" onClick={onClose}>
           {t('common.close')}
         </Button>
-        {shared && <ShareMenu title={shared.name} className="h-9 px-3 text-sm" file={async () => shared} />}
-        <Button onClick={onDownload}>
-          <Download className="mr-2 h-4 w-4" />
-          {t('export.complete.download')}
-        </Button>
+        {isDesktop && savedPath ? (
+          <>
+            <Button variant="outline" onClick={onRevealSaved}>
+              <FolderOpen className="mr-2 h-4 w-4" />
+              {t('export.complete.openFolder')}
+            </Button>
+            <Button onClick={onOpenSaved}>
+              <Play className="mr-2 h-4 w-4" />
+              {t('export.complete.openFile')}
+            </Button>
+          </>
+        ) : (
+          <>
+            {shared && (
+              <ShareMenu
+                title={shared.name}
+                className="h-9 px-3 text-sm"
+                file={async () => shared}
+              />
+            )}
+            <Button onClick={onDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              {t('export.complete.download')}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

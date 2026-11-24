@@ -69,17 +69,29 @@ async function loadModel(): Promise<void> {
       const now = Date.now()
       if (now - lastActivity > 2000) {
         lastActivity = now
-        post({ type: 'progress', stage: 'loading-model', detail: 'model download or WebGPU initialization', percent })
+        post({
+          type: 'progress',
+          stage: 'loading-model',
+          detail: 'model download or WebGPU initialization',
+          percent,
+        })
       }
     }
     post({ type: 'progress', stage: 'loading-model', detail: 'processor download', percent: 0 })
     if (!navigator.gpu) throw new Error('WebGPU is unavailable in this window')
 
-    const loadedProcessor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback: progress })
+    const loadedProcessor = await AutoProcessor.from_pretrained(MODEL_ID, {
+      progress_callback: progress,
+    })
 
     if (disposed || thisGen !== loadGeneration) return
 
-    post({ type: 'progress', stage: 'loading-model', detail: 'model download or WebGPU initialization', percent: 5 })
+    post({
+      type: 'progress',
+      stage: 'loading-model',
+      detail: 'model download or WebGPU initialization',
+      percent: 5,
+    })
     const loadedModel = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
       dtype: {
         vision_encoder: 'fp16',

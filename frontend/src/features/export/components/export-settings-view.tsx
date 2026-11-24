@@ -11,6 +11,10 @@ import { ExportPreflightPanel } from './export-preflight-panel'
 import { ExportVideoSettings, type ExportVideoSettingsProps } from './export-video-settings'
 import { ExportAudioSettings, type ExportAudioSettingsProps } from './export-audio-settings'
 import { ExportLoudnessField } from './export-loudness-field'
+import {
+  ExportDestinationFields,
+  type ExportDestinationFieldsProps,
+} from './export-destination-fields'
 import { ExportSettingsFooter, type ExportSettingsFooterProps } from './export-settings-footer'
 import type { ExportPreflightResult } from '../utils/export-preflight'
 
@@ -21,6 +25,7 @@ export interface ExportSettingsViewProps {
   preflight: ExportPreflightResult | null
   video: ExportVideoSettingsProps
   audio: ExportAudioSettingsProps
+  destination: ExportDestinationFieldsProps
   footer: ExportSettingsFooterProps
 }
 
@@ -51,6 +56,7 @@ export function ExportSettingsView(props: ExportSettingsViewProps) {
             settings={props.audio.settings}
             setSettings={props.audio.setSettings}
           />
+          <ExportDestinationFields {...props.destination} />
         </div>
       </div>
 

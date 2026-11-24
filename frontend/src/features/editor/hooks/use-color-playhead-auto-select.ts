@@ -59,6 +59,10 @@ export function useColorPlayheadAutoSelect(): void {
       // re-renders the grading panels mid-gesture. The previewFrame -> null
       // transition on release triggers the catch-up apply below.
       if (playback.previewFrame !== null) return
+      // Defer during playback/shuttle (J/L): crossing clip boundaries used to
+      // reselect and re-render the whole grading dock mid-playback, freezing fast
+      // shuttle. The isPlaying -> false transition catches the selection up.
+      if (playback.isPlaying) return
       const frame = playback.currentFrame
       const selection = useSelectionStore.getState()
       const { itemById } = useItemsStore.getState()
@@ -77,6 +81,7 @@ export function useColorPlayheadAutoSelect(): void {
 
     const unsubscribePlayback = usePlaybackStore.subscribe((state, previous) => {
       if (
+        state.isPlaying !== previous.isPlaying ||
         state.currentFrame !== previous.currentFrame ||
         state.previewFrame !== previous.previewFrame
       ) {

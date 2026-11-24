@@ -329,11 +329,14 @@ async function main() {
     assert.equal(video.width, WIDTH, `artifact width ${video.width}`)
     assert.equal(video.height, HEIGHT, `artifact height ${video.height}`)
     const [numerator, denominator = '1'] = String(video.avg_frame_rate).split('/')
-    assert.equal(Number(numerator) / Number(denominator), FPS, `artifact fps ${video.avg_frame_rate}`)
+    assert.equal(
+      Number(numerator) / Number(denominator),
+      FPS,
+      `artifact fps ${video.avg_frame_rate}`,
+    )
     const durationSeconds = Number(probe.format?.duration)
     assert.ok(
-      Number.isFinite(durationSeconds) &&
-        Math.abs(durationSeconds - DURATION_SECONDS) < 0.35,
+      Number.isFinite(durationSeconds) && Math.abs(durationSeconds - DURATION_SECONDS) < 0.35,
       `artifact duration ${probe.format?.duration}`,
     )
 

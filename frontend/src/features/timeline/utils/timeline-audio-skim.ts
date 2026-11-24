@@ -3,16 +3,25 @@ import { getMixerLiveGain } from '@/shared/state/mixer-live-gain'
 import { getAudioFadeMultiplier } from '@/shared/utils/audio-fade-curve'
 import { timelineToSourceFrames } from './source-calculations'
 import { resolveEffectiveTrackStates } from './group-utils'
+import { SKIM_GRAIN_MIN_SECONDS } from './skim-grain-timing'
 
 const DEFAULT_TIMELINE_FPS = 30
 const DEFAULT_GRAIN_DURATION_SECONDS = 0.045
 const DEFAULT_GAIN = 0.8
+/** How long a media element keeps sounding after the last scrub step. */
+const SKIM_IDLE_STOP_MS = 140
+/** Seek forward once the playhead is further than this ahead of the element. */
+const SEEK_HORIZON_SECONDS = 0.05
+/** Seek backward once the playhead is further than this behind the element. */
+const SEEK_BACK_TOLERANCE_SECONDS = 0.06
 
 interface TimelineMediaElementSkimRequest {
   mediaUrl: string
   mediaKind: 'audio' | 'video'
   timeSeconds: number
   gain?: number
+  /** Overrides the fixed grain length; skimming passes an adaptive value. */
+  grainDurationSeconds?: number
 }
 
 function normalizeFps(fps: number | undefined, fallback: number): number {
@@ -365,20 +374,21 @@ export function createTimelineMediaElementAudioSkimPreview(
     mediaKind,
     timeSeconds,
     gain: requestGain = 1,
+    grainDurationSeconds: requestGrainSeconds,
   }: TimelineMediaElementSkimRequest) => {
     if (!mediaUrl || typeof document === 'undefined') return
 
+    const grainSeconds = Math.max(
+      SKIM_GRAIN_MIN_SECONDS,
+      Math.min(0.4, requestGrainSeconds ?? grainDurationSeconds),
+    )
     const currentRequest = ++requestId
     const element = getMedia(mediaKind)
+    const sameSource = element.currentSrc === mediaUrl || element.src === mediaUrl
+
     if (stopTimer !== null) {
       window.clearTimeout(stopTimer)
       stopTimer = null
-    }
-    element.pause()
-
-    if (element.currentSrc !== mediaUrl && element.src !== mediaUrl) {
-      element.src = mediaUrl
-      element.load()
     }
 
     if (element.readyState < HTMLMediaElement.HAVE_METADATA) {
@@ -387,26 +397,49 @@ export function createTimelineMediaElementAudioSkimPreview(
     }
 
     const duration = Number.isFinite(element.duration) ? element.duration : Number.POSITIVE_INFINITY
-    const offset = Math.max(0, Math.min(timeSeconds, Math.max(0, duration - grainDurationSeconds)))
-    if (Math.abs(element.currentTime - offset) > 0.02) {
-      element.currentTime = offset
-      await waitForEventOrTimeout(element, 'seeked', 45)
-      if (currentRequest !== requestId) return
+    const offset = Math.max(0, Math.min(timeSeconds, Math.max(0, duration - grainSeconds)))
+
+    // Keep the element PLAYING and move it with a seek. Pausing between frames was
+    // what broke the sound as soon as the pointer moved faster than one grain: each
+    // step became pause → seek → play, so a quick pass stuttered into silence. The
+    // element now only stops after the pointer has been still for a moment.
+    const horizon = Math.max(grainSeconds, SEEK_HORIZON_SECONDS)
+    const ahead = offset - element.currentTime
+    const behind = -ahead
+    const needsSeek =
+      !sameSource || element.ended || behind > SEEK_BACK_TOLERANCE_SECONDS || ahead > horizon
+
+    if (!sameSource) {
+      element.pause()
+      element.src = mediaUrl
+      element.load()
+      if (element.readyState < HTMLMediaElement.HAVE_METADATA) {
+        await waitForEventOrTimeout(element, 'loadedmetadata', 250)
+        if (currentRequest !== requestId) return
+      }
     }
 
     element.volume = Math.max(0, Math.min(1, gain * requestGain))
     element.muted = false
-    await element.play()
-    if (currentRequest !== requestId) {
-      element.pause()
-      return
+
+    if (element.paused) {
+      await element.play()
+      if (currentRequest !== requestId) {
+        element.pause()
+        return
+      }
+    }
+    if (needsSeek) {
+      // Not awaited: waiting for `seeked` on every frame would cap the scrub rate at
+      // the decoder's seek latency instead of the pointer's speed.
+      element.currentTime = offset
     }
 
     stopTimer = window.setTimeout(() => {
       if (currentRequest === requestId) {
         element.pause()
       }
-    }, grainDurationSeconds * 1000)
+    }, SKIM_IDLE_STOP_MS)
   }
 
   const dispose = () => {
@@ -470,7 +503,7 @@ function createTimelineAudioBufferSkimPreview(
   const createAudioContext = options.createAudioContext ?? (() => new AudioContext())
 
   let context: AudioContext | null = null
-  let source: AudioBufferSourceNode | null = null
+  let activeGrain: { source: AudioBufferSourceNode; gain: GainNode } | null = null
 
   const getContext = () => {
     if (!context) {
@@ -479,20 +512,36 @@ function createTimelineAudioBufferSkimPreview(
     return context
   }
 
-  const stop = () => {
-    const active = source
-    source = null
-    if (!active) return
+  /** Ramp a grain down and release it once the ramp is over. */
+  const fadeOutGrain = (grain: { source: AudioBufferSourceNode; gain: GainNode }) => {
+    const ctx = context
+    if (!ctx) {
+      try {
+        grain.source.stop()
+      } catch {
+        // Source may already be stopped.
+      }
+      return
+    }
+    const now = ctx.currentTime
     try {
-      active.stop()
+      grain.gain.gain.cancelScheduledValues(now)
+      grain.gain.gain.setValueAtTime(grain.gain.gain.value, now)
+      grain.gain.gain.linearRampToValueAtTime(0, now + fadeSeconds)
+    } catch {
+      // Parameter may already be detached.
+    }
+    try {
+      grain.source.stop(now + fadeSeconds)
     } catch {
       // Source may already be stopped.
     }
-    try {
-      active.disconnect()
-    } catch {
-      // Best-effort cleanup.
-    }
+  }
+
+  const stop = () => {
+    const grain = activeGrain
+    activeGrain = null
+    if (grain) fadeOutGrain(grain)
   }
 
   const scrub = async ({
@@ -500,19 +549,31 @@ function createTimelineAudioBufferSkimPreview(
     sliceStartTimeSeconds,
     timeSeconds,
     gain: requestGain = 1,
+    grainDurationSeconds: requestGrainSeconds,
   }: {
     buffer: AudioBuffer
     sliceStartTimeSeconds: number
     timeSeconds: number
     gain?: number
+    grainDurationSeconds?: number
   }) => {
     const ctx = getContext()
     if (ctx.state === 'suspended') {
       await ctx.resume()
     }
 
-    stop()
-    const grainDuration = Math.min(grainDurationSeconds, Math.max(0, buffer.duration))
+    // Overlap the outgoing grain with the incoming one instead of cutting it: the
+    // old grain fades out over the fade window while the new one fades in, which
+    // removes the click on every scrub step (previously a hard stop).
+    const previous = activeGrain
+    activeGrain = null
+    if (previous) fadeOutGrain(previous)
+
+    const grainSeconds = Math.max(
+      SKIM_GRAIN_MIN_SECONDS,
+      requestGrainSeconds ?? grainDurationSeconds,
+    )
+    const grainDuration = Math.min(grainSeconds, Math.max(0, buffer.duration))
     if (grainDuration <= 0) return
 
     const sliceTime = Math.max(0, timeSeconds - sliceStartTimeSeconds)
@@ -528,16 +589,21 @@ function createTimelineAudioBufferSkimPreview(
     gainNode.gain.linearRampToValueAtTime(gainValue * requestGain, now + fadeSeconds)
     gainNode.gain.linearRampToValueAtTime(0, now + grainDuration)
     nextSource.onended = () => {
-      if (source === nextSource) {
-        source = null
+      if (activeGrain?.source === nextSource) {
+        activeGrain = null
       }
       try {
         nextSource.disconnect()
       } catch {
         // Best-effort cleanup.
       }
+      try {
+        gainNode.disconnect()
+      } catch {
+        // Best-effort cleanup.
+      }
     }
-    source = nextSource
+    activeGrain = { source: nextSource, gain: gainNode }
     nextSource.start(now, offset, grainDuration)
   }
 

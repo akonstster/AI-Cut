@@ -351,6 +351,8 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                 onClick={() => handleSearchChange('')}
+                aria-label={t('projects.list.clearSearch')}
+                data-tooltip={t('projects.list.clearSearch')}
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -396,7 +398,12 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
           {/* Sort Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" aria-label={t('projects.list.sortBy')} data-tooltip={t('projects.list.sortBy')}>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={t('projects.list.sortBy')}
+                data-tooltip={t('projects.list.sortBy')}
+              >
                 <ArrowUpDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -430,7 +437,12 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
 
           {/* Clear Filters */}
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              data-tooltip={t('projects.list.clearFiltersHint')}
+            >
               <X className="w-4 h-4 mr-2" />
               {t('projects.list.clearFilters')}
             </Button>
@@ -445,7 +457,13 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {t('projects.list.selectedCount', { count: selectionCount })}
               </span>
-              <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                aria-label={t('projects.list.clearSelection')}
+                data-tooltip={t('projects.list.clearSelectionHint')}
+              >
                 {t('projects.list.clearSelection')}
               </Button>
               <Button
@@ -453,6 +471,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
                 size="sm"
                 className="gap-2"
                 onClick={() => setShowBulkDeleteDialog(true)}
+                data-tooltip={t('projects.list.deleteSelectedHint')}
               >
                 <Trash2 className="w-4 h-4" />
                 {t('projects.list.deleteN', { count: selectionCount })}

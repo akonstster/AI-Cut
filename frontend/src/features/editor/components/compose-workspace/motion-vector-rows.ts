@@ -87,10 +87,11 @@ export function canCombineMotionVectorRowWithoutBake(
   row: MotionVectorRowDefinition,
 ): boolean {
   const first =
-    itemKeyframes?.properties.find((candidate) => candidate.property === row.primary)?.keyframes ?? []
-  const second =
-    itemKeyframes?.properties.find((candidate) => candidate.property === row.secondary)?.keyframes ??
+    itemKeyframes?.properties.find((candidate) => candidate.property === row.primary)?.keyframes ??
     []
+  const second =
+    itemKeyframes?.properties.find((candidate) => candidate.property === row.secondary)
+      ?.keyframes ?? []
   if (first.length === 0 || second.length === 0) return true
   return (
     first.length === second.length &&
@@ -134,10 +135,12 @@ export function buildMotionVectorSeparationProperties({
   createId?: () => string
 }): PropertyKeyframes[] {
   if (!vectorProperty || vectorProperty.keyframes.length === 0) return []
-  return ([
-    [row.primary, 'x'],
-    [row.secondary, 'y'],
-  ] as const).map(([property, axis]) => ({
+  return (
+    [
+      [row.primary, 'x'],
+      [row.secondary, 'y'],
+    ] as const
+  ).map(([property, axis]) => ({
     property,
     keyframes: vectorProperty.keyframes.map((keyframe) => ({
       id: createId(),

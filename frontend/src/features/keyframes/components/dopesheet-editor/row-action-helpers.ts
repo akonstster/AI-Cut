@@ -162,7 +162,8 @@ export function resolveClickSelection(
 ): { baseSelection: Set<string>; selectedIdsForDrag: string[] } {
   const isSelected = selected.has(keyframeId)
   const baseSelection = isSelected ? new Set(selected) : new Set([keyframeId])
-  const selectedIdsForDrag = isSelected && baseSelection.size > 1 ? Array.from(baseSelection) : [keyframeId]
+  const selectedIdsForDrag =
+    isSelected && baseSelection.size > 1 ? Array.from(baseSelection) : [keyframeId]
   return { baseSelection, selectedIdsForDrag }
 }
 
@@ -205,10 +206,7 @@ export function resolveGroupModifierSelection(
 }
 
 /** Whether a group pointer-down should be ignored outright (disabled row or non-primary button). */
-export function isGroupPointerDownIgnored(
-  disabled: boolean,
-  event: { button: number },
-): boolean {
+export function isGroupPointerDownIgnored(disabled: boolean, event: { button: number }): boolean {
   return disabled || event.button !== 0
 }
 

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { DocsLanguageContext, useDocsLanguage } from './docs-language'
 import { Link } from '@tanstack/react-router'
 import type React from 'react'
 import { useMemo, useState } from 'react'
@@ -15,8 +17,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/shared/ui/cn'
 import {
   DOC_GROUPS,
-  DOC_PAGES,
-  getDocPage,
+  DOC_PAGES as englishPages,
+  localizeDocPage,
   type DocBlock,
   type DocCategory,
   type DocPage,
@@ -48,36 +50,67 @@ interface DocsShellProps {
 }
 
 export function DocsShell({ children, currentSlug }: DocsShellProps) {
-  return (
-    <div className="min-h-screen bg-background text-foreground select-text">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <FreeCutLogo size="md" />
-            <span className="hidden text-sm text-muted-foreground sm:inline">Docs</span>
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/projects">Open AI-Cut</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">Home</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+  const { i18n } = useTranslation()
+  const [language, setLanguage] = useState<'en' | 'ru'>(() => {
+    const saved = localStorage.getItem('aicut-docs-language')
+    return saved === 'ru' || saved === 'en' ? saved : i18n.language.startsWith('ru') ? 'ru' : 'en'
+  })
+  const ru = language === 'ru'
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
-          <DocsNavigation currentSlug={currentSlug} />
-        </aside>
-        <main>{children}</main>
+  return (
+    <DocsLanguageContext.Provider value={language}>
+      <div lang={language} className="min-h-screen bg-background text-foreground select-text">
+        <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
+            <Link to="/" className="flex items-center gap-3">
+              <FreeCutLogo size="md" />
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {ru ? 'Справка' : 'Docs'}
+              </span>
+            </Link>
+            <nav className="flex items-center gap-2">
+              <select
+                aria-label={ru ? 'Язык справки' : 'Guide language'}
+                value={language}
+                className="rounded border border-border bg-background p-2 text-sm"
+                onChange={(event) => {
+                  const next = event.target.value === 'ru' ? 'ru' : 'en'
+                  localStorage.setItem('aicut-docs-language', next)
+                  setLanguage(next)
+                }}
+              >
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+              </select>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/projects">{ru ? 'Открыть AI-Cut' : 'Open AI-Cut'}</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/">{ru ? 'Главная' : 'Home'}</Link>
+              </Button>
+            </nav>
+          </div>
+        </header>
+
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
+            <DocsNavigation currentSlug={currentSlug} />
+          </aside>
+          <main>{children}</main>
+        </div>
       </div>
-    </div>
+    </DocsLanguageContext.Provider>
   )
 }
 
 function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
+  const language = useDocsLanguage()
+  const ru = language === 'ru'
+  const DOC_PAGES = useMemo(
+    () => englishPages.map((page) => localizeDocPage(page, language)),
+    [language],
+  )
+
   const [query, setQuery] = useState('')
   const trimmed = query.trim().toLowerCase()
 
@@ -86,7 +119,7 @@ function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
     return new Set(
       DOC_PAGES.filter((page) => pageSearchText(page).includes(trimmed)).map((p) => p.slug),
     )
-  }, [trimmed])
+  }, [trimmed, DOC_PAGES])
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-3">
@@ -96,8 +129,8 @@ function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search docs"
-          aria-label="Search documentation"
+          placeholder={ru ? 'Поиск по справке' : 'Search docs'}
+          aria-label={ru ? 'Поиск по документации' : 'Search documentation'}
           className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-8 text-sm outline-none focus:border-primary/60"
         />
       </div>
@@ -110,11 +143,13 @@ function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
         )}
       >
         <BookOpen className="h-4 w-4" />
-        Docs overview
+        {ru ? 'Обзор справки' : 'Docs overview'}
       </Link>
 
       {matches?.size === 0 && (
-        <p className="px-2 text-sm text-muted-foreground">No pages match “{query.trim()}”.</p>
+        <p className="px-2 text-sm text-muted-foreground">
+          {ru ? 'Ничего не найдено' : 'No matching pages'} — {query.trim()}
+        </p>
       )}
 
       {DOC_GROUPS.map((group) => {
@@ -124,9 +159,9 @@ function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
         if (pages.length === 0) return null
 
         return (
-          <div key={group} className="space-y-1">
+          <div key={ru ? categoryRu[group] : group} className="space-y-1">
             <p className="px-2 text-xs font-semibold uppercase tracking-wide text-primary">
-              {group}
+              {ru ? categoryRu[group] : group}
             </p>
             {pages.map((page) => (
               <Link
@@ -149,30 +184,40 @@ function DocsNavigation({ currentSlug }: { currentSlug?: string }) {
 }
 
 export function DocsHome() {
+  const language = useDocsLanguage()
+  const ru = language === 'ru'
+  const DOC_PAGES = useMemo(
+    () => englishPages.map((page) => localizeDocPage(page, language)),
+    [language],
+  )
+
   return (
     <div className="space-y-8">
       <section className="rounded-lg border border-border bg-card p-6 sm:p-8">
         <div className="mb-4 flex items-center gap-2 text-primary">
           <BookOpen className="h-5 w-5" />
-          <span className="text-sm font-medium">AI-Cut documentation</span>
+          <span className="text-sm font-medium">
+            {ru ? 'Документация AI-Cut' : 'AI-Cut documentation'}
+          </span>
         </div>
         <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
-          AI-Cut User Guide
+          {ru ? 'Руководство AI-Cut' : 'AI-Cut User Guide'}
         </h1>
         <p className="mt-4 max-w-3xl text-muted-foreground">
-          Start with setup, workspaces, media import, timeline editing, and export. Use the
-          reference pages when you need a precise control, shortcut, or troubleshooting path.
+          {ru
+            ? 'Начните с создания проекта, импорта медиа, монтажа и экспорта. В справочнике описаны инструменты, сочетания клавиш и решение проблем.'
+            : 'Start with setup, media import, timeline editing and export. Find tools, shortcuts and troubleshooting in the reference pages.'}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild>
             <Link to="/docs/$slug" params={{ slug: 'getting-started' }}>
-              Start editing
+              {ru ? 'Начать монтаж' : 'Start editing'}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link to="/docs/$slug" params={{ slug: 'troubleshooting' }}>
-              Fix a problem
+              {ru ? 'Решить проблему' : 'Fix a problem'}
             </Link>
           </Button>
         </div>
@@ -194,8 +239,10 @@ export function DocsHome() {
           ] satisfies [DocCategory, string][]
         ).map(([title, description]) => (
           <div key={title} className="rounded-lg border border-border bg-card p-5">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+            <h2 className="text-lg font-semibold">{ru ? categoryRu[title] : title}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {ru ? categoryDescriptionsRu[title] : description}
+            </p>
             <div className="mt-4 space-y-1">
               {DOC_PAGES.filter((page) => page.category === title).map((page) => (
                 <Link
@@ -216,7 +263,7 @@ export function DocsHome() {
       <section className="rounded-lg border border-border bg-card p-5">
         <div className="mb-3 flex items-center gap-2">
           <Search className="h-4 w-4 text-primary" />
-          <h2 className="text-lg font-semibold">Reference</h2>
+          <h2 className="text-lg font-semibold">{ru ? 'Справочник' : 'Reference'}</h2>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {DOC_PAGES.filter((page) => page.category === 'Reference').map((page) => (
@@ -236,7 +283,12 @@ export function DocsHome() {
   )
 }
 
-export function DocsArticle({ page }: { page: DocPage }) {
+export function DocsArticle({ page: original }: { page: DocPage }) {
+  const language = useDocsLanguage()
+  const ru = language === 'ru'
+  const DOC_PAGES = englishPages.map((page) => localizeDocPage(page, language))
+  const page = localizeDocPage(original, language)
+
   const index = DOC_PAGES.findIndex((candidate) => candidate.slug === page.slug)
   const previous = index > 0 ? DOC_PAGES[index - 1] : undefined
   const next = index >= 0 && index < DOC_PAGES.length - 1 ? DOC_PAGES[index + 1] : undefined
@@ -249,9 +301,11 @@ export function DocsArticle({ page }: { page: DocPage }) {
           className="mb-5 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Docs
+          {ru ? 'Справка' : 'Docs'}
         </Link>
-        <p className="text-sm font-medium text-primary">{page.category}</p>
+        <p className="text-sm font-medium text-primary">
+          {ru ? categoryRu[page.category] : page.category}
+        </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{page.title}</h1>
         <p className="mt-3 max-w-3xl text-muted-foreground">{page.description}</p>
       </div>
@@ -463,12 +517,21 @@ function RichText({ text }: { text: string }) {
 }
 
 function RelatedPages({ slugs }: { slugs?: string[] }) {
-  const related = (slugs ?? []).map(getDocPage).filter((page): page is DocPage => Boolean(page))
+  const language = useDocsLanguage()
+  const ru = language === 'ru'
+  const DOC_PAGES = useMemo(
+    () => englishPages.map((page) => localizeDocPage(page, language)),
+    [language],
+  )
+
+  const related = (slugs ?? [])
+    .map((slug) => DOC_PAGES.find((page) => page.slug === slug))
+    .filter((page): page is DocPage => Boolean(page))
   if (related.length === 0) return null
 
   return (
     <section className="border-t border-border pt-6">
-      <h2 className="text-xl font-semibold">Related</h2>
+      <h2 className="text-xl font-semibold">{ru ? 'Смотрите также' : 'Related'}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {related.map((page) => (
           <Link
@@ -484,4 +547,19 @@ function RelatedPages({ slugs }: { slugs?: string[] }) {
       </div>
     </section>
   )
+}
+
+const categoryRu = {
+  Start: 'Начало работы',
+  'Core Editing': 'Монтаж',
+  'Creative Tools': 'Творческие инструменты',
+  Output: 'Экспорт',
+  Reference: 'Справочник',
+}
+const categoryDescriptionsRu = {
+  Start: 'Установка, проекты и интерфейс.',
+  'Core Editing': 'Медиа, таймлайн и свойства клипов.',
+  'Creative Tools': 'Генерация, раскадровка, анимация, звук и эффекты.',
+  Output: 'Экспорт видео и очередь рендера.',
+  Reference: 'Настройки, термины и решение проблем.',
 }

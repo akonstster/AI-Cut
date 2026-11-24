@@ -5,7 +5,7 @@ import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useItemsStore } from '../../stores/items-store'
-import { setTimelineState } from '../../test-helpers'
+import { makeTimelineAudioItem, makeTimelineVideoItem, setTimelineState } from '../../test-helpers'
 import { useTimelineCommandStore } from '../../stores/timeline-command-store'
 import { useKeyframeSelectionStore } from '../../stores/keyframe-selection-store'
 import { useEditingShortcuts } from './use-editing-shortcuts'
@@ -310,5 +310,92 @@ describe('useEditingShortcuts delete ownership', () => {
     })
 
     expect(useItemsStore.getState().items).toEqual([clip1, clip2])
+  })
+
+  it('joins split halves even when a linked pair selects two tracks at once', () => {
+    const videoLeft = makeTimelineVideoItem({
+      id: 'video-left',
+      trackId: 'track-1',
+      originId: 'origin-video',
+      from: 0,
+      durationInFrames: 30,
+      sourceStart: 0,
+      sourceEnd: 30,
+    })
+    const videoRight = makeTimelineVideoItem({
+      id: 'video-right',
+      trackId: 'track-1',
+      originId: 'origin-video',
+      from: 30,
+      durationInFrames: 30,
+      sourceStart: 30,
+      sourceEnd: 60,
+    })
+    const audioLeft = makeTimelineAudioItem({
+      id: 'audio-left',
+      trackId: 'track-2',
+      originId: 'origin-audio',
+      from: 0,
+      durationInFrames: 30,
+      sourceStart: 0,
+      sourceEnd: 30,
+    })
+    const audioRight = makeTimelineAudioItem({
+      id: 'audio-right',
+      trackId: 'track-2',
+      originId: 'origin-audio',
+      from: 30,
+      durationInFrames: 30,
+      sourceStart: 30,
+      sourceEnd: 60,
+    })
+
+    setTimelineState({
+      tracks: [TRACK, TRACK_2],
+      items: [videoLeft, videoRight, audioLeft, audioRight],
+    })
+    useSelectionStore.setState({
+      selectedItemIds: ['video-left', 'video-right', 'audio-left', 'audio-right'],
+      selectionType: 'item',
+    })
+
+    render(<ShortcutHarness />)
+
+    const [, joinCallback, joinOptions] = getHotkeyRegistration(HOTKEYS.JOIN_ITEMS)
+    expect(joinOptions.enabled).not.toBe(false)
+
+    const joinEvent = createHotkeyEvent()
+    act(() => {
+      joinCallback(joinEvent)
+    })
+
+    const videoItems = useItemsStore.getState().items.filter((item) => item.type === 'video')
+    expect(videoItems).toHaveLength(1)
+    expect(videoItems[0]).toMatchObject({ id: 'video-left', durationInFrames: 60 })
+    expect(joinEvent.preventDefault).toHaveBeenCalled()
+  })
+
+  it('nudges the selected visual item with Shift+Arrow', () => {
+    const clip = makeTimelineVideoItem({
+      id: 'clip-1',
+      trackId: 'track-1',
+    })
+
+    setTimelineState({ tracks: [TRACK], items: [clip] })
+    useSelectionStore.setState({
+      selectedItemIds: ['clip-1'],
+      selectionType: 'item',
+    })
+
+    render(<ShortcutHarness />)
+
+    const [, nudgeRight] = getHotkeyRegistration(HOTKEYS.NUDGE_RIGHT)
+
+    act(() => {
+      nudgeRight(createHotkeyEvent())
+    })
+
+    // A clip that was never moved has no transform yet; the nudge must create it.
+    expect(useItemsStore.getState().items[0]?.transform).toMatchObject({ x: 1, y: 0 })
   })
 })

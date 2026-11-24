@@ -232,8 +232,7 @@ export function createActiveScrubPreseekScheduler(
     }
 
     recordPreviewPreseekPlan(targetFrame, bySource)
-    const elapsedMs =
-      lastTargetAtMs === 0 ? Number.POSITIVE_INFINITY : nowMs - lastTargetAtMs
+    const elapsedMs = lastTargetAtMs === 0 ? Number.POSITIVE_INFINITY : nowMs - lastTargetAtMs
     lastTargetAtMs = nowMs
     let recovered = false
     const onRecover = () => {

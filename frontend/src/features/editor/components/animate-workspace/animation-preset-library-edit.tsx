@@ -10,14 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/shared/ui/cn'
 import { TextMotionSlotRows } from '../text-motion/text-motion-slot-rows'
 import { MotionPresetThumbnail } from './motion-preset-thumbnail'
-import {
-  AppliedMotionSummary,
-  type ActiveTextMotionEntry,
-} from './applied-motion-summary'
-import type {
-  KeyframeApplicationSummary,
-  ManualKeyframeSummary,
-} from './motion-clip-summary'
+import { AppliedMotionSummary, type ActiveTextMotionEntry } from './applied-motion-summary'
+import type { KeyframeApplicationSummary, ManualKeyframeSummary } from './motion-clip-summary'
 
 interface AnimationPresetLibraryEditProps {
   /** The compact quick-preset grid (six built-ins). */

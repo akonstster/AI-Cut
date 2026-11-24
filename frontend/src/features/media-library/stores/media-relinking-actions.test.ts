@@ -313,9 +313,7 @@ describe('createRelinkingActions', () => {
     })
 
     it('does not invalidate blob URL on failed relink', async () => {
-      mediaLibraryService.relinkMediaHandle.mockRejectedValue(
-        new Error('Permission denied'),
-      )
+      mediaLibraryService.relinkMediaHandle.mockRejectedValue(new Error('Permission denied'))
 
       blobUrlManager.acquire('media-1', new Blob(['existing']))
 

@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "No adjacent clip on this side.",
+      "dropOnExisting": "Drop on the existing transition to replace it.",
+      "notEnoughFrames": "There aren’t enough source frames for a transition at this cut.",
+      "dropToTrim": "Release to review the trim needed for this transition.",
+      "trimTitle": "Trim clips to add the transition?",
+      "trimDescription": "The transition will last {{duration}}. Following clips on this track will move earlier by {{shift}}. The same time is removed on other tracks with Sync Lock enabled, which can trim audio or subtitles.",
+      "cancel": "Cancel",
+      "trimAndAdd": "Trim and add transition",
+      "trimFailed": "Could not add the transition with this trim. Check track locks and nearby transitions."
+    },
     "track": {
       "unableToAddDroppedItem": "Unable to add dropped item",
       "unableToAddDroppedMediaItems": "Unable to add dropped media items",
@@ -80,6 +91,7 @@
       "joinWithNext": "Join With Next",
       "joinWithPrevious": "Join With Previous",
       "linkClips": "Link Clips",
+      "restoreSync": "Restore Sync",
       "nameCopied": "Name copied: {{name}}",
       "openCompoundClip": "Open Compound Clip",
       "pathCopied": "Path copied: {{path}}",
@@ -205,6 +217,7 @@
       "appliedEffectToClips": "Applied Effect To Clips",
       "selectAvClipFirst": "Select Av Clip First"
     },
+    "joinUnavailable": "Nothing to join: select the two parts of a clip that came from one cut.",
     "joinIndicators": {
       "canJoinNext": "Can Join Next",
       "canJoinPrevious": "Can Join Previous"

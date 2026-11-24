@@ -23,6 +23,14 @@ import {
   getMaxTransitionDurationForHandles,
 } from '../../utils/transition-utils'
 import { execute, getLogger } from './shared'
+import { captureSnapshot, restoreSnapshot } from '../commands/snapshot'
+import { useTimelineCommandStore } from '../timeline-command-store'
+import { applyRippleTrim } from './edit/trim-actions'
+import { isLinkedSelectionEnabled } from './edit/shared'
+import { getSynchronizedLinkedItemsForEdit } from './linked-edit'
+import { resolveTransitionTargetForEdge } from '../../utils/transition-targets'
+import { planTransitionTrim, type TransitionTrimPlan } from '../../utils/transition-trim-plan'
+import type { DraggedTransitionDescriptor } from '@/shared/state/transition-drag'
 
 export function addTransition(
   leftClipId: string,
@@ -113,6 +121,113 @@ export function addTransition(
     },
     { leftClipId, rightClipId, type },
   )
+}
+
+export function addTransitionWithTrim(
+  requested: TransitionTrimPlan,
+  descriptor: DraggedTransitionDescriptor,
+): boolean {
+  const { leftClipId, rightClipId, alignment } = requested
+  const before = captureSnapshot()
+  if (before.fps !== requested.fps) return false
+  const target = resolveTransitionTargetForEdge({
+    itemId: leftClipId,
+    edge: 'right',
+    items: before.items,
+    transitions: before.transitions,
+    timelineFps: before.fps,
+    alignment,
+  })
+  if (!target || target.rightClipId !== rightClipId) return false
+  const plan = planTransitionTrim(target, before.fps)
+  if (
+    !plan ||
+    plan.trimLeft !== requested.trimLeft ||
+    plan.trimRight !== requested.trimRight ||
+    plan.durationInFrames !== requested.durationInFrames
+  )
+    return false
+
+  const { trackId } = target.leftClip
+  const synchronizedGroups = isLinkedSelectionEnabled()
+    ? before.items
+        .filter((item) => item.trackId === trackId && item.from >= target.leftClip.from)
+        .map((item) => getSynchronizedLinkedItemsForEdit(before.items, item.id, true))
+        .filter((group) => group.length > 1)
+    : []
+  const { isDirty } = useTimelineSettingsStore.getState()
+  let committed = false
+  try {
+    applyRippleTrim(leftClipId, 'end', -plan.trimLeft, true)
+    applyRippleTrim(rightClipId, 'start', plan.trimRight, true)
+    const { itemById } = useItemsStore.getState()
+    const left = itemById[leftClipId]
+    const right = itemById[rightClipId]
+    const transitions = useTransitionsStore.getState()
+    const transitionsById = new Map(transitions.transitions.map((entry) => [entry.id, entry]))
+    if (
+      !left ||
+      !right ||
+      left.durationInFrames !== target.leftClip.durationInFrames - plan.trimLeft ||
+      right.durationInFrames !== target.rightClip.durationInFrames - plan.trimRight ||
+      !areFramesAligned(left.from + left.durationInFrames, right.from) ||
+      !canAddTransition(left, right, plan.durationInFrames, alignment, before.fps).canAdd ||
+      synchronizedGroups.some(([first, ...companions]) => {
+        const anchor = itemById[first!.id]
+        return (
+          !anchor ||
+          companions.some(({ id }) => {
+            const companion = itemById[id]
+            return (
+              companion?.from !== anchor.from ||
+              companion?.durationInFrames !== anchor.durationInFrames
+            )
+          })
+        )
+      }) ||
+      before.transitions.some((transition) => {
+        if (transition.trackId !== trackId) return false
+        const current = transitionsById.get(transition.id)
+        return (
+          !current ||
+          current.leftClipId !== transition.leftClipId ||
+          current.rightClipId !== transition.rightClipId ||
+          current.durationInFrames !== transition.durationInFrames ||
+          current.alignment !== transition.alignment
+        )
+      })
+    ) {
+      return false
+    }
+
+    transitions._addTransition(
+      leftClipId,
+      rightClipId,
+      trackId,
+      'crossfade',
+      plan.durationInFrames,
+      descriptor.presentation,
+      descriptor.direction,
+      alignment,
+    )
+    useTimelineSettingsStore.getState().markDirty()
+    useTimelineCommandStore
+      .getState()
+      .addUndoEntry(
+        { type: 'ADD_TRANSITION', payload: { leftClipId, rightClipId, type: 'crossfade' } },
+        before,
+      )
+    committed = true
+    return true
+  } catch (error) {
+    getLogger().error('Failed to add transition with trim', error)
+    return false
+  } finally {
+    if (!committed) {
+      restoreSnapshot(before)
+      useTimelineSettingsStore.getState().setIsDirty(isDirty)
+    }
+  }
 }
 
 type TransitionUpdates = Partial<

@@ -565,6 +565,8 @@
       "invert": "Umkehren"
     },
     "subtitleSection": {
+      "addCue": "Untertitel hinzufügen",
+      "newCue": "Neuer Untertitel",
       "title": "Untertitel",
       "multiSelectHint": "{{segments}} Segmente ausgewählt · insgesamt {{cues}} Untertitel. Der Stil gilt für alle. Wähle ein einzelnes Segment, um einzelne Untertitel zu bearbeiten.",
       "trackLabel": "Spur {{number}}",

@@ -22,6 +22,56 @@ function makeTrack(overrides: Partial<TimelineTrack> = {}): TimelineTrack {
 }
 
 describe('resolveSourceEditTrackTargets', () => {
+  it('follows the active track in Auto instead of pinning the first one', () => {
+    const tracks = [
+      makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 }),
+      makeTrack({ id: 'v2', name: 'V2', kind: 'video', order: 1 }),
+    ]
+    const auto = {
+      tracks,
+      mediaType: 'image' as const,
+      hasAudio: false,
+      patchVideo: true,
+      patchAudio: false,
+      preferredTrackHeight: 64,
+    }
+
+    expect(
+      resolveSourceEditTrackTargets({
+        ...auto,
+        activeTrackId: 'v1',
+        preferredVideoTrackId: null,
+      })?.videoTrackId,
+    ).toBe('v1')
+    expect(
+      resolveSourceEditTrackTargets({
+        ...auto,
+        activeTrackId: 'v2',
+        preferredVideoTrackId: null,
+      })?.videoTrackId,
+    ).toBe('v2')
+  })
+
+  it('keeps a named destination pinned when the active track changes', () => {
+    const tracks = [
+      makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 }),
+      makeTrack({ id: 'v2', name: 'V2', kind: 'video', order: 1 }),
+    ]
+
+    expect(
+      resolveSourceEditTrackTargets({
+        tracks,
+        activeTrackId: 'v1',
+        preferredVideoTrackId: 'v2',
+        mediaType: 'image',
+        hasAudio: false,
+        patchVideo: true,
+        patchAudio: false,
+        preferredTrackHeight: 64,
+      })?.videoTrackId,
+    ).toBe('v2')
+  })
+
   it('uses the active generic lane as video and creates an audio companion below', () => {
     const result = resolveSourceEditTrackTargets({
       tracks: [makeTrack({ id: 'track-1', name: 'Track 1', order: 0 })],

@@ -22,13 +22,23 @@ export function workspaceRoot(): Promise<string | null> {
 }
 
 /**
+ * The absolute path of a file inside the workspace, given its workspace-relative path (a string
+ * with either separator, or its segments).
+ */
+export async function workspaceAbsolutePath(relative: string | string[]): Promise<string | null> {
+  const workspace = await workspaceRoot()
+  if (!workspace) return null
+  const segments = (Array.isArray(relative) ? relative : relative.split(/[\\/]+/)).filter(Boolean)
+  if (segments.length === 0) return null
+  const separator = workspace.includes('\\') ? '\\' : '/'
+  return [workspace, ...segments].join(separator)
+}
+
+/**
  * The absolute path of a media source file, or null when the page has no workspace (a browser build)
  * or the media lives somewhere the workspace does not describe.
  */
-export async function mediaAbsolutePath(
-  mediaId: string,
-  fileName: string,
-): Promise<string | null> {
+export async function mediaAbsolutePath(mediaId: string, fileName: string): Promise<string | null> {
   const workspace = await workspaceRoot()
   if (!workspace) return null
   const separator = workspace.includes('\\') ? '\\' : '/'

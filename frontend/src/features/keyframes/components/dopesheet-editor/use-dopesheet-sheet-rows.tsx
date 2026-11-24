@@ -331,7 +331,10 @@ export function useDopesheetSheetRows({
     const content = new Map<string, React.ReactNode>()
     for (const entry of renderedSheetEntries.entries) {
       if (entry.type !== 'group') continue
-      content.set(entry.group.id, <DopesheetGroupHeader group={entry.group} {...groupHeaderProps} />)
+      content.set(
+        entry.group.id,
+        <DopesheetGroupHeader group={entry.group} {...groupHeaderProps} />,
+      )
     }
     return content
   }, [groupHeaderProps, renderedSheetEntries.entries])
@@ -400,53 +403,54 @@ export function useDopesheetSheetRows({
       },
     }
     const textMotionRows = buildTextMotionRowsElement(rowContext)
-    const rows = renderedSheetEntries.entries.map((entry) => buildSheetRowElement(entry, rowContext))
+    const rows = renderedSheetEntries.entries.map((entry) =>
+      buildSheetRowElement(entry, rowContext),
+    )
     return textMotionRows ? [textMotionRows, ...rows] : rows
   }, [
-      renderedSheetEntries.entries,
-      expandedGroups,
-      groupTimelineRowStyle,
-      propertyTimelineRowStyle,
-      groupTimelineById,
-      rowKeyframesByProperty,
-      handleRowPointerDown,
-      handleTimelineBackgroundPointerDown,
-      handleGroupKeyframePointerDown,
-      sheetGroupContentById,
-      sheetPropertyContentByProperty,
-      getRenderedKeyframeX,
-      isPropertyLocked,
-      disabled,
-      ticks,
-      effectiveTimelineWidth,
-      frameToX,
-      sharedGridFrameToX,
-      timelineGridDivisions,
-      transitionBlockedRanges,
-      proceduralBandByProperty,
-      renderedKeyframeXById,
-      selectedKeyframeIds,
-      sheetPreviewDuplicateKeyframeIds,
-      sheetPreviewFrames,
-      handleKeyframePointerDown,
-      setKeyframeButtonRef,
-      keyframeMetaByIdRef,
-      itemId,
-      onSegmentEasingChange,
-      onDragStart,
-      onDragEnd,
-      presentation,
-      textMotionBands,
-      getLiveDragPixelsPerFrame,
-      onDurationDragStart,
-      onDurationCommit,
-      onDurationCancel,
-      onOffsetDragStart,
-      onOffsetCommit,
-      onOffsetCancel,
-      onBandClick,
-    ],
-  )
+    renderedSheetEntries.entries,
+    expandedGroups,
+    groupTimelineRowStyle,
+    propertyTimelineRowStyle,
+    groupTimelineById,
+    rowKeyframesByProperty,
+    handleRowPointerDown,
+    handleTimelineBackgroundPointerDown,
+    handleGroupKeyframePointerDown,
+    sheetGroupContentById,
+    sheetPropertyContentByProperty,
+    getRenderedKeyframeX,
+    isPropertyLocked,
+    disabled,
+    ticks,
+    effectiveTimelineWidth,
+    frameToX,
+    sharedGridFrameToX,
+    timelineGridDivisions,
+    transitionBlockedRanges,
+    proceduralBandByProperty,
+    renderedKeyframeXById,
+    selectedKeyframeIds,
+    sheetPreviewDuplicateKeyframeIds,
+    sheetPreviewFrames,
+    handleKeyframePointerDown,
+    setKeyframeButtonRef,
+    keyframeMetaByIdRef,
+    itemId,
+    onSegmentEasingChange,
+    onDragStart,
+    onDragEnd,
+    presentation,
+    textMotionBands,
+    getLiveDragPixelsPerFrame,
+    onDurationDragStart,
+    onDurationCommit,
+    onDurationCancel,
+    onOffsetDragStart,
+    onOffsetCommit,
+    onOffsetCancel,
+    onBandClick,
+  ])
   const propertyColumnElements = useMemo(
     () =>
       groupedPropertyRows.flatMap<React.ReactNode>((group): React.ReactNode[] => {

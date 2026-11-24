@@ -122,6 +122,14 @@ interface ItemsActions {
   _setItemEffects: (updates: Array<{ itemId: string; effects: ItemEffect[] }>) => void
 }
 
+/**
+ * Whether an item can carry a canvas transform. Audio and subtitle segments cannot; every other
+ * visual item can, even when it has no `transform` object yet (a clip that was never moved).
+ */
+function canHoldTransform(item: TimelineItem): boolean {
+  return item.type !== 'audio' && item.type !== 'subtitle'
+}
+
 function updateVisualItemEffects(
   state: ItemsState,
   itemId: string,
@@ -740,7 +748,7 @@ export const useItemsStore = create<ItemsState & ItemsActions>()((set, get) => (
     set((state) => {
       const nextItems = state.items.map((item) => {
         if (item.id !== id) return item
-        if (!('transform' in item)) return item
+        if (!canHoldTransform(item)) return item
 
         return {
           ...item,
@@ -756,7 +764,7 @@ export const useItemsStore = create<ItemsState & ItemsActions>()((set, get) => (
     set((state) => {
       const nextItems = state.items.map((item) => {
         if (item.id !== id) return item
-        if (!('transform' in item)) return item
+        if (!canHoldTransform(item)) return item
 
         const updatedItem = {
           ...item,
@@ -779,7 +787,7 @@ export const useItemsStore = create<ItemsState & ItemsActions>()((set, get) => (
       const idsSet = new Set(ids)
       const nextItems = state.items.map((item) => {
         if (!idsSet.has(item.id)) return item
-        if (!('transform' in item)) return item
+        if (!canHoldTransform(item)) return item
 
         return {
           ...item,
@@ -800,7 +808,7 @@ export const useItemsStore = create<ItemsState & ItemsActions>()((set, get) => (
         const updatedItem = updates
           ? normalizeFrameFields({ ...item, ...normalizeItemUpdates(updates) } as typeof item)
           : item
-        if (!transform || !('transform' in item)) return updatedItem
+        if (!transform || !canHoldTransform(item)) return updatedItem
 
         return normalizeFrameFields({
           ...updatedItem,

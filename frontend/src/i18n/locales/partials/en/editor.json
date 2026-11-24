@@ -565,6 +565,13 @@
       "invert": "Invert"
     },
     "subtitleSection": {
+      "addCue": "Add subtitle",
+      "newCue": "New subtitle",
+      "deleteCue": "Delete subtitle",
+      "moveToTrack": "Move to subtitle track",
+      "moveToTrackHint": "Move these subtitles to their own subtitle track",
+      "restore": "Create subtitles from transcript",
+      "restoreHint": "Subtitles for this clip were removed. Build them again from the saved transcript.",
       "title": "Subtitle",
       "multiSelectHint": "{{segments}} segments selected · {{cues}} cues total. Style applies to all. Select a single segment to edit individual cues.",
       "trackLabel": "Track {{number}}",
@@ -894,7 +901,17 @@
       "dockLabel": "Color grading workspace",
       "dockTitle": "Color",
       "emptyState": "Select a clip to grade",
-      "adjustmentLayerLabel": "Grade"
+      "adjustmentLayerLabel": "Grade",
+      "keyframes": "Keyframes",
+      "keyframesToggle": "Show keyframe editor"
+    },
+    "colorTimeline": {
+      "label": "Color timeline navigator",
+      "noClip": "No clips",
+      "resizeFilmstrip": "Resize the clip filmstrip",
+      "tileSize": "Thumbnail size",
+      "clipCount_one": "{{count}} clip",
+      "clipCount_other": "{{count}} clips"
     }
   }
 }

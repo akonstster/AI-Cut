@@ -5,21 +5,30 @@ import type { PromptElement } from '../services/prompt-elements'
 const EMPTY: PromptElement[] = []
 
 export function useProjectElements(projectId: string | null) {
-  const [loaded, setLoaded] = useState<{ projectId: string; elements?: PromptElement[]; error?: string }>()
+  const [loaded, setLoaded] = useState<{
+    projectId: string
+    elements?: PromptElement[]
+    error?: string
+  }>()
 
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
     let unsubscribe: (() => void) | undefined
     const listener = (elements: PromptElement[]) => setLoaded({ projectId, elements })
-    void loadProjectElements(projectId).then((project) => {
-      if (cancelled) return
-      project.listeners.add(listener)
-      unsubscribe = () => { project.listeners.delete(listener) }
-      listener(project.elements)
-    }, (error: unknown) => {
-      if (!cancelled) setLoaded({ projectId, error: String(error) })
-    })
+    void loadProjectElements(projectId).then(
+      (project) => {
+        if (cancelled) return
+        project.listeners.add(listener)
+        unsubscribe = () => {
+          project.listeners.delete(listener)
+        }
+        listener(project.elements)
+      },
+      (error: unknown) => {
+        if (!cancelled) setLoaded({ projectId, error: String(error) })
+      },
+    )
     return () => {
       cancelled = true
       unsubscribe?.()

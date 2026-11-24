@@ -1,40 +1,174 @@
 import { MotionDopesheetLanes } from './motion-dopesheet-content'
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent, type Ref } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type Ref,
+} from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
-import { ChevronDown, ClipboardPaste, Blend, Copy, Crop, CopyPlus, Crosshair, Group, Maximize2, Plus, Pencil, Spline, Square, Type, Trash2, Ungroup } from 'lucide-react'
+import {
+  ChevronDown,
+  ClipboardPaste,
+  Blend,
+  Copy,
+  Crop,
+  CopyPlus,
+  Crosshair,
+  Group,
+  Maximize2,
+  Plus,
+  Pencil,
+  Spline,
+  Square,
+  Type,
+  Trash2,
+  Ungroup,
+} from 'lucide-react'
 import { cn } from '@/shared/ui/cn'
 import { useRafDeferredValue } from '@/shared/hooks/use-raf-deferred-value'
 import { PlayheadMarks } from '@/shared/ui/playhead-marks'
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { createLogger } from '@/shared/logging/logger'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useClipboardStore } from '@/shared/state/clipboard'
 import type { DirectLinkableProperty } from '@/types/keyframe'
 import type { TimelineItem, TimelineTrack } from '@/types/timeline'
-import { addItemOnNewTrack, addItemsOnNewTracks, captureSnapshot, CompactNavigator, createDefaultControllerItem, createDefaultGradientItem, createDefaultShapeItem, createDefaultSolidColorItem, createTextTemplateItem, PropertyLinkPickWhipOverlay, getAnimatablePropertiesForItem, KEYFRAME_EDGE_INSET, moveItems, openComposition, resolveDroppedMediaEntriesFromPayload, setPropertyExpression, removePropertyExpression, setTracks, updateItem, useCompositionNavigationStore, useCompositionsStore, useItemsStore, useKeyframesStore, useKeyframeSelectionStore, useTimelineCommandStore, useTimelineSettingsStore, usePropertyLinkPickWhip, wouldCreateCompositionCycle } from '@/features/editor/deps/timeline-motion'
-import { clearSpanDragVisuals, clearSpanTrimVisuals, createMotionSpanDragCommands, createMotionSpanTrimCommands, type SpanDragState, type SpanTrimState } from './motion-span-interactions'
+import {
+  addItemOnNewTrack,
+  addItemsOnNewTracks,
+  captureSnapshot,
+  CompactNavigator,
+  createDefaultControllerItem,
+  createDefaultGradientItem,
+  createDefaultShapeItem,
+  createDefaultSolidColorItem,
+  createTextTemplateItem,
+  PropertyLinkPickWhipOverlay,
+  getAnimatablePropertiesForItem,
+  KEYFRAME_EDGE_INSET,
+  moveItems,
+  openComposition,
+  resolveDroppedMediaEntriesFromPayload,
+  setPropertyExpression,
+  removePropertyExpression,
+  setTracks,
+  updateItem,
+  useCompositionNavigationStore,
+  useCompositionsStore,
+  useItemsStore,
+  useKeyframesStore,
+  useKeyframeSelectionStore,
+  useTimelineCommandStore,
+  useTimelineSettingsStore,
+  usePropertyLinkPickWhip,
+  wouldCreateCompositionCycle,
+} from '@/features/editor/deps/timeline-motion'
+import {
+  clearSpanDragVisuals,
+  clearSpanTrimVisuals,
+  createMotionSpanDragCommands,
+  createMotionSpanTrimCommands,
+  type SpanDragState,
+  type SpanTrimState,
+} from './motion-span-interactions'
 import { createMotionRowReorderCommands, type RowReorderDragState } from './motion-row-reorder'
-import { advanceMotionScrubPan, createMotionTimeViewportController, formatFrameTime, normalizeMotionTimeViewport, resolveMotionFrameFromClientX, resolveMotionScrubFramePaint, resolveMotionScrubRelease, resolveMotionScrubReleaseBounds, type MotionTimeViewport, type MotionTimeViewportController } from './motion-time-viewport-controller'
-import { collectMotionViewportPreviewElements, collectMotionViewportPreviewGrids, collectMotionViewportPreviewNavigator, collectMotionViewportPreviewPlayhead, collectMotionViewportPreviewRulerLabels, paintMotionViewportGrids, paintMotionViewportNavigator, paintMotionViewportPlayhead, paintMotionViewportRulerLabels, paintMotionViewportTargets } from './motion-time-viewport-preview'
+import {
+  advanceMotionScrubPan,
+  createMotionTimeViewportController,
+  formatFrameTime,
+  normalizeMotionTimeViewport,
+  resolveMotionFrameFromClientX,
+  resolveMotionScrubFramePaint,
+  resolveMotionScrubRelease,
+  resolveMotionScrubReleaseBounds,
+  type MotionTimeViewport,
+  type MotionTimeViewportController,
+} from './motion-time-viewport-controller'
+import {
+  collectMotionViewportPreviewElements,
+  collectMotionViewportPreviewGrids,
+  collectMotionViewportPreviewNavigator,
+  collectMotionViewportPreviewPlayhead,
+  collectMotionViewportPreviewRulerLabels,
+  paintMotionViewportGrids,
+  paintMotionViewportNavigator,
+  paintMotionViewportPlayhead,
+  paintMotionViewportRulerLabels,
+  paintMotionViewportTargets,
+} from './motion-time-viewport-preview'
 import { createMotionLayerClipboardCommands } from './motion-layer-clipboard'
 import { createMotionLayerSelectionCommands } from './motion-layer-selection'
-import { getVisibleMotionRetimeRange, getRetimeKeyboardDelta, applyMotionSelectionFrameUpdates, restoreMotionSelectionRetimeVisuals, type MotionSelectionRetimeDragState, createMotionSelectionRetimeCommands } from './motion-selection-retime'
-import { LAYER_COLUMN_WIDTH, LAYER_MODE_COLUMN_WIDTH, LAYER_PARENT_COLUMN_WIDTH, LAYER_ROW_HEIGHT, LAYER_TIMING_COLUMN_WIDTH, RULER_DIVISIONS, useSettledMotionFrame, type MotionViewportPreviewState, type MotionMiddlePanState, type InlineCurveState, type RenameTarget } from './motion-timeline-primitives'
+import {
+  getVisibleMotionRetimeRange,
+  getRetimeKeyboardDelta,
+  applyMotionSelectionFrameUpdates,
+  restoreMotionSelectionRetimeVisuals,
+  type MotionSelectionRetimeDragState,
+  createMotionSelectionRetimeCommands,
+} from './motion-selection-retime'
+import {
+  LAYER_COLUMN_WIDTH,
+  LAYER_MODE_COLUMN_WIDTH,
+  LAYER_PARENT_COLUMN_WIDTH,
+  LAYER_ROW_HEIGHT,
+  LAYER_TIMING_COLUMN_WIDTH,
+  RULER_DIVISIONS,
+  useSettledMotionFrame,
+  type MotionViewportPreviewState,
+  type MotionMiddlePanState,
+  type InlineCurveState,
+  type RenameTarget,
+} from './motion-timeline-primitives'
 import { useGizmoStore, useMaskEditorStore } from '@/features/editor/deps/preview'
 import { getLinkedAudioCompanion } from '@/shared/utils/linked-media'
-import { trimCompositionToActiveRegion, useMarkersStore } from '@/features/editor/deps/timeline-store'
-import { clearMediaDragData, getMediaDragData, useMediaLibraryStore } from '@/features/editor/deps/media-library-contract'
+import {
+  trimCompositionToActiveRegion,
+  useMarkersStore,
+} from '@/features/editor/deps/timeline-store'
+import {
+  clearMediaDragData,
+  getMediaDragData,
+  useMediaLibraryStore,
+} from '@/features/editor/deps/media-library-contract'
 import { useComposeUiStore } from './compose-ui-store'
 import { NewCompositionDialog } from './new-composition-dialog'
 import { TransformParentPickWhipOverlay } from './transform-parent-pick-whip-overlay'
 import { useTransformParentPickWhip } from './use-transform-parent-pick-whip'
-import { buildMotionSelectionDragState, buildMotionSelectionRetimeUpdates, getMotionSelectionTimeRange } from './motion-keyframe-selection'
+import {
+  buildMotionSelectionDragState,
+  buildMotionSelectionRetimeUpdates,
+  getMotionSelectionTimeRange,
+} from './motion-keyframe-selection'
 import { MotionIoLane, MOTION_IO_LANE_HEIGHT } from './motion-io-lane'
 import { MotionActiveRegionOverlay, MotionCompEndRulerDim } from './motion-region-overlay'
 import {
@@ -92,14 +226,7 @@ function createGeneratedLayerItem(
 }
 const EMPTY_LAYER_IDS: string[] = []
 
-
-
 const logger = createLogger('MotionTimeline')
-
-
-
-
-
 
 const MotionPlayheadOverlay = memo(function MotionPlayheadOverlay({
   timeViewport,
@@ -151,7 +278,6 @@ const MotionPlayheadOverlay = memo(function MotionPlayheadOverlay({
     </div>
   )
 })
-
 
 interface MotionSelectionRetimeRangeProps {
   range: ReturnType<typeof getMotionSelectionTimeRange>
@@ -246,7 +372,6 @@ const MotionSelectionRetimeRange = memo(function MotionSelectionRetimeRange({
     </div>
   )
 })
-
 
 const MotionCompactNavigator = memo(function MotionCompactNavigator({
   viewport,
@@ -350,9 +475,6 @@ const MotionRowContextMenu = memo(function MotionRowContextMenu({
   )
 })
 
-
-
-
 interface CompositingTimelineProps {
   className?: string
   defaults?: { width: number; height: number; fps: number }
@@ -361,7 +483,6 @@ interface CompositingTimelineProps {
 interface CompositingTimelineCoreProps extends CompositingTimelineProps {
   itemsSnapshot: CompositingTimelineItemsSnapshot
 }
-
 
 /**
  * Dedicated layer/property timeline for the Motion workspace.
@@ -452,9 +573,9 @@ const CompositingTimelineCore = memo(function CompositingTimelineCore({
   const durationInFramesRef = useRef(0)
   const preparePreviewRef = useRef<() => void>(() => {})
   const previewViewportRef = useRef<(viewport: MotionTimeViewport) => void>(() => {})
-  const commitViewportRef = useRef<
-    (viewport: MotionTimeViewport, roundToFrames?: boolean) => void
-  >(() => {})
+  const commitViewportRef = useRef<(viewport: MotionTimeViewport, roundToFrames?: boolean) => void>(
+    () => {},
+  )
   const viewportControllerRef = useRef<MotionTimeViewportController | null>(null)
   if (!viewportControllerRef.current) {
     viewportControllerRef.current = createMotionTimeViewportController({
@@ -470,9 +591,7 @@ const CompositingTimelineCore = memo(function CompositingTimelineCore({
   }
   const viewportController = viewportControllerRef.current
   const [motionScrollbarWidth, setMotionScrollbarWidth] = useState(0)
-  const [allPathVertexItemIds, setAllPathVertexItemIds] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const [allPathVertexItemIds, setAllPathVertexItemIds] = useState<Set<string>>(() => new Set())
   const middlePanRef = useRef<MotionMiddlePanState | null>(null)
   const latestScrubFrameRef = useRef<number | null>(null)
   const scrubAnimationFrameRef = useRef<number | null>(null)
@@ -503,9 +622,7 @@ const CompositingTimelineCore = memo(function CompositingTimelineCore({
   const maskEditingItemId = useMaskEditorStore((state) =>
     state.isEditing ? state.editingItemId : null,
   )
-  const selectedPathVertexIndices = useMaskEditorStore(
-    (state) => state.selectedVertexIndices,
-  )
+  const selectedPathVertexIndices = useMaskEditorStore((state) => state.selectedVertexIndices)
   const expandedLayerIds = useComposeUiStore(
     useCallback(
       (state) =>
@@ -1318,7 +1435,6 @@ const CompositingTimelineCore = memo(function CompositingTimelineCore({
       setPreviewFrame,
     ],
   )
-
 
   useEffect(() => {
     const navigationRoot = motionViewportPreviewRootRef.current

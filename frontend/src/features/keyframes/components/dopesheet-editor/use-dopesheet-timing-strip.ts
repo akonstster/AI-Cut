@@ -34,15 +34,14 @@ export interface UseDopesheetTimingStripOptions {
   scheduleDragPreviewFrames: (frames: Record<string, number> | null) => void
 }
 
-export interface UseDopesheetTimingStripReturn
-  extends Pick<
-    UseTimingStripDragReturn,
-    | 'timingStripPreviewFrames'
-    | 'handleTimingStripSelectionChange'
-    | 'handleTimingStripSlideStart'
-    | 'handleTimingStripSlideChange'
-    | 'handleTimingStripSlideEnd'
-  > {
+export interface UseDopesheetTimingStripReturn extends Pick<
+  UseTimingStripDragReturn,
+  | 'timingStripPreviewFrames'
+  | 'handleTimingStripSelectionChange'
+  | 'handleTimingStripSlideStart'
+  | 'handleTimingStripSlideChange'
+  | 'handleTimingStripSlideEnd'
+> {
   timingStripMarkers: Array<{
     id: string
     frame: number

@@ -16,6 +16,8 @@ export {
 export { MediaLibrary } from '@/features/media-library/components/media-library'
 
 export const importProxyService = () => import('@/features/media-library/services/proxy-service')
+export const importMediaTranscriptionService = () =>
+  import('@/features/media-library/services/media-transcription-service')
 export const importMediaLibraryService = () =>
   import('@/features/media-library/services/media-library-service')
 export const importThumbnailGenerator = () =>

@@ -6,7 +6,12 @@
  * is the React wiring around them.
  */
 
-import { useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react'
+import {
+  useCallback,
+  useMemo,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+} from 'react'
 import type { AnimatableProperty, Keyframe, KeyframeRef } from '@/types/keyframe'
 import { getCombinedGraphValueRange } from '../value-graph-editor/value-range-utils'
 import { PROPERTY_VALUE_RANGES } from '@/features/keyframes/property-value-ranges'

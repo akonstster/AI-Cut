@@ -1,10 +1,6 @@
 const SOURCE_MONITOR_PLAYING_RESYNC_THRESHOLD_FRAMES = 6
 
-function shouldResyncPlayingMedia(
-  currentTime: number,
-  targetTime: number,
-  fps: number,
-): boolean {
+function shouldResyncPlayingMedia(currentTime: number, targetTime: number, fps: number): boolean {
   return Math.abs(currentTime - targetTime) * fps >= SOURCE_MONITOR_PLAYING_RESYNC_THRESHOLD_FRAMES
 }
 

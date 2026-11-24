@@ -29,9 +29,7 @@ interface MediabunnyVideoTrack {
   displayWidth: number
   displayHeight: number
   codec: string
-  computeFrameRateMetrics(options?: {
-    targetPacketCount?: number
-  }): Promise<VideoFrameRateMetrics>
+  computeFrameRateMetrics(options?: { targetPacketCount?: number }): Promise<VideoFrameRateMetrics>
   canDecode?: () => Promise<boolean>
 }
 

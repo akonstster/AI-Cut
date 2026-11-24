@@ -565,6 +565,8 @@
       "invert": "Ters çevir"
     },
     "subtitleSection": {
+      "addCue": "Altyazı ekle",
+      "newCue": "Yeni altyazı",
       "title": "Altyazı",
       "multiSelectHint": "{{segments}} segment seçildi · toplam {{cues}} ipucu. Stil hepsine uygulanır. Tek tek ipuçlarını düzenlemek için tek bir segment seçin.",
       "trackLabel": "İz {{number}}",

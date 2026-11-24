@@ -349,10 +349,7 @@ function resolvePreviewGpuEffectFallback(params: {
   return useHeldFrame ? params.heldFrame!.canvas : null
 }
 
-type PreviewGpuEffectFastPathRecorder = (
-  reason: string,
-  details?: Record<string, unknown>,
-) => void
+type PreviewGpuEffectFastPathRecorder = (reason: string, details?: Record<string, unknown>) => void
 
 /**
  * `true` when this call may take the DOM-video fast path: a preview frame of a
@@ -555,13 +552,7 @@ export function renderPreviewVideoGpuEffectsToCanvas(
 
   const frameCache = getPreviewGpuEffectFrameCache(rctx)
   const heldFrame = getFreshPreviewGpuEffectFrame(rctx, item.id, frame)
-  const videoFrame = resolvePreviewGpuEffectVideoFrame(
-    item,
-    frame,
-    rctx,
-    heldFrame,
-    recordFastPath,
-  )
+  const videoFrame = resolvePreviewGpuEffectVideoFrame(item, frame, rctx, heldFrame, recordFastPath)
   if (!videoFrame.draws) return videoFrame.canvas
   const { video, sourceTime } = videoFrame
 

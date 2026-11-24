@@ -178,6 +178,11 @@ type BaseTimelineItem = {
   // Corner pin transform (perspective warp)
   cornerPin?: TimelineItemCornerPin
   transcriptCaptions?: TimelineTranscriptCaptions
+  /**
+   * When automatic transcript captions were generated for this clip. Auto-captioning runs once per
+   * clip: without the marker, deleting a subtitle would make the app generate it again on reload.
+   */
+  autoCaptionedAt?: number
 }
 
 export interface GeneratedCaptionSource {

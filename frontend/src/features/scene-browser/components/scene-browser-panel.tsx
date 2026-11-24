@@ -120,7 +120,8 @@ export function SceneBrowserPanel({ className }: SceneBrowserPanelProps) {
   )
 
   const indexProgress = useSemanticIndex()
-  const { scenes, totalScenes, clipsWithCaptions, reanalyzingMedia, isQuerying, reranking } = useRankedScenes(indexProgress.lastCompletedAt)
+  const { scenes, totalScenes, clipsWithCaptions, reanalyzingMedia, isQuerying, reranking } =
+    useRankedScenes(indexProgress.lastCompletedAt)
 
   const scopedMedia = useMemo(
     () => (scope ? (mediaWithCaptions.find((m) => m.id === scope) ?? null) : null),

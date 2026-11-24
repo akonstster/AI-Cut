@@ -41,7 +41,12 @@ const SEMANTIC_TEXT_STRONG_THRESHOLD = 0.4
 const SEMANTIC_IMAGE_STRONG_THRESHOLD = 0.3
 
 function captionTokens(text: string): string[] {
-  return text.normalize('NFKC').toLowerCase().match(/[\p{L}\p{M}\p{N}]+/gu) ?? []
+  return (
+    text
+      .normalize('NFKC')
+      .toLowerCase()
+      .match(/[\p{L}\p{M}\p{N}]+/gu) ?? []
+  )
 }
 
 function hasNearbyCaptionTerms(query: string[], caption: string): boolean {
@@ -170,7 +175,8 @@ export function semanticRank(
     const hasImageSide = !paletteOnly && !!imageVector
     const fairText = hasTextSide && textScore >= threshold
     const fairImage = hasImageSide && imageScore >= imageThreshold
-    const strongText = hasTextSide && textScore >= (options.strongTextThreshold ?? SEMANTIC_TEXT_STRONG_THRESHOLD)
+    const strongText =
+      hasTextSide && textScore >= (options.strongTextThreshold ?? SEMANTIC_TEXT_STRONG_THRESHOLD)
     const strongImage = hasImageSide && imageScore >= SEMANTIC_IMAGE_STRONG_THRESHOLD
 
     let accept: boolean

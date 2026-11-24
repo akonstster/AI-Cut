@@ -309,6 +309,12 @@ export function resolveLinkedDragTrackTargets(params: {
   zone: LinkedDragDropZone
   createNew?: boolean
   preferredTrackHeight: number
+  /**
+   * The pair's own lanes before the drag. When the companion's lane is free and
+   * unlocked it stays there, instead of being forced to match the picture's number.
+   */
+  initialVideoTrackId?: string
+  initialAudioTrackId?: string
 }): LinkedDragTrackTargetResult | null {
   const { tracks, hoveredTrackId, zone, createNew = false, preferredTrackHeight } = params
   const hoveredTrack = tracks.find((track) => track.id === hoveredTrackId)
@@ -385,33 +391,199 @@ export function resolveLinkedDragTrackTargets(params: {
     workingTracks.find((track) => track.id === zoneTrackId)!,
     zoneKind,
   )
-  const ensuredCompanionTrack =
-    zoneTrackNumber !== null
-      ? ensureTrackNumber({
-          tracks: workingTracks,
-          kind: companionKind,
-          number: zoneTrackNumber,
-          preferredTrackHeight,
-        })
-      : ensureTrackIndex({
-          tracks: workingTracks,
-          kind: companionKind,
-          index: sectionIndex,
-          preferredTrackHeight,
-        })
-  workingTracks = ensuredCompanionTrack.tracks
+
+  // The companion can simply stay on its own lane: dragging the picture up one
+  // video lane has nothing to do with the sound, and forcing the pair to matching
+  // numbers used to shove the audio down (or create another lane) although its own
+  // lane was free and unlocked.
+  const ownCompanionTrackId =
+    zone === 'video' ? params.initialAudioTrackId : params.initialVideoTrackId
+  const ownCompanionTrack = ownCompanionTrackId
+    ? workingTracks.find((track) => track.id === ownCompanionTrackId)
+    : undefined
+  const companionStaysOnOwnTrack =
+    ownCompanionTrack !== undefined &&
+    !ownCompanionTrack.locked &&
+    (getTrackKind(ownCompanionTrack) ?? companionKind) === companionKind &&
+    ownCompanionTrack.id !== zoneTrackId
+
+  const companionTrackId = companionStaysOnOwnTrack
+    ? ownCompanionTrack.id
+    : (() => {
+        const ensuredCompanionTrack =
+          zoneTrackNumber !== null
+            ? ensureTrackNumber({
+                tracks: workingTracks,
+                kind: companionKind,
+                number: zoneTrackNumber,
+                preferredTrackHeight,
+              })
+            : ensureTrackIndex({
+                tracks: workingTracks,
+                kind: companionKind,
+                index: sectionIndex,
+                preferredTrackHeight,
+              })
+        workingTracks = ensuredCompanionTrack.tracks
+        return ensuredCompanionTrack.trackId
+      })()
 
   if (zone === 'video') {
     return {
       tracks: workingTracks,
       videoTrackId: zoneTrackId,
-      audioTrackId: ensuredCompanionTrack.trackId,
+      audioTrackId: companionTrackId,
     }
   }
 
   return {
     tracks: workingTracks,
-    videoTrackId: ensuredCompanionTrack.trackId,
+    videoTrackId: companionTrackId,
     audioTrackId: zoneTrackId,
   }
+}
+
+export interface GroupDragTrackItem {
+  id: string
+  initialTrackId: string
+  /** The physical lane kind: audio lanes or the universal video lanes. */
+  kind: TrackKind
+  /**
+   * This item keeps its own lane even when the anchor's kind matches: subtitles
+   * live on the same universal video lanes as pictures and photos, but moving the
+   * picture must not drag its captions along.
+   */
+  staysOnOwnLane: boolean
+}
+
+/**
+ * Assign lanes for a drag of any size (two clips, a pair with subtitles, five
+ * clips across three lanes).
+ *
+ * Video lanes are universal — photos, pictures, text, adjustment layers and
+ * subtitles all share them — so only the anchor's *kind* (video vs audio) moves
+ * as a stack. Anything of the other kind, and anything flagged `staysOnOwnLane`,
+ * keeps the lane it already sits on, as long as it is free, unlocked and not
+ * claimed by another item of the same drag. No lane is ever excluded from the
+ * candidates: subtitles can live anywhere, so a free video lane is a free video
+ * lane regardless of what currently sits on it.
+ */
+export function resolveGroupDragTrackAssignments(params: {
+  tracks: TimelineTrack[]
+  items: GroupDragTrackItem[]
+  anchorItemId: string
+  targetTrackId: string
+  createNew: boolean
+  preferredTrackHeight: number
+}): CreateNewDragTrackTargetResult | null {
+  const { items, createNew, preferredTrackHeight } = params
+  if (items.length === 0) return null
+
+  const anchor = items.find((item) => item.id === params.anchorItemId) ?? items[0]!
+  const anchorKind = anchor.kind
+
+  let workingTracks = [...params.tracks]
+  const usedTrackIds = new Set<string>()
+
+  const createTrack = (kind: TrackKind): string => {
+    const track = createClassicTrack({
+      tracks: workingTracks,
+      kind,
+      order: getCreateNewTrackOrder(workingTracks, kind),
+      height: preferredTrackHeight,
+    })
+    workingTracks = [...workingTracks, track]
+    return track.id
+  }
+
+  const nearestFreeKindTrack = (kind: TrackKind, nearIndex: number): string | null => {
+    const kindTracks = getKindTracks(workingTracks, kind)
+    let bestId: string | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+    for (let index = 0; index < kindTracks.length; index += 1) {
+      const track = kindTracks[index]!
+      if (track.locked || usedTrackIds.has(track.id)) continue
+      const distance = Math.abs(index - nearIndex)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestId = track.id
+      }
+    }
+    return bestId
+  }
+
+  // The anchor goes where the pointer is, or to the closest lane of its own kind.
+  const hovered = workingTracks.find((track) => track.id === params.targetTrackId)
+  const hoveredKind = hovered ? (getTrackKind(hovered) ?? anchorKind) : anchorKind
+  let anchorTrackId: string | null = null
+  if (hovered && !hovered.locked && hoveredKind === anchorKind) {
+    anchorTrackId = hovered.id
+  } else if (createNew) {
+    anchorTrackId = createTrack(anchorKind)
+  } else if (hovered) {
+    const hoveredIndex = Math.max(
+      0,
+      getKindTracks(workingTracks, hoveredKind).findIndex((track) => track.id === hovered.id),
+    )
+    anchorTrackId = nearestFreeKindTrack(anchorKind, hoveredIndex)
+  }
+  if (!anchorTrackId) return null
+
+  usedTrackIds.add(anchorTrackId)
+  const trackAssignments = new Map<string, string>([[anchor.id, anchorTrackId]])
+  const anchorIndex = Math.max(
+    0,
+    getKindTracks(workingTracks, anchorKind).findIndex((track) => track.id === anchorTrackId),
+  )
+  const anchorInitialIndex = Math.max(
+    0,
+    getTrackNumberIndex(workingTracks, anchorKind, anchor.initialTrackId),
+  )
+
+  const ordered = [...items].sort((left, right) => {
+    const leftIndex = getTrackNumberIndex(workingTracks, left.kind, left.initialTrackId)
+    const rightIndex = getTrackNumberIndex(workingTracks, right.kind, right.initialTrackId)
+    return leftIndex - rightIndex || left.id.localeCompare(right.id)
+  })
+
+  for (const item of ordered) {
+    if (item.id === anchor.id) continue
+    const kind = item.kind
+    const initialIndex = getTrackNumberIndex(workingTracks, kind, item.initialTrackId)
+    let targetId: string | null = null
+
+    if (!item.staysOnOwnLane && kind === anchorKind && initialIndex >= 0) {
+      // Same kind as the anchor and not flagged to stay put: keep the stack
+      // together and move it as a unit.
+      const kindTracks = getKindTracks(workingTracks, kind)
+      const desiredIndex = Math.min(
+        Math.max(0, anchorIndex + (initialIndex - anchorInitialIndex)),
+        Math.max(0, kindTracks.length - 1),
+      )
+      const candidate = kindTracks[desiredIndex]
+      if (candidate && !candidate.locked && !usedTrackIds.has(candidate.id)) {
+        targetId = candidate.id
+      } else {
+        targetId = nearestFreeKindTrack(kind, desiredIndex)
+        if (!targetId && createNew) targetId = createTrack(kind)
+      }
+    } else {
+      // Another kind, or an annotation that must not be dragged along: keep its own
+      // lane — this is what lets the sound and the subtitles stay put while the
+      // picture changes lane.
+      const own = workingTracks.find((track) => track.id === item.initialTrackId)
+      if (own && !own.locked && !usedTrackIds.has(own.id) && (getTrackKind(own) ?? kind) === kind) {
+        targetId = own.id
+      } else {
+        targetId = nearestFreeKindTrack(kind, anchorIndex)
+        if (!targetId && createNew) targetId = createTrack(kind)
+      }
+    }
+
+    if (!targetId) return null
+    usedTrackIds.add(targetId)
+    trackAssignments.set(item.id, targetId)
+  }
+
+  return { tracks: workingTracks, trackAssignments }
 }

@@ -26,11 +26,13 @@ export interface TimelineItemContextMenuParams {
   getCanJoinSelected: () => boolean
   getCanLinkSelected: () => boolean
   getCanUnlinkSelected: () => boolean
+  getCanRestoreSync: () => boolean
   handleJoinSelected: () => void
   handleJoinLeft: () => void
   handleJoinRight: () => void
   handleLinkSelected: () => void
   handleUnlinkSelected: () => void
+  handleRestoreSync: () => void
   handleClearAllKeyframes: () => void
   handleClearPropertyKeyframes: (property: AnimatableProperty) => void
   handleBentoLayout: () => void
@@ -70,11 +72,13 @@ export function buildTimelineItemContextMenuProps({
   getCanJoinSelected,
   getCanLinkSelected,
   getCanUnlinkSelected,
+  getCanRestoreSync,
   handleJoinSelected,
   handleJoinLeft,
   handleJoinRight,
   handleLinkSelected,
   handleUnlinkSelected,
+  handleRestoreSync,
   handleClearAllKeyframes,
   handleClearPropertyKeyframes,
   handleBentoLayout,
@@ -106,8 +110,10 @@ export function buildTimelineItemContextMenuProps({
     linkActions: {
       canLinkSelected: getCanLinkSelected(),
       canUnlinkSelected: getCanUnlinkSelected(),
+      canRestoreSync: getCanRestoreSync(),
       onLinkSelected: handleLinkSelected,
       onUnlinkSelected: handleUnlinkSelected,
+      onRestoreSync: handleRestoreSync,
     },
     keyframeActions: {
       keyframedProperties,

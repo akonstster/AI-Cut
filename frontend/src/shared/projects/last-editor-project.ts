@@ -21,12 +21,27 @@ export function rememberLastEditorProjectId(projectId: string): void {
   }
 }
 
-function getLastEditorProjectId(): string | undefined {
+/** The project edited last, or undefined when none was opened yet (or storage is restricted). */
+export function getLastEditorProjectId(): string | undefined {
   try {
     return window.localStorage.getItem(LAST_EDITOR_PROJECT_ID_KEY) ?? undefined
   } catch {
     return undefined
   }
+}
+
+/**
+ * The project to open when the app starts. The setting can be on while the remembered project is
+ * gone (deleted, moved to the trash, another workspace), so it only opens a project that is
+ * actually in the list.
+ */
+export function resolveAutoOpenProjectId(params: {
+  enabled: boolean
+  lastProjectId: string | undefined
+  projectIds: readonly string[]
+}): string | undefined {
+  if (!params.enabled || !params.lastProjectId) return undefined
+  return params.projectIds.includes(params.lastProjectId) ? params.lastProjectId : undefined
 }
 
 export function getEditorProjectReloadPathWithCacheBust(): string {

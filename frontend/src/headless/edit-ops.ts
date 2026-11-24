@@ -229,18 +229,30 @@ interface ClipPlacement {
   projectFps: number
 }
 
-function placementTrack(op: EditOp, kind: 'video' | 'audio', from: number, duration: number): string {
+function placementTrack(
+  op: EditOp,
+  kind: 'video' | 'audio',
+  from: number,
+  duration: number,
+): string {
   if (op.keepFrom !== true || op.trackId) return resolveOrCreateTrack(op.trackId, kind)
   const { items, tracks: all } = useItemsStore.getState()
-  const free = all.find((track) =>
-    !track.isGroup && (track.kind ?? 'video') === kind &&
-    !items.some((item) => item.trackId === track.id &&
-      item.from < from + duration && from < item.from + item.durationInFrames)
+  const free = all.find(
+    (track) =>
+      !track.isGroup &&
+      (track.kind ?? 'video') === kind &&
+      !items.some(
+        (item) =>
+          item.trackId === track.id &&
+          item.from < from + duration &&
+          from < item.from + item.durationInFrames,
+      ),
   )
   if (free) return free.id
-  const order = kind === 'video'
-    ? Math.min(0, ...all.map((track) => track.order)) - 1
-    : Math.max(0, ...all.map((track) => track.order)) + 1
+  const order =
+    kind === 'video'
+      ? Math.min(0, ...all.map((track) => track.order)) - 1
+      : Math.max(0, ...all.map((track) => track.order)) + 1
   const track = createClassicTrack({ tracks: all, kind, order })
   setTracks([...all, track])
   return track.id
@@ -271,7 +283,8 @@ function placeAudioClip(
   { mediaId, media, from, projectFps }: ClipPlacement,
 ): CreatedClip[] {
   const sf = sourceFieldsFor(media, projectFps)
-  const durationInFrames = asNumber(op.durationInFrames) ?? Math.max(1, Math.round((media.duration ?? 0) * projectFps))
+  const durationInFrames =
+    asNumber(op.durationInFrames) ?? Math.max(1, Math.round((media.duration ?? 0) * projectFps))
   const item: AudioItem = {
     id: newId(),
     type: 'audio',
@@ -322,7 +335,10 @@ function placeVideoClip(
   const audio: AudioItem = {
     id: newId(),
     type: 'audio',
-    trackId: op.keepFrom === true ? placementTrack({ keepFrom: true, op: 'addClip' }, 'audio', from, durationInFrames) : getOrCreateTrack('audio'),
+    trackId:
+      op.keepFrom === true
+        ? placementTrack({ keepFrom: true, op: 'addClip' }, 'audio', from, durationInFrames)
+        : getOrCreateTrack('audio'),
     from,
     durationInFrames,
     label: `${label} audio`,
@@ -372,21 +388,32 @@ function applyReplaceMedia(op: EditOp): unknown {
   const projectFps = useTimelineSettingsStore.getState().fps || 30
   const { items } = useItemsStore.getState()
   const group = clip.linkedGroupId
-    ? items.filter((item) => item.linkedGroupId === clip.linkedGroupId && item.mediaId === clip.mediaId)
+    ? items.filter(
+        (item) => item.linkedGroupId === clip.linkedGroupId && item.mediaId === clip.mediaId,
+      )
     : [clip]
   const sf = sourceFieldsFor(media, projectFps)
   for (const item of group) {
     if (item.type === 'image') {
-      updateItem(item.id, { mediaId, label: media.fileName ?? mediaId, src: '', thumbnailUrl: undefined } as Partial<TimelineItem>)
+      updateItem(item.id, {
+        mediaId,
+        label: media.fileName ?? mediaId,
+        src: '',
+        thumbnailUrl: undefined,
+      } as Partial<TimelineItem>)
       continue
     }
-    const speed = 'speed' in item && typeof item.speed === 'number' && item.speed > 0 ? item.speed : 1
+    const speed =
+      'speed' in item && typeof item.speed === 'number' && item.speed > 0 ? item.speed : 1
     const inPoint = Math.min(item.sourceStart ?? 0, Math.max(0, sf.sourceDuration - 1))
     const reach = Math.floor(((sf.sourceDuration - inPoint) / sf.sourceFps / speed) * projectFps)
     const durationInFrames = Math.max(1, Math.min(item.durationInFrames, reach))
     updateItem(item.id, {
       mediaId,
-      label: item.type === 'audio' && clip.type === 'video' ? `${media.fileName ?? mediaId} audio` : (media.fileName ?? mediaId),
+      label:
+        item.type === 'audio' && clip.type === 'video'
+          ? `${media.fileName ?? mediaId} audio`
+          : (media.fileName ?? mediaId),
       src: '',
       sourceFps: sf.sourceFps,
       sourceStart: inPoint,

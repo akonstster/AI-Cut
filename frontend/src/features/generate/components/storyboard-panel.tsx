@@ -8,8 +8,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useEditorStore } from '@/shared/state/editor'
 import { useMediaLibraryStore, useProjectStore } from '../deps/editor'
-import { formatUsd, generateApi, type Job, type ModelForm } from '../services/generate-api'
+import {
+  formatUsd,
+  generateApi,
+  type Job,
+  type MediaRef,
+  type ModelForm,
+} from '../services/generate-api'
 import { placeMediaAt } from '../services/timeline-actions'
+import { holdGenerationForReview, forgetReviewReturn } from '../services/generation-review'
 import { applyElements } from '../services/prompt-elements'
 import { splitScript } from '../services/prompt-assist'
 import {
@@ -96,26 +103,40 @@ export function StoryboardPanel() {
   const jobs = useGenerateStore((state) => state.jobs)
   const { form: imageForm, error: imageFormError } = useForm(models.image)
   const { form: videoForm, error: videoFormError } = useForm(models.video)
-  const [picker, setPicker] = useState<{ projectId: string; shotId: string; kind: 'image' | 'video' }>()
+  const [picker, setPicker] = useState<{
+    projectId: string
+    shotId: string
+    kind: 'image' | 'video'
+  }>()
   const [mediaQuery, setMediaQuery] = useState('')
   const [mediaLimit, setMediaLimit] = useState(24)
-  const selectedShot = picker && picker.projectId === projectId
-    ? board.shots.find((shot) => shot.id === picker.shotId)
-    : undefined
-  const mediaLabel = (kind: 'image' | 'video') => t(kind === 'image' ? 'generate.storyboard.libraryFrame' : 'generate.storyboard.libraryPrevis')
-  const selectedMedia = picker?.kind === 'image' ? selectedShot?.frameMediaId : selectedShot?.previs?.video
-  const matchingMedia = picker ? media.filter((item) =>
-    item.mimeType.startsWith(picker.kind + '/') &&
-    item.fileName.toLowerCase().includes(mediaQuery.trim().toLowerCase()),
-  ) : []
+  const selectedShot =
+    picker && picker.projectId === projectId
+      ? board.shots.find((shot) => shot.id === picker.shotId)
+      : undefined
+  const mediaLabel = (kind: 'image' | 'video') =>
+    t(kind === 'image' ? 'generate.storyboard.libraryFrame' : 'generate.storyboard.libraryPrevis')
+  const selectedMedia =
+    picker?.kind === 'image' ? selectedShot?.frameMediaId : selectedShot?.previs?.video
+  const matchingMedia = picker
+    ? media.filter(
+        (item) =>
+          item.mimeType.startsWith(picker.kind + '/') &&
+          item.fileName.toLowerCase().includes(mediaQuery.trim().toLowerCase()),
+      )
+    : []
   const selectMedia = (id?: string) => {
     if (!picker || !selectedShot) return
     const store = useGenerateStore.getState()
-    const shot = store.storyboards[picker.projectId]?.shots.find((each) => each.id === picker.shotId)
+    const shot = store.storyboards[picker.projectId]?.shots.find(
+      (each) => each.id === picker.shotId,
+    )
     if (!shot) return
-    store.updateShot(picker.projectId, shot.id, picker.kind === 'image'
-      ? { frameMediaId: id }
-      : { previs: { ...shot.previs, video: id } })
+    store.updateShot(
+      picker.projectId,
+      shot.id,
+      picker.kind === 'image' ? { frameMediaId: id } : { previs: { ...shot.previs, video: id } },
+    )
     setPicker(undefined)
   }
   const [count, setCount] = useState(6)
@@ -131,24 +152,53 @@ export function StoryboardPanel() {
     : undefined
   const jobOf = (id: string | null) => (id ? jobs.find((job) => job.id === id) : undefined)
   const frameOf = (shot: Shot) =>
-    shot.frameMediaId ? { media: shot.frameMediaId } : jobOf(shot.imageJob)?.status === 'done' ? { job: shot.imageJob!, index: 0 } : shot.previs?.frame ? { media: shot.previs.frame } : undefined
-  const needsFrame = videoForm?.fields.some((field) => field.role === 'first_frame') ?? false
+    shot.frameMediaId
+      ? { media: shot.frameMediaId }
+      : jobOf(shot.imageJob)?.status === 'done'
+        ? { job: shot.imageJob!, index: 0 }
+        : shot.previs?.frame
+          ? { media: shot.previs.frame }
+          : undefined
+  const firstFrameOf = (shot: Shot) =>
+    shot.frameMediaId ? { media: shot.frameMediaId } : undefined
+  const videoReferenceOf = (shot: Shot): MediaRef | undefined => {
+    const job = jobOf(shot.imageJob)
+    if (job?.status === 'done') {
+      if (!job.imported[0]) return { job: job.id, index: 0 }
+      return job.imported[0] !== shot.frameMediaId ? { media: job.imported[0] } : undefined
+    }
+    const media = shot.previs?.frame
+    return media && media !== shot.frameMediaId ? { media } : undefined
+  }
+  const needsFrame =
+    videoForm?.fields.some((field) => field.role === 'first_frame' && field.required) ?? false
 
   const save = (next: Storyboard) =>
     projectId && useGenerateStore.getState().setStoryboard(projectId, next)
   const frameInputs = (shot: Shot) =>
     imageForm
-      ? applyElements(imageForm.fields, shotValues(imageForm.fields, { prompt: shot.prompt, aspect }), elements)
+      ? applyElements(
+          imageForm.fields,
+          shotValues(imageForm.fields, { prompt: shot.prompt, aspect }),
+          elements,
+        )
       : null
-  const clipInputs = (shot: Shot) =>
-    videoForm
-      ? applyElements(videoForm.fields, shotValues(videoForm.fields, {
+  const clipInputs = (shot: Shot) => {
+    const reference = videoReferenceOf(shot)
+    return videoForm
+      ? applyElements(
+          videoForm.fields,
+          shotValues(videoForm.fields, {
             prompt: shot.prompt,
             seconds: shot.seconds,
-            firstFrame: frameOf(shot),
+            firstFrame: firstFrameOf(shot),
+            references: reference ? [reference] : undefined,
             aspect,
-          }), elements)
+          }),
+          elements,
+        )
       : null
+  }
 
   const moveShot = (index: number, direction: number) => {
     const shots = [...board.shots]
@@ -162,9 +212,10 @@ export function StoryboardPanel() {
 
   const frameDue = (shot: Shot) => !frameOf(shot) && !ACTIVE.has(jobOf(shot.imageJob)?.status ?? '')
   const clipDue = (shot: Shot) =>
-    (!needsFrame || !!frameOf(shot)) &&
+    (!needsFrame || !!firstFrameOf(shot)) &&
     !ACTIVE.has(jobOf(shot.videoJob)?.status ?? '') &&
-    jobOf(shot.videoJob)?.status !== 'done' && !shot.clipMediaId
+    jobOf(shot.videoJob)?.status !== 'done' &&
+    !shot.clipMediaId
   const priceKey = JSON.stringify([
     models,
     elements,
@@ -232,15 +283,46 @@ export function StoryboardPanel() {
     }
   }
 
-  const run = async (kind: 'frame' | 'clip', shot: Shot, placeAt: number | null) => {
+  const run = async (
+    kind: 'frame' | 'clip',
+    shot: Shot,
+    placeAt: number | null,
+  ): Promise<boolean> => {
     const model = kind === 'frame' ? models.image : models.video
     const inputs = kind === 'frame' ? frameInputs(shot) : clipInputs(shot)
     if (!elementsReady) throw new Error(elementsError ?? t('generate.form.loading'))
-    if (!model || !inputs) return
+    if (!model || !inputs) return false
     if (inputs.left.length) {
-      throw new Error(t(inputs.noReferenceSlot ? 'generate.elements.noReferenceSlot' : 'generate.elements.blocked', { names: inputs.left.map((name) => `@${name}`).join(', ') }))
+      const names = inputs.left.map((name) => `@${name}`).join(', ')
+      throw new Error(
+        inputs.noReferenceSlot
+          ? t('generate.elements.noReferenceSlot', { names })
+          : t('generate.elements.referenceCount', {
+              names,
+              count: inputs.referenceCount,
+              limit: inputs.referenceLimit,
+            }),
+      )
     }
     const { values } = inputs
+    if (
+      holdGenerationForReview({
+        task: kind === 'frame' ? 'image' : 'video',
+        provider: model.provider,
+        model: model.id,
+        values,
+        placeOnTimeline: placeAt !== null,
+        returnTo: {
+          to: 'shot',
+          projectId,
+          shotId: shot.id,
+          kind: kind === 'frame' ? 'image' : 'video',
+          placeAt,
+        },
+      })
+    ) {
+      return true
+    }
     const { jobs: created } = await generateApi.createJobs({
       provider: model.provider,
       model: model.id,
@@ -251,14 +333,16 @@ export function StoryboardPanel() {
       place: placeAt !== null,
       place_at: placeAt,
     })
+    forgetReviewReturn()
     for (const job of created) useGenerateStore.getState().upsertJob(job)
     const id = created[0]?.id ?? null
     useGenerateStore
       .getState()
       .updateShot(projectId, shot.id, kind === 'frame' ? { imageJob: id } : { videoJob: id })
+    return false
   }
 
-  const attempt = (work: () => Promise<void>) => {
+  const attempt = (work: () => Promise<unknown>) => {
     setError(null)
     work().catch((failure: unknown) =>
       setError(failure instanceof Error ? failure.message : String(failure)),
@@ -272,7 +356,8 @@ export function StoryboardPanel() {
     let at = playheadSeconds()
     for (const shot of board.shots) {
       at = shot.startSeconds ?? at
-      if (clipDue(shot)) await run('clip', shot, at)
+      // In review mode the first request waits for the person, so the run stops there.
+      if (clipDue(shot) && (await run('clip', shot, at))) return
       at += sentSeconds(videoForm.fields, clipValues(shot) ?? {}, shot.seconds)
     }
   }
@@ -283,7 +368,9 @@ export function StoryboardPanel() {
   return (
     // one column that scrolls as a whole with the run buttons stuck to the bottom, as the generation panel
     <div className="min-h-0 flex-1 overflow-y-auto" data-testid="storyboard-panel">
-      <div className="px-3 pt-2"><PromptElements key={projectId} projectId={projectId} fields={[]} values={{}} /></div>
+      <div className="px-3 pt-2">
+        <PromptElements key={projectId} projectId={projectId} fields={[]} values={{}} />
+      </div>
       <div className="space-y-3 p-3">
         <div className="space-y-1">
           <Label htmlFor="storyboard-script" className="text-[11px] text-muted-foreground">
@@ -389,7 +476,9 @@ export function StoryboardPanel() {
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium">
                       {t('generate.storyboard.shot', { number: index + 1 })}
-                      {shot.startSeconds != null && <span className="ml-2 text-muted-foreground">{shot.startSeconds}s</span>}
+                      {shot.startSeconds != null && (
+                        <span className="ml-2 text-muted-foreground">{shot.startSeconds}s</span>
+                      )}
                     </span>
                     <label className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
                       {t('generate.storyboard.seconds')}
@@ -411,7 +500,10 @@ export function StoryboardPanel() {
                       onClick={() =>
                         save({
                           ...board,
-                          shots: retimeShots(board.shots.filter((each) => each.id !== shot.id), board.shots[0]?.startSeconds ?? 0),
+                          shots: retimeShots(
+                            board.shots.filter((each) => each.id !== shot.id),
+                            board.shots[0]?.startSeconds ?? 0,
+                          ),
                         })
                       }
                       aria-label={t('generate.storyboard.remove', {
@@ -426,38 +518,93 @@ export function StoryboardPanel() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <Input className="h-7 flex-1" value={shot.label ?? ''} placeholder={t('generate.storyboard.shotName')}
+                    <Input
+                      className="h-7 flex-1"
+                      value={shot.label ?? ''}
+                      placeholder={t('generate.storyboard.shotName')}
                       aria-label={t('generate.storyboard.shotName')}
-                      onChange={(event) => useGenerateStore.getState().updateShot(projectId, shot.id, { label: event.target.value })} />
-                    <Button size="sm" variant="ghost" disabled={index === 0} onClick={() => moveShot(index, -1)} aria-label={t('generate.storyboard.moveUp')}>↑</Button>
-                    <Button size="sm" variant="ghost" disabled={index === board.shots.length - 1} onClick={() => moveShot(index, 1)} aria-label={t('generate.storyboard.moveDown')}>↓</Button>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      useGenerateStore.setState({ blockingShot: { projectId, shotId: shot.id } })
-                      useEditorStore.getState().setActiveTab('blocking')
-                    }}>3D</Button>
-                    <Button size="sm" variant="outline" onClick={() => attempt(async () => {
-                      await addShotWorkflow(projectId, shot.id, models.video)
-                      useGenerateStore.setState({ workflowFocus: { projectId, shotId: shot.id } })
-                      useEditorStore.getState().setWorkspace('canvas')
-                    })}>Workflow</Button>
+                      onChange={(event) =>
+                        useGenerateStore
+                          .getState()
+                          .updateShot(projectId, shot.id, { label: event.target.value })
+                      }
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === 0}
+                      onClick={() => moveShot(index, -1)}
+                      aria-label={t('generate.storyboard.moveUp')}
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === board.shots.length - 1}
+                      onClick={() => moveShot(index, 1)}
+                      aria-label={t('generate.storyboard.moveDown')}
+                    >
+                      ↓
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        useGenerateStore.setState({ blockingShot: { projectId, shotId: shot.id } })
+                        useEditorStore.getState().setActiveTab('blocking')
+                      }}
+                    >
+                      3D
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        attempt(async () => {
+                          await addShotWorkflow(projectId, shot.id, models.video)
+                          useGenerateStore.setState({
+                            workflowFocus: { projectId, shotId: shot.id },
+                          })
+                          useEditorStore.getState().setWorkspace('canvas')
+                        })
+                      }
+                    >
+                      Workflow
+                    </Button>
                   </div>
                   <div className="flex flex-col gap-1">
                     {(['image', 'video'] as const).map((kind) => {
                       const id = kind === 'image' ? shot.frameMediaId : shot.previs?.video
                       const label = mediaLabel(kind)
                       const fileName = media.find((item) => item.id === id)?.fileName
-                      return <Button key={kind} size="sm" variant="outline" className="h-auto min-h-8 justify-start gap-2 px-2"
-                        onClick={() => {
-                          setMediaQuery('')
-                          setMediaLimit(24)
-                          setPicker({ projectId, shotId: shot.id, kind })
-                        }}>
-                        {id && <span className="h-7 w-10 shrink-0 overflow-hidden rounded bg-muted"><MediaThumb reference={{ media: id }} /></span>}
-                        <span className="min-w-0 text-left">
-                          <span className="block truncate">{label}</span>
-                          {fileName && <span className="block truncate text-xs text-muted-foreground">{fileName}</span>}
-                        </span>
-                      </Button>
+                      return (
+                        <Button
+                          key={kind}
+                          size="sm"
+                          variant="outline"
+                          className="h-auto min-h-8 justify-start gap-2 px-2"
+                          onClick={() => {
+                            setMediaQuery('')
+                            setMediaLimit(24)
+                            setPicker({ projectId, shotId: shot.id, kind })
+                          }}
+                        >
+                          {id && (
+                            <span className="h-7 w-10 shrink-0 overflow-hidden rounded bg-muted">
+                              <MediaThumb reference={{ media: id }} />
+                            </span>
+                          )}
+                          <span className="min-w-0 text-left">
+                            <span className="block truncate">{label}</span>
+                            {fileName && (
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {fileName}
+                              </span>
+                            )}
+                          </span>
+                        </Button>
+                      )
                     })}
                   </div>
                   <div className="flex gap-2">
@@ -491,10 +638,14 @@ export function StoryboardPanel() {
                     <button
                       type="button"
                       disabled={
-                        !videoForm || (needsFrame && !frame) || ACTIVE.has(clipJob?.status ?? '')
+                        !videoForm ||
+                        (needsFrame && !firstFrameOf(shot)) ||
+                        ACTIVE.has(clipJob?.status ?? '')
                       }
                       title={
-                        needsFrame && !frame ? t('generate.storyboard.clipNeedsFrame') : undefined
+                        needsFrame && !firstFrameOf(shot)
+                          ? t('generate.storyboard.clipNeedsFrame')
+                          : undefined
                       }
                       onClick={() => attempt(() => run('clip', shot, shot.startSeconds ?? null))}
                       className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-40"
@@ -504,8 +655,11 @@ export function StoryboardPanel() {
                     </button>
                     <JobState job={clipJob} kind="clip" />
                     {shot.clipMediaId && !clipJob && (
-                      <button type="button" className="text-[11px] text-muted-foreground hover:text-foreground"
-                        onClick={() => placeMediaAt(shot.clipMediaId!, shot.startSeconds ?? 0)}>
+                      <button
+                        type="button"
+                        className="text-[11px] text-muted-foreground hover:text-foreground"
+                        onClick={() => placeMediaAt(shot.clipMediaId!, shot.startSeconds ?? 0)}
+                      >
                         {t('generate.actions.place')}
                       </button>
                     )}
@@ -583,29 +737,65 @@ export function StoryboardPanel() {
           </Button>
         </div>
       )}
-      <Dialog open={!!selectedShot} onOpenChange={(open) => { if (!open) setPicker(undefined) }}>
-        {picker && selectedShot && <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
-          <DialogTitle>{mediaLabel(picker.kind)}</DialogTitle>
-          <DialogDescription>{t('generate.storyboard.pickMediaHint')}</DialogDescription>
-          <Input value={mediaQuery} placeholder={t('generate.elements.search')} aria-label={t('generate.elements.search')}
-            onChange={(event) => { setMediaQuery(event.target.value); setMediaLimit(24) }} />
-          {matchingMedia.length === 0 && <p className="text-sm text-muted-foreground">{t('generate.storyboard.noMatchingMedia')}</p>}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {matchingMedia.slice(0, mediaLimit).map((item) => (
-              <button key={item.id} type="button" title={item.fileName}
-                aria-pressed={item.id === selectedMedia}
-                className={`min-w-0 overflow-hidden rounded border text-left hover:border-primary ${item.id === selectedMedia ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
-                onClick={() => selectMedia(item.id)}>
-                <span className="block aspect-video bg-muted"><MediaThumb reference={{ media: item.id }} /></span>
-                <span className="block truncate px-2 py-1 text-xs">{item.fileName}</span>
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedMedia && <Button type="button" variant="outline" onClick={() => selectMedia()}>{t('generate.storyboard.clearMedia')}</Button>}
-            {matchingMedia.length > mediaLimit && <Button type="button" variant="outline" onClick={() => setMediaLimit((limit) => limit + 24)}>{t('generate.storyboard.moreMedia')}</Button>}
-          </div>
-        </DialogContent>}
+      <Dialog
+        open={!!selectedShot}
+        onOpenChange={(open) => {
+          if (!open) setPicker(undefined)
+        }}
+      >
+        {picker && selectedShot && (
+          <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
+            <DialogTitle>{mediaLabel(picker.kind)}</DialogTitle>
+            <DialogDescription>{t('generate.storyboard.pickMediaHint')}</DialogDescription>
+            <Input
+              value={mediaQuery}
+              placeholder={t('generate.elements.search')}
+              aria-label={t('generate.elements.search')}
+              onChange={(event) => {
+                setMediaQuery(event.target.value)
+                setMediaLimit(24)
+              }}
+            />
+            {matchingMedia.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {t('generate.storyboard.noMatchingMedia')}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {matchingMedia.slice(0, mediaLimit).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  title={item.fileName}
+                  aria-pressed={item.id === selectedMedia}
+                  className={`min-w-0 overflow-hidden rounded border text-left hover:border-primary ${item.id === selectedMedia ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
+                  onClick={() => selectMedia(item.id)}
+                >
+                  <span className="block aspect-video bg-muted">
+                    <MediaThumb reference={{ media: item.id }} />
+                  </span>
+                  <span className="block truncate px-2 py-1 text-xs">{item.fileName}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedMedia && (
+                <Button type="button" variant="outline" onClick={() => selectMedia()}>
+                  {t('generate.storyboard.clearMedia')}
+                </Button>
+              )}
+              {matchingMedia.length > mediaLimit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMediaLimit((limit) => limit + 24)}
+                >
+                  {t('generate.storyboard.moreMedia')}
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   )

@@ -194,7 +194,7 @@ describe('mediaTranscriptionService.insertTranscriptAsCaptions', () => {
     resolvePreviewAudioConformUrlMock.mockResolvedValue(null)
   })
 
-  it('creates a new captions track above the clip track when no compatible track exists', async () => {
+  it('creates a captions track above every track when no compatible track exists', async () => {
     const clip: VideoItem = {
       id: 'clip-1',
       type: 'video',
@@ -260,7 +260,8 @@ describe('mediaTranscriptionService.insertTranscriptAsCaptions', () => {
       (track) => !initialTracks.some((existing) => existing.id === track.id),
     )
     expect(captionTrack).toBeDefined()
-    expect(captionTrack?.order).toBe(0.5)
+    // Above every existing track: a caption track next to the audio would render behind the picture.
+    expect(captionTrack?.order).toBe(-1)
 
     expect(addItems).toHaveBeenCalledTimes(1)
     const insertedItems = addItems.mock.calls[0]![0] as TimelineItem[]
@@ -628,6 +629,358 @@ describe('mediaTranscriptionService.enableTranscriptCaptions', () => {
     )
   })
 
+  it('leaves an already captioned clip alone unless replaceExisting is set', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 90,
+      sourceDuration: 90,
+      sourceFps: 30,
+      speed: 1,
+    }
+    const existingSegment = {
+      id: 'subtitle-1',
+      type: 'subtitle',
+      trackId: 'track-captions',
+      from: 0,
+      durationInFrames: 60,
+      label: 'Transcript',
+      source: { type: 'transcript', mediaId: 'media-1', clipId: 'clip-1' },
+      cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hello there' }],
+    } as unknown as TimelineItem
+    const addItems = vi.fn()
+    const transcript: MediaTranscript = {
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Hello there',
+      segments: [{ text: 'Hello there', start: 0, end: 2 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0)],
+      items: [clip, existingSegment],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems,
+      updateItem: vi.fn(),
+    })
+    getTranscriptMock.mockResolvedValue(transcript)
+
+    const result = await mediaTranscriptionService.insertTranscriptAsCaptions('media-1', {
+      clipIds: ['clip-1'],
+      replaceExisting: false,
+    })
+
+    expect(result).toEqual({ insertedItemCount: 0, removedItemCount: 0 })
+    expect(addItems).not.toHaveBeenCalled()
+  })
+
+  it('keeps a clip-owned caption copy when captions are only auto-enabled', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 90,
+      sourceDuration: 90,
+      sourceFps: 30,
+      speed: 1,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'manual', startSeconds: 0, endSeconds: 1, text: 'My edit' }],
+      },
+    }
+    const addItems = vi.fn()
+    const updateItem = vi.fn()
+    const transcript: MediaTranscript = {
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Hello there',
+      segments: [{ text: 'Hello there', start: 0, end: 2 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0)],
+      items: [clip],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems,
+      updateItem,
+    })
+    getTranscriptMock.mockResolvedValue(transcript)
+
+    const result = await mediaTranscriptionService.insertTranscriptAsCaptions('media-1', {
+      clipIds: ['clip-1'],
+      replaceExisting: false,
+    })
+
+    expect(result).toEqual({ insertedItemCount: 0, removedItemCount: 0 })
+    expect(addItems).not.toHaveBeenCalled()
+    // Marked as handled so deleting these subtitles later does not bring them back.
+    expect(updateItem).toHaveBeenCalledWith('clip-1', {
+      autoCaptionedAt: expect.any(Number),
+    })
+  })
+
+  it('moves a clip-owned caption copy onto the subtitle track without re-transcribing', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 90,
+      sourceDuration: 90,
+      sourceFps: 30,
+      speed: 1,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [
+          {
+            id: 'manual',
+            startSeconds: 0.5,
+            endSeconds: 2,
+            text: 'My corrected line',
+            words: [{ text: 'My corrected line', startSeconds: 0.5, endSeconds: 2 }],
+          },
+        ],
+      },
+    }
+    const addItems = vi.fn()
+    const updateItem = vi.fn()
+    const transcript: MediaTranscript = {
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Recognized line',
+      segments: [{ text: 'Recognized line', start: 0, end: 2 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0)],
+      items: [clip],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems,
+      updateItem,
+    })
+    getTranscriptMock.mockResolvedValue(transcript)
+
+    const result = await mediaTranscriptionService.insertTranscriptAsCaptions('media-1', {
+      clipIds: ['clip-1'],
+      moveExistingCaptions: true,
+      selectUpdatedClips: false,
+    })
+
+    expect(result.insertedItemCount).toBe(1)
+    const inserted = addItems.mock.calls[0]![0] as TimelineItem[]
+    const segment = inserted[0]
+    expect(segment?.type).toBe('subtitle')
+    if (segment?.type !== 'subtitle') throw new Error('expected a subtitle segment')
+    expect(segment.source).toEqual({ type: 'transcript', mediaId: 'media-1', clipId: 'clip-1' })
+    expect(segment.cues[0]?.text).toBe('My corrected line')
+    expect(segment.cues[0]?.words).toHaveLength(1)
+    // The subtitles share the clip's linked group, so a move in either direction carries both.
+    expect(segment.linkedGroupId).toBe('clip-1')
+    expect(updateItem).toHaveBeenCalledWith(
+      'clip-1',
+      expect.objectContaining({
+        transcriptCaptions: undefined,
+        autoCaptionedAt: expect.any(Number),
+        linkedGroupId: 'clip-1',
+      }),
+    )
+    expect(selectItemsMock).not.toHaveBeenCalled()
+  })
+
+  it('clears the paired clip caption copy when the transcript moves to the subtitle track', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 90,
+      sourceDuration: 90,
+      sourceFps: 30,
+      speed: 1,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'manual', startSeconds: 0, endSeconds: 1, text: 'My line' }],
+      },
+    }
+    const pairedAudio: TimelineItem = {
+      id: 'audio-1',
+      type: 'audio',
+      trackId: 'track-audio',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceFps: 30,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'manual', startSeconds: 0, endSeconds: 1, text: 'My line' }],
+      },
+    }
+    const updateItem = vi.fn()
+    const transcript: MediaTranscript = {
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Hello there',
+      segments: [{ text: 'Hello there', start: 0, end: 2 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0), makeTrack('track-audio', 1)],
+      items: [clip, pairedAudio],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems: vi.fn(),
+      updateItem,
+    })
+    getTranscriptMock.mockResolvedValue(transcript)
+
+    await mediaTranscriptionService.insertTranscriptAsCaptions('media-1', {
+      clipIds: ['clip-1'],
+      moveExistingCaptions: true,
+      selectUpdatedClips: false,
+    })
+
+    expect(updateItem).toHaveBeenCalledWith(
+      'clip-1',
+      expect.objectContaining({
+        transcriptCaptions: undefined,
+        autoCaptionedAt: expect.any(Number),
+      }),
+    )
+    expect(updateItem).toHaveBeenCalledWith(
+      'audio-1',
+      expect.objectContaining({
+        transcriptCaptions: undefined,
+        autoCaptionedAt: expect.any(Number),
+      }),
+    )
+  })
+
+  it('moves clip-owned captions onto the subtitle track and clears the stale clip copy', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 90,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 90,
+      sourceDuration: 90,
+      sourceFps: 30,
+      speed: 1,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'old', startSeconds: 0, endSeconds: 1, text: 'Old line' }],
+      },
+    }
+    const updateItem = vi.fn()
+    const transcript: MediaTranscript = {
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Hello there',
+      segments: [{ text: 'Hello there', start: 0, end: 2 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0)],
+      items: [clip],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems: vi.fn(),
+      updateItem,
+    })
+    getTranscriptMock.mockResolvedValue(transcript)
+
+    await mediaTranscriptionService.insertTranscriptAsCaptions('media-1', {
+      clipIds: ['clip-1'],
+      replaceExisting: true,
+    })
+
+    expect(updateItem).toHaveBeenCalledWith(
+      'clip-1',
+      expect.objectContaining({
+        transcriptCaptions: undefined,
+        autoCaptionedAt: expect.any(Number),
+      }),
+    )
+  })
+
   it('can enable transcript captions without changing selection', async () => {
     const clip: VideoItem = {
       id: 'clip-1',
@@ -682,6 +1035,62 @@ describe('mediaTranscriptionService.enableTranscriptCaptions', () => {
       }),
     )
     expect(selectItemsMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps existing cue edits when captions are enabled again without replaceExisting', async () => {
+    const clip: VideoItem = {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      from: 0,
+      durationInFrames: 150,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 150,
+      sourceDuration: 150,
+      sourceFps: 30,
+      speed: 1,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'manual', startSeconds: 0, endSeconds: 1, text: 'My line' }],
+      },
+    }
+    const updateItem = vi.fn()
+
+    timelineStateMock.mockReturnValue({
+      fps: 30,
+      tracks: [makeTrack('track-video', 0)],
+      items: [clip],
+      setTracks: vi.fn(),
+      removeItems: vi.fn(),
+      addItems: vi.fn(),
+      updateItem,
+    })
+
+    getTranscriptMock.mockResolvedValue({
+      id: 'media-1',
+      mediaId: 'media-1',
+      model: 'whisper-tiny',
+      language: 'auto',
+      quantization: 'q8',
+      text: 'Recognized line',
+      segments: [{ text: 'Recognized line', start: 0, end: 1 }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    } satisfies MediaTranscript)
+
+    const result = await mediaTranscriptionService.enableTranscriptCaptions('media-1', {
+      clipIds: ['clip-1'],
+      replaceExisting: false,
+    })
+
+    expect(result).toEqual({ updatedClipCount: 0, removedItemCount: 0 })
+    expect(updateItem).not.toHaveBeenCalled()
   })
 })
 

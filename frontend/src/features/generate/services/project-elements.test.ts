@@ -13,7 +13,9 @@ const fs = vi.hoisted(() => ({
   write: vi.fn(),
 }))
 
-vi.mock('@/infrastructure/storage/workspace-fs/root', () => ({ requireWorkspaceRoot: () => fs.root }))
+vi.mock('@/infrastructure/storage/workspace-fs/root', () => ({
+  requireWorkspaceRoot: () => fs.root,
+}))
 vi.mock('@/infrastructure/storage/workspace-fs/fs-primitives', () => ({
   readJson: async (_root: unknown, path: string[]) => fs.files.get(path.join('/')) ?? null,
   writeJsonAtomic: fs.write,
@@ -31,7 +33,9 @@ beforeEach(() => {
   fs.files.clear()
   fs.owners.clear()
   fs.write.mockReset()
-  fs.write.mockImplementation(async (_root, path: string[], value) => { fs.files.set(path.join('/'), value) })
+  fs.write.mockImplementation(async (_root, path: string[], value) => {
+    fs.files.set(path.join('/'), value)
+  })
   useGenerateStore.setState({ legacyElements: [] })
 })
 
@@ -43,25 +47,51 @@ it('keeps generation drafts isolated and remaps copied storyboard, canvas and el
   store.setValue(model, 'references', [{ media: 'old' }])
   store.setStoryboard('one', {
     script: 'A script',
-    shots: [{ id: 'shot', prompt: 'A scene', seconds: 2, imageJob: null, videoJob: null, frameMediaId: 'old' }],
+    shots: [
+      {
+        id: 'shot',
+        prompt: 'A scene',
+        seconds: 2,
+        imageJob: null,
+        videoJob: null,
+        frameMediaId: 'old',
+      },
+    ],
   })
   store.setMotionDraft({ html: '<p>Title</p>', seconds: 3 })
   await saveProjectElement('one', { name: 'actor', refs: [{ media: 'old' }] })
   const canvas = await loadProjectCanvas('one')
-  canvas.graph = { nodes: [{ type: 'media', id: 'ref', position: { x: 0, y: 0 }, data: { name: 'Actor', kind: 'image', ref: { media: 'old' } } }], edges: [] }
+  canvas.graph = {
+    nodes: [
+      {
+        type: 'media',
+        id: 'ref',
+        position: { x: 0, y: 0 },
+        data: { name: 'Actor', kind: 'image', ref: { media: 'old' } },
+      },
+    ],
+    edges: [],
+  }
 
   await store.activateProject('two')
   expect(useGenerateStore.getState().valuesByModel).toEqual({})
   expect(useGenerateStore.getState().storyboards).toEqual({})
-  await restoreProjectGeneration('three', await collectProjectGeneration('one'), new Map([['old', 'new']]))
+  await restoreProjectGeneration(
+    'three',
+    await collectProjectGeneration('one'),
+    new Map([['old', 'new']]),
+  )
 
   expect((await readProjectGeneration('three'))?.storyboard?.shots[0]?.frameMediaId).toBe('new')
   expect((await readProjectGeneration('three'))?.motionDraft?.html).toBe('<p>Title</p>')
   expect((await loadProjectElements('three')).elements[0]?.refs).toEqual([{ media: 'new' }])
-  expect((await loadProjectCanvas('three')).graph.nodes[0]?.data).toMatchObject({ ref: { media: 'new' } })
+  expect((await loadProjectCanvas('three')).graph.nodes[0]?.data).toMatchObject({
+    ref: { media: 'new' },
+  })
   await store.activateProject('three')
   expect(useGenerateStore.getState().valuesByModel['openrouter:test']).toEqual({
-    prompt: 'Only this project', references: [{ media: 'new' }],
+    prompt: 'Only this project',
+    references: [{ media: 'new' }],
   })
   await store.activateProject(null)
 })

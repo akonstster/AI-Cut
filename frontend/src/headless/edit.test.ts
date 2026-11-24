@@ -224,7 +224,12 @@ describe('editProject', () => {
       media: [
         {
           mediaId: 'm-img',
-          metadata: { ...videoMedia, id: 'm-img', mimeType: 'image/png', audioCodec: undefined } as MediaMetadata,
+          metadata: {
+            ...videoMedia,
+            id: 'm-img',
+            mimeType: 'image/png',
+            audioCodec: undefined,
+          } as MediaMetadata,
         },
         { mediaId: 'm-vid', metadata: videoMedia },
       ],
@@ -233,6 +238,110 @@ describe('editProject', () => {
     const video = items.find((i) => i.type === 'video')!
     const audio = items.find((i) => i.type === 'audio')!
     expect(video.from).toBe(150)
+    expect(audio.from).toBe(video.from)
+  })
+
+  it('addClip (video with audio) keeps the pair together when the audio track is already busy', async () => {
+    const busyAudioTrack = {
+      id: 't_a',
+      name: 'A1',
+      kind: 'audio' as const,
+      height: 64,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 1,
+    }
+    const result = await editProject({
+      project: baseProject({
+        tracks: [
+          {
+            id: 't_v',
+            name: 'V1',
+            kind: 'video',
+            height: 80,
+            locked: false,
+            visible: true,
+            muted: false,
+            solo: false,
+            order: 0,
+          },
+          busyAudioTrack,
+        ],
+        items: [
+          {
+            id: 'existing-audio',
+            type: 'audio',
+            trackId: 't_a',
+            from: 0,
+            durationInFrames: 200,
+            label: 'music',
+            mediaId: 'm-music',
+            src: '',
+          } as never,
+        ],
+      }),
+      ops: [{ op: 'addClip', mediaId: 'm-vid', from: 5, keepFrom: true } as EditOp],
+      media: [{ mediaId: 'm-vid', metadata: videoMedia }],
+    })
+
+    const items = result.project.timeline!.items
+    const video = items.find((i) => i.type === 'video')!
+    const audio = items.find((i) => i.type === 'audio' && i.id !== 'existing-audio')!
+    // Placing a shot at a second the audio track is busy on must not slide one half: the pair
+    // either lands together on a new track or stays out of the way as one unit.
+    expect(audio.from).toBe(video.from)
+    expect(video.from).toBe(5)
+  })
+
+  it('addClip at the playhead keeps the pair together over a busy audio track', async () => {
+    const result = await editProject({
+      project: baseProject({
+        tracks: [
+          {
+            id: 't_v',
+            name: 'V1',
+            kind: 'video',
+            height: 80,
+            locked: false,
+            visible: true,
+            muted: false,
+            solo: false,
+            order: 0,
+          },
+          {
+            id: 't_a',
+            name: 'A1',
+            kind: 'audio',
+            height: 64,
+            locked: false,
+            visible: true,
+            muted: false,
+            solo: false,
+            order: 1,
+          },
+        ],
+        items: [
+          {
+            id: 'existing-audio',
+            type: 'audio',
+            trackId: 't_a',
+            from: 0,
+            durationInFrames: 200,
+            label: 'music',
+            mediaId: 'm-music',
+            src: '',
+          } as never,
+        ],
+      }),
+      ops: [{ op: 'addClip', mediaId: 'm-vid', from: 0 } as EditOp],
+      media: [{ mediaId: 'm-vid', metadata: videoMedia }],
+    })
+
+    const items = result.project.timeline!.items
+    const video = items.find((i) => i.type === 'video')!
+    const audio = items.find((i) => i.type === 'audio' && i.id !== 'existing-audio')!
     expect(audio.from).toBe(video.from)
   })
 

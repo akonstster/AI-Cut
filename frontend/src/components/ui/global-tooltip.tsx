@@ -66,10 +66,16 @@ export function GlobalTooltip() {
     const side = (element.getAttribute('data-tooltip-side') || 'top') as TooltipSide
     const sideOffset = 4 // Match Radix default sideOffset
 
+    // A button in the top bar would place a "top" tooltip outside the window: flip toward the
+    // side that has room, and keep the bubble on screen.
+    let resolvedSide = side
+    if (side === 'top' && rect.top < 36) resolvedSide = 'bottom'
+    else if (side === 'bottom' && rect.bottom > window.innerHeight - 36) resolvedSide = 'top'
+
     let x: number
     let y: number
 
-    switch (side) {
+    switch (resolvedSide) {
       case 'bottom':
         x = rect.left + rect.width / 2
         y = rect.bottom + sideOffset
@@ -89,7 +95,14 @@ export function GlobalTooltip() {
         break
     }
 
-    setState({ visible: true, instant, text, x, y, side })
+    const margin = 8
+    if (resolvedSide === 'top' || resolvedSide === 'bottom') {
+      x = Math.min(Math.max(x, margin), Math.max(margin, window.innerWidth - margin))
+    } else {
+      y = Math.min(Math.max(y, margin), Math.max(margin, window.innerHeight - margin))
+    }
+
+    setState({ visible: true, instant, text, x, y, side: resolvedSide })
   }, [])
 
   const hideTooltip = useCallback(() => {

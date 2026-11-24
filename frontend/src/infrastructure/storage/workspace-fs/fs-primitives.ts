@@ -56,19 +56,81 @@ function wrap<T>(operation: string, fn: () => Promise<T>): Promise<T> {
 }
 
 /**
+ * Directory handles already resolved from a workspace root, keyed by the joined
+ * path. Every read and write walks the path with one `getDirectoryHandle` per
+ * segment; on the desktop the workspace is served over REST, so each segment is
+ * an HTTP round trip (`/api/fs/stat`, or `/api/fs/mkdir` when creating) and a
+ * single clip read cost ten requests. A directory handle stays valid for as long
+ * as the directory exists, so the walk result is memoised per root.
+ *
+ * Misses are never cached, and `removeEntry` drops the removed subtree, so a
+ * directory created afterwards is resolved fresh. Keying on the root handle means
+ * a root swap (reconnect, "choose another folder") starts with an empty cache.
+ */
+const directoryHandleCache = new WeakMap<
+  FileSystemDirectoryHandle,
+  Map<string, Promise<FileSystemDirectoryHandle>>
+>()
+
+/** Cap on memoised directories per root; the oldest entry is evicted first. */
+const MAX_CACHED_DIRECTORIES = 4096
+
+function directoryCache(
+  root: FileSystemDirectoryHandle,
+): Map<string, Promise<FileSystemDirectoryHandle>> {
+  let cache = directoryHandleCache.get(root)
+  if (!cache) {
+    cache = new Map()
+    directoryHandleCache.set(root, cache)
+  }
+  return cache
+}
+
+/** Forget memoised handles at `segments` and below (after a delete or a move). */
+function invalidateDirectoryCache(root: FileSystemDirectoryHandle, segments: string[]): void {
+  const cache = directoryHandleCache.get(root)
+  if (!cache || cache.size === 0) return
+  const path = segments.join('/')
+  const prefix = `${path}/`
+  for (const key of cache.keys()) {
+    if (key === path || key.startsWith(prefix)) cache.delete(key)
+  }
+}
+
+/**
  * Walk a path of directory segments, creating each if missing.
  * Last segment is returned as the directory handle.
+ *
+ * The walk is memoised (see `directoryHandleCache`) and concurrent callers share
+ * one in-flight walk instead of racing it.
  */
 async function resolveDir(
   root: FileSystemDirectoryHandle,
   segments: string[],
   create: boolean,
 ): Promise<FileSystemDirectoryHandle> {
-  let dir = root
-  for (const segment of segments) {
-    dir = await dir.getDirectoryHandle(segment, { create })
+  if (segments.length === 0) return root
+  const cache = directoryCache(root)
+  const key = segments.join('/')
+  const cached = cache.get(key)
+  if (cached) return cached
+
+  const walk = (async () => {
+    const parent = await resolveDir(root, segments.slice(0, -1), create)
+    return parent.getDirectoryHandle(segments[segments.length - 1]!, { create })
+  })()
+
+  if (cache.size >= MAX_CACHED_DIRECTORIES) {
+    const oldest = cache.keys().next().value
+    if (oldest !== undefined) cache.delete(oldest)
   }
-  return dir
+  cache.set(key, walk)
+  // A directory that is missing now must be looked up again next time: only
+  // successful resolutions are worth remembering.
+  walk.catch(() => {
+    if (cache.get(key) === walk) cache.delete(key)
+  })
+  return walk
 }
 
 /**
@@ -295,6 +357,9 @@ export async function removeEntry(
     try {
       const { parent, fileName } = await resolveFileParent(root, segments, false)
       await parent.removeEntry(fileName, { recursive: options.recursive ?? false })
+      // A removed directory must not hand out its old handle to the next caller:
+      // its creator may re-create the same path.
+      invalidateDirectoryCache(root, segments)
     } catch (error) {
       if (isNotFound(error)) return
       throw error

@@ -39,9 +39,11 @@ export function replaceClipMedia(clipId: string, mediaId: string): unknown {
   return applyOp({ op: 'replaceMedia', id: clipId, mediaId })
 }
 
-
 export function playheadSeconds(): number {
-  return usePlaybackStore.getState().currentFrame / (useProjectStore.getState().currentProject?.metadata?.fps ?? 30)
+  return (
+    usePlaybackStore.getState().currentFrame /
+    (useProjectStore.getState().currentProject?.metadata?.fps ?? 30)
+  )
 }
 
 export function placeMediaAt(mediaId: string, seconds: number) {

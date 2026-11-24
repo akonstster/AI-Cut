@@ -274,7 +274,13 @@ type WheelNavigation =
   | { kind: 'consume' }
   | { kind: 'vertical'; scrollDelta: number }
   | { kind: 'pan'; axis: 'x' | 'y'; delta: number; timelineWidth: number }
-  | { kind: 'zoom'; pivotRatio: number; zoomFactor: number; timelineWidth: number; minVisibleFrames: number }
+  | {
+      kind: 'zoom'
+      pivotRatio: number
+      zoomFactor: number
+      timelineWidth: number
+      minVisibleFrames: number
+    }
 
 /** Time pane geometry for a wheel event, including whether it is over the pane. */
 function resolveTimelinePane(
@@ -318,8 +324,7 @@ function resolveZoomNavigation(
       Math.max(
         1,
         Math.ceil(
-          Math.max(1, timelineWidth - KEYFRAME_EDGE_INSET * 2) /
-            KEYFRAME_DIAMOND_RENDERED_WIDTH_PX,
+          Math.max(1, timelineWidth - KEYFRAME_EDGE_INSET * 2) / KEYFRAME_DIAMOND_RENDERED_WIDTH_PX,
         ),
       ),
     ),
@@ -345,7 +350,8 @@ function resolveWheelNavigation(input: {
   if (!isZoomGesture && !isVerticalScrollGesture && panGesture === null) return { kind: 'ignore' }
   // Motion reserves Alt/Option+wheel for deliberate vertical layer/property
   // navigation while ordinary wheel owns time.
-  if (isVerticalScrollGesture) return { kind: 'vertical', scrollDelta: event.deltaY || event.deltaX }
+  if (isVerticalScrollGesture)
+    return { kind: 'vertical', scrollDelta: event.deltaY || event.deltaX }
   const pane = resolveTimelinePane(event, scrollArea, layerColumnWidth)
   // Like Edit's non-scrollable track-header viewport, ordinary wheel over the
   // layer column is safely consumed without creating a second pan.
@@ -416,7 +422,9 @@ export function createMotionTimeViewportController(
         animationFrame = null
         const pendingViewport = queuedViewport
         if (pendingViewport) {
-          deps.previewViewport(normalizeMotionTimeViewport(pendingViewport, durationInFrames, false))
+          deps.previewViewport(
+            normalizeMotionTimeViewport(pendingViewport, durationInFrames, false),
+          )
         }
       })
     }
@@ -482,7 +490,12 @@ export function createMotionTimeViewportController(
     panAxis = navigation.kind === 'pan' ? navigation.axis : null
     queue((current) =>
       navigation.kind === 'pan'
-        ? panMotionTimeViewport(current, navigation.delta, navigation.timelineWidth, durationInFrames)
+        ? panMotionTimeViewport(
+            current,
+            navigation.delta,
+            navigation.timelineWidth,
+            durationInFrames,
+          )
         : zoomMotionTimeViewport(
             current,
             navigation.pivotRatio,

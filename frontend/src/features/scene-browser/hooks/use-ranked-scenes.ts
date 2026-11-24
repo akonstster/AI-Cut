@@ -206,7 +206,7 @@ export function useRankedScenes(indexRevision = 0): RankedScenesResult {
       })
     } else if (isSemanticActive) {
       ranked = semanticRank(queryEmbedding!, allScenes, textEmbeddings, {
-        threshold: 0.70,
+        threshold: 0.7,
         strongTextThreshold: 0.76,
         queryImageEmbedding,
         imageEmbeddings,
@@ -271,9 +271,14 @@ export function useRankedScenes(indexRevision = 0): RankedScenesResult {
     scenes?: ScoredScene[]
     status?: RankedScenesResult['reranking']
   }>()
-  const canRerank = !!queryEmbedding && !reference && !colorQuery.paletteOnly
-    && result.activeMode === 'semantic' && result.scenes.length > 1
-    && sortMode !== 'time' && sortMode !== 'name'
+  const canRerank =
+    !!queryEmbedding &&
+    !reference &&
+    !colorQuery.paletteOnly &&
+    result.activeMode === 'semantic' &&
+    result.scenes.length > 1 &&
+    sortMode !== 'time' &&
+    sortMode !== 'name'
 
   useEffect(() => {
     if (!canRerank) return
@@ -281,23 +286,33 @@ export function useRankedScenes(indexRevision = 0): RankedScenesResult {
     const timer = setTimeout(() => {
       const candidates = result.scenes.slice(0, RERANK_LIMIT)
       setRefinement({ source: result, status: {} })
-      void rerankSceneCaptions(query.trim(), candidates.map((scene) => scene.text), {
-        signal: controller.signal,
-        onProgress: (progress) => setRefinement({ source: result, status: { progress } }),
-      }).then((scores) => {
-        if (controller.signal.aborted) return
-        if (scores.length !== candidates.length || !scores.every(Number.isFinite)) {
-          throw new Error('Invalid scene reranker scores')
-        }
-        const reordered = candidates.map((scene, index) => ({ scene, score: scores[index]! }))
-          .sort((a, b) => b.score - a.score)
-          .map(({ scene }) => scene)
-        setRefinement({ source: result, scenes: [...reordered, ...result.scenes.slice(RERANK_LIMIT)] })
-      }).catch((error) => {
-        if (controller.signal.aborted) return
-        log.warn('Scene reranking failed', error)
-        setRefinement({ source: result, status: { failed: true } })
-      })
+      void rerankSceneCaptions(
+        query.trim(),
+        candidates.map((scene) => scene.text),
+        {
+          signal: controller.signal,
+          onProgress: (progress) => setRefinement({ source: result, status: { progress } }),
+        },
+      )
+        .then((scores) => {
+          if (controller.signal.aborted) return
+          if (scores.length !== candidates.length || !scores.every(Number.isFinite)) {
+            throw new Error('Invalid scene reranker scores')
+          }
+          const reordered = candidates
+            .map((scene, index) => ({ scene, score: scores[index]! }))
+            .sort((a, b) => b.score - a.score)
+            .map(({ scene }) => scene)
+          setRefinement({
+            source: result,
+            scenes: [...reordered, ...result.scenes.slice(RERANK_LIMIT)],
+          })
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return
+          log.warn('Scene reranking failed', error)
+          setRefinement({ source: result, status: { failed: true } })
+        })
     }, 250)
     return () => {
       clearTimeout(timer)

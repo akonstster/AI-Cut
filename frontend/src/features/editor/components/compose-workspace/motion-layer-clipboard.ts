@@ -277,10 +277,7 @@ export function createMotionLayerClipboardCommands(
     })
     if (pastedLayers.length === 0) return
     const newItems = pastedLayers.map((layer) => layer.item)
-    addItemsOnNewTracks(
-      newItems,
-      [...deps.tracks, ...pastedLayers.map((layer) => layer.track)],
-    )
+    addItemsOnNewTracks(newItems, [...deps.tracks, ...pastedLayers.map((layer) => layer.track)])
     const visiblePastedItems = getVisibleLinkedItems(newItems)
     deps.selectItems(visiblePastedItems.map((item) => item.id))
     toast.success(
@@ -296,9 +293,7 @@ export function createMotionLayerClipboardCommands(
     const expandedItemIdSet = new Set(expandedItemIds)
     const removedTrackIds = new Set([
       ...trackIds,
-      ...deps.items
-        .filter((item) => expandedItemIdSet.has(item.id))
-        .map((item) => item.trackId),
+      ...deps.items.filter((item) => expandedItemIdSet.has(item.id)).map((item) => item.trackId),
     ])
     setTracks(deps.tracks.filter((track) => !removedTrackIds.has(track.id)))
     deps.selectItems([])

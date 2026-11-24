@@ -208,9 +208,16 @@ pub fn form(entry: &ModelEntry) -> Result<ModelForm, ProviderError> {
             let seedance_references = matches!(entry.id.as_str(),
                 "bytedance/seedance-2.0" | "bytedance/seedance-2.0-fast" | "bytedance/seedance-2.0-mini"
                 | "bytedance/seedance-2.5" | "bytedance/seedance-2.5-flash");
-            if seedance_references || matches!(entry.id.as_str(), "alibaba/wan-2.7" | "alibaba/wan-3.0") {
-                // Conservative app limit until the video catalog supplies a per-model maximum.
-                fields.push(media("input_references", "Reference images", MediaKind::Image, 0, 3, Role::Reference));
+            let reference_limit = model.pointer("/supported_parameters/input_references/max")
+                .and_then(Value::as_u64)
+                .and_then(|max| u32::try_from(max).ok())
+                .unwrap_or_else(|| match entry.id.as_str() {
+                    "bytedance/seedance-2.5" => 50,
+                    _ if seedance_references || matches!(entry.id.as_str(), "alibaba/wan-2.7" | "alibaba/wan-3.0") => 3,
+                    _ => 0,
+                });
+            if reference_limit > 0 {
+                fields.push(media("input_references", "Reference images", MediaKind::Image, 0, reference_limit, Role::Reference));
             }
             if entry.tasks.contains(&Task::VideoEdit) {
                 fields.push(media("input_video", "Source video", MediaKind::Video, 1, 1, Role::Source));

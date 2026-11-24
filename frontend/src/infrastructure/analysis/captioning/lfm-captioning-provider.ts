@@ -50,12 +50,20 @@ function waitForReady(
     }
     const onAbort = () => fail(signal?.reason)
     const onWorkerError = (event: ErrorEvent) => {
-      fail(new Error(`Could not start the local LFM worker: ${event.message || 'worker script failed to load'}`))
+      fail(
+        new Error(
+          `Could not start the local LFM worker: ${event.message || 'worker script failed to load'}`,
+        ),
+      )
     }
     const armTimeout = (duration: number) => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
-        fail(new Error(`Local LFM timed out during ${stage}. The first run downloads the model from Hugging Face and initializes WebGPU.`))
+        fail(
+          new Error(
+            `Local LFM timed out during ${stage}. The first run downloads the model from Hugging Face and initializes WebGPU.`,
+          ),
+        )
       }, duration)
     }
     const onMessage = (event: MessageEvent) => {

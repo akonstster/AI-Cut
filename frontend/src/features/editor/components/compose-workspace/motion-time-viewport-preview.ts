@@ -1,4 +1,7 @@
-import { getKeyframeNavigatorThumbMetrics, getNiceTickStep } from '@/features/editor/deps/timeline-motion'
+import {
+  getKeyframeNavigatorThumbMetrics,
+  getNiceTickStep,
+} from '@/features/editor/deps/timeline-motion'
 import {
   RULER_DIVISIONS,
   type MotionViewportPreviewElement,
@@ -266,7 +269,11 @@ export function paintMotionViewportNavigator(
  * own box, and a length that does not parse falls back to the box edge the
  * element was already laid out at.
  */
-function resolveMotionInlinePixels(value: string, referenceWidth: number, fallback: number): number {
+function resolveMotionInlinePixels(
+  value: string,
+  referenceWidth: number,
+  fallback: number,
+): number {
   const parsed = Number.parseFloat(value)
   if (!Number.isFinite(parsed)) return fallback
   return value.trim().endsWith('%') ? (parsed / 100) * referenceWidth : parsed
@@ -428,7 +435,9 @@ export function collectMotionViewportPreviewElements(input: {
   baseRange: number
 }): MotionViewportPreviewElement[] {
   const elements: MotionViewportPreviewElement[] = []
-  for (const surface of input.root.querySelectorAll<HTMLElement>('[data-motion-viewport-surface]')) {
+  for (const surface of input.root.querySelectorAll<HTMLElement>(
+    '[data-motion-viewport-surface]',
+  )) {
     const surfaceWidth = Math.max(
       0,
       Number(surface.dataset.motionViewportAxisWidth) || surface.clientWidth,

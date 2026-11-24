@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useSyncedText } from '@/shared/ui/use-synced-text'
 import type { CompositionControlDefinition } from '@/types/composition-controls'
 import type { CompositionItem, TimelineItem } from '@/types/timeline'
 import { useCompositionsStore, updateItem } from '@/features/editor/deps/timeline-store'
@@ -20,17 +21,29 @@ function TextControlInput({
   onCommit: (value: string) => void
   label: string
 }) {
-  const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
+  // The authoring snapshot is deferred; the field keeps what is being typed until it is committed.
+  const field = useSyncedText<HTMLInputElement>({ value })
+  const reverted = useRef(false)
   return (
     <Input
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={() => onCommit(draft)}
+      ref={field.fieldProps.ref}
+      value={field.fieldProps.value}
+      onChange={(event) => {
+        reverted.current = false
+        field.fieldProps.onChange(event)
+      }}
+      onBlur={() => {
+        if (reverted.current) {
+          reverted.current = false
+          return
+        }
+        onCommit(field.fieldProps.value)
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter') event.currentTarget.blur()
         if (event.key === 'Escape') {
-          setDraft(value)
+          reverted.current = true
+          field.reset()
           event.currentTarget.blur()
         }
       }}

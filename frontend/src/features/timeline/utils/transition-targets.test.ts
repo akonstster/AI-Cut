@@ -104,6 +104,7 @@ describe('transition-targets', () => {
       edge: 'right',
       items,
       transitions: [],
+      allowCenteredFallback: true,
     })
 
     expect(target).toMatchObject({
@@ -114,6 +115,36 @@ describe('transition-targets', () => {
     })
     expect(target?.reason).toContain('Not enough source handle')
   })
+
+  it.each([
+    { itemId: 'left', edge: 'right' as const },
+    { itemId: 'right', edge: 'left' as const },
+  ])(
+    'uses the same shorter one-sided transition from the $edge edge of $itemId',
+    ({ itemId, edge }) => {
+      const items = [
+        createVideoClip('left', 0, 60, 0, 60, 72),
+        createVideoClip('right', 60, 60, 0, 60, 60),
+      ]
+
+      const target = resolveTransitionTargetForEdge({
+        itemId,
+        edge,
+        items,
+        transitions: [],
+        preferredDurationInFrames: 30,
+        allowCenteredFallback: true,
+      })
+
+      expect(target).toMatchObject({
+        leftClipId: 'left',
+        rightClipId: 'right',
+        canApply: true,
+        suggestedDurationInFrames: 12,
+        alignment: 0,
+      })
+    },
+  )
 
   it('rejects drop targets when the chosen alignment cannot keep the requested duration', () => {
     const items = [

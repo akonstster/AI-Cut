@@ -18,6 +18,7 @@ import {
 } from '@/features/timeline/utils/zoom-conversions'
 import { useSnapCalculator } from './use-snap-calculator'
 import { findNearestAvailableSpace } from '../utils/collision-utils'
+import { resolveGroupDropDelta } from '../utils/group-drop-placement'
 import { findNearestSnapTarget } from '../utils/timeline-snap-utils'
 import { getTrackKind } from '../utils/classic-tracks'
 import {
@@ -26,10 +27,12 @@ import {
   expandSelectionWithLinkedItems,
   filterUnlockedItemIds,
   getLinkedItemIds,
+  getSelectionIdsForItem,
 } from '../utils/linked-items'
 import { findCompatibleTrackForItemType } from '../utils/track-item-compatibility'
 import {
   resolveCreateNewDragTrackTargets,
+  resolveGroupDragTrackAssignments,
   resolveLinkedDragTrackTargets,
   type LinkedDragDropZone,
 } from '../utils/linked-drag-targeting'
@@ -253,6 +256,7 @@ function resolveDraggedTrackTargets(params: {
   tracks: TimelineTrack[]
   dropTarget: { trackId: string; zone: LinkedDragDropZone | null; createNew?: boolean }
   preferredTrackHeight: number
+  anchorItemId: string
 }): { tracks: TimelineTrack[]; trackAssignments: Map<string, string> } | null {
   const { items, draggedItems, tracks, dropTarget, preferredTrackHeight } = params
   if (!dropTarget.zone) {
@@ -262,12 +266,16 @@ function resolveDraggedTrackTargets(params: {
   const draggedItemIds = draggedItems.map((draggedItem) => draggedItem.id)
   const linkedPair = getDraggedLinkedPair(items, draggedItemIds)
   if (linkedPair) {
+    const visualItem = items.find((candidate) => candidate.id === linkedPair.visualItemId)
+    const audioItem = items.find((candidate) => candidate.id === linkedPair.audioItemId)
     const linkedTrackTargets = resolveLinkedDragTrackTargets({
       tracks,
       hoveredTrackId: dropTarget.trackId,
       zone: dropTarget.zone,
       createNew: dropTarget.createNew,
       preferredTrackHeight,
+      initialVideoTrackId: visualItem?.trackId,
+      initialAudioTrackId: audioItem?.trackId,
     })
     if (!linkedTrackTargets) {
       return null
@@ -279,6 +287,39 @@ function resolveDraggedTrackTargets(params: {
         [linkedPair.visualItemId, linkedTrackTargets.videoTrackId],
         [linkedPair.audioItemId, linkedTrackTargets.audioTrackId],
       ]),
+    }
+  }
+
+  if (!dropTarget.createNew && draggedItems.length < 3) {
+    return null
+  }
+
+  const groupItem = (item: TimelineItem, initialTrackId: string) => ({
+    id: item.id,
+    initialTrackId,
+    kind: item.type === 'audio' ? ('audio' as const) : ('video' as const),
+    staysOnOwnLane: item.type === 'subtitle',
+  })
+
+  const draggedSourceItems = draggedItems
+    .map((draggedItem) => {
+      const sourceItem = items.find((item) => item.id === draggedItem.id)
+      return sourceItem ? groupItem(sourceItem, draggedItem.initialTrackId) : null
+    })
+    .filter((item): item is ReturnType<typeof groupItem> => item !== null)
+
+  const groupTrackTargets = resolveGroupDragTrackAssignments({
+    tracks,
+    items: draggedSourceItems,
+    anchorItemId: params.anchorItemId,
+    targetTrackId: dropTarget.trackId,
+    createNew: dropTarget.createNew === true,
+    preferredTrackHeight,
+  })
+  if (groupTrackTargets) {
+    return {
+      tracks: groupTrackTargets.tracks,
+      trackAssignments: groupTrackTargets.trackAssignments,
     }
   }
 
@@ -968,6 +1009,7 @@ function resolveDragDropTargets(options: {
     draggedItems,
     tracks,
     dropTarget,
+    anchorItemId: itemId,
     preferredTrackHeight:
       tracks.find((track) => track.id === dropTarget.trackId)?.height ??
       tracks.find((track) => track.id === startTrackId)?.height ??
@@ -1334,11 +1376,7 @@ export function useTimelineDrag(
       const targetEndFrame = targetStartFrame + itemDurationInFrames
 
       // Find nearest snap for start position
-      const nearestStartTarget = findNearestSnapTarget(
-        targetStartFrame,
-        targets,
-        threshold,
-      )
+      const nearestStartTarget = findNearestSnapTarget(targetStartFrame, targets, threshold)
       // Find nearest snap for end position
       const nearestEndTarget = findNearestSnapTarget(targetEndFrame, targets, threshold)
 
@@ -1396,10 +1434,15 @@ export function useTimelineDrag(
       // would wipe the existing multi-selection, and the click handler's additive
       // toggle would then read this clip as "already selected" and remove it again.
       const isMultiSelectClick = e.ctrlKey || e.metaKey
-      const linkedIds = linkedSelectionEnabled ? getLinkedItemIds(allItems, item.id) : [item.id]
+      const selectionIds = getSelectionIdsForItem(allItems, item.id, linkedSelectionEnabled)
       if (!isInSelection && !isMultiSelectClick) {
-        selectItems(linkedIds)
+        selectItems(selectionIds)
       }
+      // Selecting a subtitle keeps the inspector on the captions, but dragging it still moves
+      // the linked group (its audio half), the same way dragging the audio moves the captions.
+      const dragCohortIds = linkedSelectionEnabled
+        ? expandSelectionWithLinkedItems(allItems, selectionIds)
+        : selectionIds
 
       // Determine which items to drag and snapshot their initial positions
       const { baseItemsToDrag, draggedItems } = resolveDraggedItemStates(
@@ -1407,7 +1450,7 @@ export function useTimelineDrag(
         currentTracks,
         currentSelectedIds,
         isInSelection,
-        linkedIds,
+        dragCohortIds,
         linkedSelectionEnabled,
       )
       // Compare cohort *contents*, not just lengths: a same-size but
@@ -1683,6 +1726,7 @@ export function useTimelineDrag(
         draggedItems: dragState.draggedItems,
         tracks: tracksRef.current,
         dropTarget,
+        anchorItemId: dragState.itemId,
         preferredTrackHeight:
           tracksRef.current.find((track) => track.id === dropTarget.trackId)?.height ??
           tracksRef.current.find((track) => track.id === dragState.startTrackId)?.height ??
@@ -1765,6 +1809,34 @@ export function useTimelineDrag(
 
               itemNewTrackId =
                 tracksRef.current[newItemTrackIndex]?.id || draggedItem.initialTrackId
+
+              // A group can hold any number of clips: the row offset must never move
+              // the sound of the pair onto a video lane (or the picture onto audio).
+              // Fall back to the nearest lane of the item's own kind, then to its own.
+              const itemKind = sourceItem.type === 'audio' ? 'audio' : 'video'
+              const candidate = tracksRef.current.find((t) => t.id === itemNewTrackId)
+              if (candidate && (getTrackKind(candidate) ?? itemKind) !== itemKind) {
+                const sameKindTracks = tracksRef.current.filter(
+                  (t) => (getTrackKind(t) ?? 'video') === itemKind && !t.locked,
+                )
+                const ownTrack = tracksRef.current.find((t) => t.id === draggedItem.initialTrackId)
+                const nearest =
+                  sameKindTracks.length > 0
+                    ? sameKindTracks.reduce((best, track) => {
+                        const bestIndex = tracksRef.current.findIndex((t) => t.id === best.id)
+                        const trackIndex = tracksRef.current.findIndex((t) => t.id === track.id)
+                        return Math.abs(trackIndex - newItemTrackIndex) <
+                          Math.abs(bestIndex - newItemTrackIndex)
+                          ? track
+                          : best
+                      })
+                    : undefined
+                itemNewTrackId =
+                  nearest?.id ??
+                  (ownTrack && (getTrackKind(ownTrack) ?? itemKind) === itemKind
+                    ? ownTrack.id
+                    : draggedItem.initialTrackId)
+              }
             }
 
             return {
@@ -1789,61 +1861,50 @@ export function useTimelineDrag(
           ? currentItems
           : currentItems.filter((i) => !draggedItemIds.includes(i.id))
 
-        let maxSnapForward = 0 // largest positive shift needed
-        let maxSnapBackward = 0 // largest negative shift needed (stored as negative)
+        // One delta has to be free for the whole group: a shift that clears the
+        // audio half can still put the picture on top of a text clip on its own
+        // track. Per-item corrections are only candidates here.
+        const groupSnapDelta = resolveGroupDropDelta(
+          movedItems.map((movedItem) => ({
+            id: movedItem.id,
+            from: movedItem.newFrom,
+            durationInFrames: movedItem.durationInFrames,
+            trackId: movedItem.newTrackId,
+          })),
+          itemsExcludingDragged,
+        )
 
-        for (const movedItem of movedItems) {
-          const finalPosition = findNearestAvailableSpace(
-            movedItem.newFrom,
-            movedItem.durationInFrames,
-            movedItem.newTrackId,
-            itemsExcludingDragged,
+        if (groupSnapDelta === null) {
+          logger.warn(
+            isAltDrag
+              ? 'Cannot duplicate items: no available space'
+              : 'Cannot move items: no available space',
           )
-
-          if (finalPosition === null) {
-            logger.warn(
-              isAltDrag
-                ? 'Cannot duplicate items: no available space'
-                : 'Cannot move items: no available space',
-            )
-            // Clean up and cancel - defer drag state to avoid render cascade
-            if (elementRef?.current) {
-              elementRef.current.style.transform = ''
-            }
-            dragOffsetRef.current = { x: 0, y: 0 }
-            dragVisualTopByTrackIdRef.current.clear()
-            dragDropGeometryRef.current = null
-            dragPreviewOffsetByItemRef.current = {}
-            clearLargeAltDragCanvas()
-            clearLinkedMovePreview()
-            prevSnapTargetRef.current = null
-            magneticSnapTargetsRef.current = []
-            dragStateRef.current = null
-            isAltDragRef.current = false
-            clearGlobalDragCursor()
-            document.body.style.userSelect = ''
-            setIsDragging(false)
-            setDragOffset({ x: 0, y: 0 })
-            queueMicrotask(() => {
-              setActiveSnapTarget(null)
-              setActiveLinkedDropTarget(null)
-              setDragState(null)
-            })
-            return
+          // Clean up and cancel - defer drag state to avoid render cascade
+          if (elementRef?.current) {
+            elementRef.current.style.transform = ''
           }
-
-          const snapAmount = finalPosition - movedItem.newFrom
-          if (snapAmount > maxSnapForward) {
-            maxSnapForward = snapAmount
-          }
-          if (snapAmount < maxSnapBackward) {
-            maxSnapBackward = snapAmount
-          }
+          dragOffsetRef.current = { x: 0, y: 0 }
+          dragVisualTopByTrackIdRef.current.clear()
+          dragDropGeometryRef.current = null
+          dragPreviewOffsetByItemRef.current = {}
+          clearLargeAltDragCanvas()
+          clearLinkedMovePreview()
+          prevSnapTargetRef.current = null
+          magneticSnapTargetsRef.current = []
+          dragStateRef.current = null
+          isAltDragRef.current = false
+          clearGlobalDragCursor()
+          document.body.style.userSelect = ''
+          setIsDragging(false)
+          setDragOffset({ x: 0, y: 0 })
+          queueMicrotask(() => {
+            setActiveSnapTarget(null)
+            setActiveLinkedDropTarget(null)
+            setDragState(null)
+          })
+          return
         }
-
-        // Pick whichever direction has the larger correction needed
-        const groupSnapDelta =
-          Math.abs(maxSnapForward) >= Math.abs(maxSnapBackward) ? maxSnapForward : maxSnapBackward
 
         if (isAltDrag) {
           // ALT-DRAG: Duplicate items at new positions
@@ -1869,9 +1930,7 @@ export function useTimelineDrag(
             id: m.id,
             from: Math.round(m.newFrom + groupSnapDelta),
             trackId:
-              m.newTrackId !== currentItemsById.get(m.id)?.trackId
-                ? m.newTrackId
-                : undefined,
+              m.newTrackId !== currentItemsById.get(m.id)?.trackId ? m.newTrackId : undefined,
           }))
 
           if (resolvedTrackTargets) {

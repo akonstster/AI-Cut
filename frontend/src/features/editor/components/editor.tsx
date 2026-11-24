@@ -29,6 +29,7 @@ import { toast } from 'sonner'
 import { useEditorHotkeys } from '@/features/editor/hooks/use-editor-hotkeys'
 import { useAutoSave } from '../hooks/use-auto-save'
 import {
+  useTimelineAudioSkimPreview,
   useTimelineShortcuts,
   useTransitionBreakageNotifications,
 } from '@/features/editor/deps/timeline-hooks'
@@ -82,7 +83,17 @@ const LazyColorTimelineNavigator = lazy(() =>
     default: ColorTimelineNavigator,
   })),
 )
-const LazyNodeCanvas = lazy(() => import('../deps/generate').then(({ NodeCanvas }) => ({ default: NodeCanvas })))
+/**
+ * Audio skimming on the Color page: the mini timeline scrubs the same playhead as
+ * the Edit timeline, so the same hook (and the same shared source cache) drives it.
+ */
+function ColorAudioSkim() {
+  useTimelineAudioSkimPreview()
+  return null
+}
+const LazyNodeCanvas = lazy(() =>
+  import('../deps/generate').then(({ NodeCanvas }) => ({ default: NodeCanvas })),
+)
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
 
 function workspaceTimelineSizeStorageKey(workspace: EditorWorkspaceId): string {
@@ -408,6 +419,10 @@ export const LoadedEditor = memo(function LoadedEditor({
   const propertiesFullColumn = useEditorStore((s) => s.propertiesFullColumn)
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const workspace = useEditorStore((s) => s.workspace)
+  const colorFilmstripWidth = useEditorStore((s) => s.colorFilmstripWidth)
+  const setColorFilmstripWidth = useEditorStore((s) => s.setColorFilmstripWidth)
+  const colorFilmTileSize = useEditorStore((s) => s.colorFilmTileSize)
+  const setColorFilmTileSize = useEditorStore((s) => s.setColorFilmTileSize)
   const isMaskEditingActive = useMaskEditorStore((s) => s.isEditing)
   const hasRefreshedMigrationStateRef = useRef(false)
   const timelinePanelRef = useRef<ImperativePanelHandle>(null)
@@ -426,7 +441,9 @@ export const LoadedEditor = memo(function LoadedEditor({
 
   useEffect(() => {
     void useGenerateStore.getState().activateProject(projectId)
-    return () => { void useGenerateStore.getState().activateProject(null) }
+    return () => {
+      void useGenerateStore.getState().activateProject(null)
+    }
   }, [projectId])
 
   // Initialize transition chain subscription (pre-computes chains from timeline data)
@@ -662,7 +679,13 @@ export const LoadedEditor = memo(function LoadedEditor({
   }, [project.name])
 
   const handleExportFcpxml = useCallback(() => {
-    exportFcpxml().catch((error: unknown) => toast.error(i18n.t('export.fcpxml.failed', { reason: error instanceof Error ? error.message : String(error) })))
+    exportFcpxml().catch((error: unknown) =>
+      toast.error(
+        i18n.t('export.fcpxml.failed', {
+          reason: error instanceof Error ? error.message : String(error),
+        }),
+      ),
+    )
   }, [])
 
   // Enable keyboard shortcuts
@@ -734,17 +757,26 @@ export const LoadedEditor = memo(function LoadedEditor({
           </div>
         ) : isColorWorkspace ? (
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ErrorBoundary level="feature">
-                <PreviewArea project={project} />
-              </ErrorBoundary>
-            </div>
+            {/* Filmstrip column + viewer + mini timeline share ONE navigator
+                instance: two mounts used to duplicate derivation, subscriptions
+                and thumbnail work while playing/scrubbing. */}
             <Suspense fallback={null}>
-              <LazyColorTimelineNavigator />
+              <LazyColorTimelineNavigator
+                filmStripWidth={colorFilmstripWidth}
+                onFilmStripWidthChange={setColorFilmstripWidth}
+                filmTileSize={colorFilmTileSize}
+                onFilmTileSizeChange={setColorFilmTileSize}
+                preview={
+                  <ErrorBoundary level="feature">
+                    <PreviewArea project={project} />
+                  </ErrorBoundary>
+                }
+              />
             </Suspense>
+            <ColorAudioSkim />
             <InteractionLockRegion
               locked={isMaskEditingActive}
-              className="h-[37%] min-h-[288px] max-h-[39vh] shrink-0"
+              className="h-[31%] min-h-[256px] max-h-[34vh] shrink-0"
             >
               <ErrorBoundary level="feature">
                 <Suspense fallback={null}>

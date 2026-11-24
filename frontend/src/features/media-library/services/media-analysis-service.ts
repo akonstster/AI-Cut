@@ -110,7 +110,12 @@ class MediaAnalysisService {
       useMediaLibraryStore.setState(({ analysisProgress }) => {
         if (!analysisProgress) return {}
         if (progress.stage === 'loading-model') {
-          return { analysisProgress: { ...analysisProgress, modelLoading: { mediaId: media.id, percent: progress.percent } } }
+          return {
+            analysisProgress: {
+              ...analysisProgress,
+              modelLoading: { mediaId: media.id, percent: progress.percent },
+            },
+          }
         }
         if (analysisProgress.modelLoading?.mediaId !== media.id) return {}
         return { analysisProgress: { ...analysisProgress, modelLoading: undefined } }
@@ -138,8 +143,12 @@ class MediaAnalysisService {
         const cached = await getCaptionsByContentHash(contentHash, sampleIntervalSec).catch(
           () => undefined,
         )
-        if (cached && this.isCacheCompatible(cached, sampleIntervalSec) &&
-            (mediaType !== 'image' || cached.data.captions.every((caption) => caption.palette?.length))) {
+        if (
+          cached &&
+          this.isCacheCompatible(cached, sampleIntervalSec) &&
+          (mediaType !== 'image' ||
+            cached.data.captions.every((caption) => caption.palette?.length))
+        ) {
           // Treat an adopt failure as a cache miss and fall through to a full
           // run rather than aborting the whole analysis.
           let adopted: Awaited<ReturnType<typeof adoptCaptionsFromCache>> | undefined
@@ -217,9 +226,10 @@ class MediaAnalysisService {
         const blob = await response.blob()
         URL.revokeObjectURL(blobUrl)
         const previous = media.aiCaptions?.find((caption) => caption.text.trim())
-        captions = previous && !previous.palette?.length
-          ? [{ ...previous, thumbRelPath: undefined }]
-          : await captionImage(blob, { saveThumbnail: stageThumbnail, onProgress })
+        captions =
+          previous && !previous.palette?.length
+            ? [{ ...previous, thumbRelPath: undefined }]
+            : await captionImage(blob, { saveThumbnail: stageThumbnail, onProgress })
         stillImage = blob
       }
 
@@ -230,7 +240,9 @@ class MediaAnalysisService {
         let imageEmbeddingDim: number | undefined
         let captionsWithEmbeddings = captions
 
-        const thumbBlobs = captions.map((_, index) => stagedThumbnailBlobs.get(index) ?? stillImage ?? null)
+        const thumbBlobs = captions.map(
+          (_, index) => stagedThumbnailBlobs.get(index) ?? stillImage ?? null,
+        )
 
         const colorResults = await Promise.all(
           thumbBlobs.map(async (blob) => {

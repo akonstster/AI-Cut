@@ -1,9 +1,5 @@
 import type { CompositionInputProps } from '@/types/export'
-import type {
-  ClientExportSettings,
-  ClientRenderResult,
-  RenderProgress,
-} from '../client-renderer'
+import type { ClientExportSettings, ClientRenderResult, RenderProgress } from '../client-renderer'
 
 export interface ExportRenderStartRequest {
   type: 'start'

@@ -42,11 +42,21 @@ export async function isPreviewAudioConformed(mediaId: string): Promise<boolean>
   }
 }
 
+/**
+ * Media known to have no conform asset. Audio skimming resolves a source per
+ * skim frame; without this every frame re-read `metadata.json` from disk for
+ * clips that were never conformed. Cleared when a conform is persisted/deleted.
+ */
+const mediaWithoutPreviewAudioConform = new Set<string>()
+
 export async function resolvePreviewAudioConformUrl(mediaId: string): Promise<string | null> {
   const cacheKey = getPreviewAudioConformCacheKey(mediaId)
   const cached = blobUrlManager.get(cacheKey)
   if (cached) {
     return cached
+  }
+  if (mediaWithoutPreviewAudioConform.has(mediaId)) {
+    return null
   }
 
   const pending = pendingPreviewAudioConformLoads.get(mediaId)
@@ -58,6 +68,7 @@ export async function resolvePreviewAudioConformUrl(mediaId: string): Promise<st
     try {
       const media = await getMedia(mediaId)
       if (!media?.previewAudioConformedAt && !media?.previewAudioOpfsPath) {
+        mediaWithoutPreviewAudioConform.add(mediaId)
         return null
       }
       const mimeType = media.previewAudioMimeType || PREVIEW_AUDIO_CONFORM_MIME_TYPE
@@ -75,6 +86,9 @@ export async function resolvePreviewAudioConformUrl(mediaId: string): Promise<st
       // workspace v2 copy so subsequent reads stay workspace-first.
       const legacyPath = media.previewAudioOpfsPath
       if (!legacyPath) {
+        // Metadata says "conformed" but the WAV is gone: remember the miss so
+        // per-frame skim lookups stop hitting the disk until a new conform lands.
+        mediaWithoutPreviewAudioConform.add(mediaId)
         return null
       }
       try {
@@ -145,6 +159,7 @@ function persistConform(mediaId: string, buildBlob: () => Blob): Promise<void> {
       previewAudioMimeType: PREVIEW_AUDIO_CONFORM_MIME_TYPE,
       previewAudioConformedAt: Date.now(),
     })
+    mediaWithoutPreviewAudioConform.delete(mediaId)
   })()
     .catch((err) => {
       log.warn('Failed to persist preview audio conform asset', { mediaId, err })
@@ -184,6 +199,7 @@ export async function deletePreviewAudioConform(
 
   pendingPreviewAudioConformLoads.delete(mediaId)
   pendingPreviewAudioConformPersists.delete(mediaId)
+  mediaWithoutPreviewAudioConform.delete(mediaId)
   blobUrlManager.invalidate(getPreviewAudioConformCacheKey(mediaId))
 
   await removeWorkspaceCacheEntry(previewAudioPath(mediaId))

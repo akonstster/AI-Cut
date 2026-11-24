@@ -3,15 +3,7 @@
  * Shows keyframes across properties as draggable diamonds on a frame grid.
  */
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnimatableProperty, Keyframe } from '@/types/keyframe'
 
@@ -63,10 +55,7 @@ import {
 } from './dopesheet-pane-elements'
 import { buildDopesheetWorkspaceChrome } from './dopesheet-workspace-chrome'
 
-import {
-  computeKeyframeFrameBounds,
-  formatDopesheetPropertyValue,
-} from './dopesheet-helpers'
+import { computeKeyframeFrameBounds, formatDopesheetPropertyValue } from './dopesheet-helpers'
 import {
   EMPTY_AUTO_KEY_ENABLED_BY_PROPERTY,
   PROPERTY_COLUMN_WIDTH,
@@ -76,7 +65,6 @@ import type { DragState } from './dopesheet-types'
 import { useAutoKeyframeStore } from '../../stores/auto-keyframe-store'
 import type { DopesheetEditorProps } from './dopesheet-editor-props'
 
-
 // Stable empty fallbacks so memoized timeline cells don't see fresh `[]` refs.
 const EMPTY_PROPERTY_GROUP_IDS: readonly string[] = []
 const EMPTY_HIDDEN_PROPERTIES: readonly AnimatableProperty[] = []
@@ -85,7 +73,6 @@ const EMPTY_COMPOUND_SECONDARIES: Partial<Record<AnimatableProperty, AnimatableP
 const EMPTY_DIMENSION_SEPARATION: NonNullable<
   DopesheetEditorProps['dimensionSeparationByProperty']
 > = {}
-
 
 export const DopesheetEditor = memo(function DopesheetEditor({
   frameViewport,
@@ -429,7 +416,6 @@ export const DopesheetEditor = memo(function DopesheetEditor({
     showGraphPane,
   ])
 
-
   const frameRange = Math.max(1, viewport.endFrame - viewport.startFrame)
   const {
     horizontalZoomRatioBase,
@@ -560,7 +546,6 @@ export const DopesheetEditor = memo(function DopesheetEditor({
     onDragEnd,
   })
 
-
   const {
     canClearRow,
     activateProperty,
@@ -649,7 +634,6 @@ export const DopesheetEditor = memo(function DopesheetEditor({
     onDragCancel,
   })
 
-
   const activePropertyRow = selectedProperty
     ? propertyRowByProperty.get(selectedProperty)
     : undefined
@@ -721,17 +705,16 @@ export const DopesheetEditor = memo(function DopesheetEditor({
   const handleKeyframePointerDown = keyframeDrag.handleKeyframePointerDown
   const handleGroupKeyframePointerDown = keyframeDrag.handleGroupKeyframePointerDown
 
-
-  const { handleRowPointerDown, handleTimelineBackgroundPointerDown } =
-    useDopesheetPointerDispatch({
+  const { handleRowPointerDown, handleTimelineBackgroundPointerDown } = useDopesheetPointerDispatch(
+    {
       disabled,
       isPropertyLocked,
       selectedKeyframeIds,
       onActivePropertyChange,
       beginMarqueeSelection,
       getMarqueeModeFromPointerEvent,
-    })
-
+    },
+  )
 
   const rulerScrub = useRulerScrub({
     disabled,
@@ -766,7 +749,6 @@ export const DopesheetEditor = memo(function DopesheetEditor({
   const handleRulerPointerMove = rulerScrub.handleRulerPointerMove
   const handleRulerPointerLeave = rulerScrub.handleRulerPointerLeave
   const handleRulerPointerUp = rulerScrub.handleRulerPointerUp
-
 
   useLinkedTimelineWheelForwarding({
     rootRef: pickWhipRootRef,
@@ -824,30 +806,76 @@ export const DopesheetEditor = memo(function DopesheetEditor({
   })
   // Shared row and group-header bundles, built once per change by the hook.
   const { rowContentProps, groupHeaderProps } = useDopesheetRowProps({
-  activateProperty, axisConstraintByProperty, autoKeyEnabledByProperty,
-  beginPropertyLink, canClearRow, compoundPropertyRows,
-  compoundSecondaryProperties, itemId, itemFrom,
-  currentFrame, fps, disabled,
-  expressionEditor, formatPropertyValue: formatDopesheetPropertyValue, globalFrame,
-  graphVisibleProperties, handleClearProperty, handleRowAutoKeyToggle,
-  handleRowNavigate, handleRowToggleKeyframe, handleRowValueChange,
-  handleRowValueCommit, handleValueScrubEnd, handleValueScrubCancel,
-  handleValueScrubMove, handleValueScrubStart, isPropertyLocked,
-  isCurrentFrameBlocked, onAddKeyframe, onNavigateToKeyframe,
-  onCurveVisibilityChange, onDragCancel, onDragEnd,
-  onDragStart, onPropertyValueCommit, onPropertyValuePreview,
-  resolvedPropertyLinks, resolvedPropertyLinkSourceLabels, removePropertyLink,
-  propertyExpressions, propertyLabels, preExpressionPropertyValues,
-  resolveExpressionReference, onSetPropertyExpression, openPropertyExpressionEditor,
-  onResetPropertiesToDefault, propertyValues, presentation,
-  selectedProperty, selectedCurveVisibleExternally, setAllRowsLocked,
-  setEditingValueProperty, setValueDrafts, showGraphPane,
-  showSinglePropertyCurve, singleCurveMode, skipNextBlurCommitPropertyRef,
-  spacious, t, togglePropertyCurve,
-  toggleLockedProperty, valueDraftAtFocusRef, valueDrafts,
-  expandedGroups, dimensionSeparationByProperty, setAllGroupsExpanded,
-  setGroupLocked, toggleGroup, toggleGroupCurves,
-  handleClearGroup,
+    activateProperty,
+    axisConstraintByProperty,
+    autoKeyEnabledByProperty,
+    beginPropertyLink,
+    canClearRow,
+    compoundPropertyRows,
+    compoundSecondaryProperties,
+    itemId,
+    itemFrom,
+    currentFrame,
+    fps,
+    disabled,
+    expressionEditor,
+    formatPropertyValue: formatDopesheetPropertyValue,
+    globalFrame,
+    graphVisibleProperties,
+    handleClearProperty,
+    handleRowAutoKeyToggle,
+    handleRowNavigate,
+    handleRowToggleKeyframe,
+    handleRowValueChange,
+    handleRowValueCommit,
+    handleValueScrubEnd,
+    handleValueScrubCancel,
+    handleValueScrubMove,
+    handleValueScrubStart,
+    isPropertyLocked,
+    isCurrentFrameBlocked,
+    onAddKeyframe,
+    onNavigateToKeyframe,
+    onCurveVisibilityChange,
+    onDragCancel,
+    onDragEnd,
+    onDragStart,
+    onPropertyValueCommit,
+    onPropertyValuePreview,
+    resolvedPropertyLinks,
+    resolvedPropertyLinkSourceLabels,
+    removePropertyLink,
+    propertyExpressions,
+    propertyLabels,
+    preExpressionPropertyValues,
+    resolveExpressionReference,
+    onSetPropertyExpression,
+    openPropertyExpressionEditor,
+    onResetPropertiesToDefault,
+    propertyValues,
+    presentation,
+    selectedProperty,
+    selectedCurveVisibleExternally,
+    setAllRowsLocked,
+    setEditingValueProperty,
+    setValueDrafts,
+    showGraphPane,
+    showSinglePropertyCurve,
+    singleCurveMode,
+    skipNextBlurCommitPropertyRef,
+    spacious,
+    t,
+    togglePropertyCurve,
+    toggleLockedProperty,
+    valueDraftAtFocusRef,
+    valueDrafts,
+    expandedGroups,
+    dimensionSeparationByProperty,
+    setAllGroupsExpanded,
+    setGroupLocked,
+    toggleGroup,
+    toggleGroupCurves,
+    handleClearGroup,
   })
   const expressionDockElement = useDopesheetExpressionDock({
     editor: expressionEditor,
@@ -925,41 +953,108 @@ export const DopesheetEditor = memo(function DopesheetEditor({
     },
   })
   const paneState = {
-    t, hasPropertyFilters, hasProceduralMotion,
-    propertyGridStyle, timelineRef, graphRulerUnit, reservedScrollbarGutterWidth,
-    ticks, frameToX, handleRulerPointerDown, handleRulerPointerMove,
-    handleRulerPointerUp, handleRulerPointerLeave, filterKeyframedOnly,
-    setShowKeyframedOnly, presentation, propertyFilter, hasLinkedTimelineAxis,
-    timelineScrollContainerRef, getTimelineLivePixelsPerSecond,
-    timelinePixelsPerSecond, itemFrom, columnWidth, showPlayhead, onSkim,
-    playheadFrame, currentFrame, totalFrames, playheadClampToItemBounds,
-    globalFrameToPixels, rulerScrubActiveRef, rulerScrubHandoffFrameRef,
-    effectiveTimelineWidth, fps, isRulerScrubbing, scrollAreaRef, sheetRows,
-    textMotionBands, rowElements, marqueeOverlayRef,
-    handleTimelineBackgroundPointerDown, propertyColumnElements, graphPaneRef,
-    disabled, graphDisplayPropertyLocked, focusGraphPane, handleGraphPaneKeyDown,
-    graphPaneSize, visibleGraphProperties, viewport, updateViewport, itemId,
-    keyframesByProperty, graphDisplayProperty, singleCurveMode,
-    compoundSecondaryProperties, selectedKeyframeIds, onKeyframeMove,
-    timingStripPreviewFrames, constrainGraphFrameDelta, onBezierHandleMove,
-    onSelectionChange, onPropertyChange, onScrub, onScrubStart, onScrubEnd,
-    onDragStart, onDragEnd, onAddKeyframe, onRemoveKeyframes,
-    onNavigateToKeyframe, transitionBlockedRanges, proceduralPreview,
-    snapEnabled, showAllGraphHandles, autoZoomGraphHeight,
-    graphVerticalZoomValue, isSplitView, graphMode, speedGraphContent,
-    affectedFrameRange, affectedFrameRangeGeometry, selectedFrameSummary,
-    globalFrame, localFrameInputValue, globalFrameInputValue,
-    setLocalFrameInputValue, setGlobalFrameInputValue,
-    skipNextHeaderFrameBlurRef, commitLocalFrameInput, commitGlobalFrameInput,
+    t,
+    hasPropertyFilters,
+    hasProceduralMotion,
+    propertyGridStyle,
+    timelineRef,
+    graphRulerUnit,
+    reservedScrollbarGutterWidth,
+    ticks,
+    frameToX,
+    handleRulerPointerDown,
+    handleRulerPointerMove,
+    handleRulerPointerUp,
+    handleRulerPointerLeave,
+    filterKeyframedOnly,
+    setShowKeyframedOnly,
+    presentation,
+    propertyFilter,
+    hasLinkedTimelineAxis,
+    timelineScrollContainerRef,
+    getTimelineLivePixelsPerSecond,
+    timelinePixelsPerSecond,
+    itemFrom,
+    columnWidth,
+    showPlayhead,
+    onSkim,
+    playheadFrame,
+    currentFrame,
+    totalFrames,
+    playheadClampToItemBounds,
+    globalFrameToPixels,
+    rulerScrubActiveRef,
+    rulerScrubHandoffFrameRef,
+    effectiveTimelineWidth,
+    fps,
+    isRulerScrubbing,
+    scrollAreaRef,
+    sheetRows,
+    textMotionBands,
+    rowElements,
+    marqueeOverlayRef,
+    handleTimelineBackgroundPointerDown,
+    propertyColumnElements,
+    graphPaneRef,
+    disabled,
+    graphDisplayPropertyLocked,
+    focusGraphPane,
+    handleGraphPaneKeyDown,
+    graphPaneSize,
+    visibleGraphProperties,
+    viewport,
+    updateViewport,
+    itemId,
+    keyframesByProperty,
+    graphDisplayProperty,
+    singleCurveMode,
+    compoundSecondaryProperties,
+    selectedKeyframeIds,
+    onKeyframeMove,
+    timingStripPreviewFrames,
+    constrainGraphFrameDelta,
+    onBezierHandleMove,
+    onSelectionChange,
+    onPropertyChange,
+    onScrub,
+    onScrubStart,
+    onScrubEnd,
+    onDragStart,
+    onDragEnd,
+    onAddKeyframe,
+    onRemoveKeyframes,
+    onNavigateToKeyframe,
+    transitionBlockedRanges,
+    proceduralPreview,
+    snapEnabled,
+    showAllGraphHandles,
+    autoZoomGraphHeight,
+    graphVerticalZoomValue,
+    isSplitView,
+    graphMode,
+    speedGraphContent,
+    affectedFrameRange,
+    affectedFrameRangeGeometry,
+    selectedFrameSummary,
+    globalFrame,
+    localFrameInputValue,
+    globalFrameInputValue,
+    setLocalFrameInputValue,
+    setGlobalFrameInputValue,
+    skipNextHeaderFrameBlurRef,
+    commitLocalFrameInput,
+    commitGlobalFrameInput,
     handleHeaderFrameInputKeyDown,
   }
   const {
-    rulerHeaderElement, sheetBodyElement, playheadOverlayElement,
-    splitPlayheadOverlayElement, skimPlayheadOverlayElement,
+    rulerHeaderElement,
+    sheetBodyElement,
+    playheadOverlayElement,
+    splitPlayheadOverlayElement,
+    skimPlayheadOverlayElement,
   } = buildDopesheetSheetPaneElements(paneState)
   const graphPaneElement = buildDopesheetGraphPaneElement(paneState)
-  const affectedFrameRangeOverlayElement =
-    buildDopesheetAffectedFrameRangeOverlayElement(paneState)
+  const affectedFrameRangeOverlayElement = buildDopesheetAffectedFrameRangeOverlayElement(paneState)
   const headerFrameInputs = buildDopesheetHeaderFrameInputs(paneState)
 
   if (presentation === 'lanes') {
@@ -1016,24 +1111,65 @@ export const DopesheetEditor = memo(function DopesheetEditor({
   // Workspace chrome: only the default shell renders these, so they are built
   // after the two exclusive shells have already returned.
   const chromeState = {
-    propertyGridStyle, viewport, contentFrameMax, disabled, currentFrame,
-    minViewportFrames, updateViewport, timingStripMarkers,
-    timingStripPreviewFrames, handleTimingStripSelectionChange,
-    handleTimingStripSlideStart, handleTimingStripSlideChange,
-    handleTimingStripSlideEnd, headerFrameInputs, availableProperties,
-    filterKeyframedOnly, setShowKeyframedOnly, allPropertyGroups, visibleGroups,
-    toggleVisibleGroup, setAllGroupsExpanded, resetParameterView,
-    hasPropertyFilters, showGraphPane, graphDisplayProperty, compoundPropertyRows,
-    speedGraphContent, onGraphModeChange, graphMode, visibleKeyframes,
-    isCurrentFrameBlocked, canBakeMotion, onBakeMotion, interpolationOptions,
-    selectedInterpolation, interpolationDisabled, onInterpolationChange,
-    selectedRefs, hasKeyframeClipboard, isKeyframeClipboardCut,
-    onCopyKeyframes, onCutKeyframes, onPasteKeyframes, onRemoveKeyframes,
-    handleRemoveKeyframes, horizontalZoomValue, horizontalZoomRatioBase,
-    setHorizontalZoomValue, resetViewport, graphVerticalZoomValue,
-    visibleGraphProperties, verticalZoomRatioBase, setGraphVerticalZoomValue,
-    graphRulerUnit, setGraphRulerUnit, showAllGraphHandles, setShowAllGraphHandles,
-    autoZoomGraphHeight, setAutoZoomGraphHeight,
+    propertyGridStyle,
+    viewport,
+    contentFrameMax,
+    disabled,
+    currentFrame,
+    minViewportFrames,
+    updateViewport,
+    timingStripMarkers,
+    timingStripPreviewFrames,
+    handleTimingStripSelectionChange,
+    handleTimingStripSlideStart,
+    handleTimingStripSlideChange,
+    handleTimingStripSlideEnd,
+    headerFrameInputs,
+    availableProperties,
+    filterKeyframedOnly,
+    setShowKeyframedOnly,
+    allPropertyGroups,
+    visibleGroups,
+    toggleVisibleGroup,
+    setAllGroupsExpanded,
+    resetParameterView,
+    hasPropertyFilters,
+    showGraphPane,
+    graphDisplayProperty,
+    compoundPropertyRows,
+    speedGraphContent,
+    onGraphModeChange,
+    graphMode,
+    visibleKeyframes,
+    isCurrentFrameBlocked,
+    canBakeMotion,
+    onBakeMotion,
+    interpolationOptions,
+    selectedInterpolation,
+    interpolationDisabled,
+    onInterpolationChange,
+    selectedRefs,
+    hasKeyframeClipboard,
+    isKeyframeClipboardCut,
+    onCopyKeyframes,
+    onCutKeyframes,
+    onPasteKeyframes,
+    onRemoveKeyframes,
+    handleRemoveKeyframes,
+    horizontalZoomValue,
+    horizontalZoomRatioBase,
+    setHorizontalZoomValue,
+    resetViewport,
+    graphVerticalZoomValue,
+    visibleGraphProperties,
+    verticalZoomRatioBase,
+    setGraphVerticalZoomValue,
+    graphRulerUnit,
+    setGraphRulerUnit,
+    showAllGraphHandles,
+    setShowAllGraphHandles,
+    autoZoomGraphHeight,
+    setAutoZoomGraphHeight,
   }
   const { toolbarElement, timingStripElement, navigatorElement } =
     buildDopesheetWorkspaceChrome(chromeState)

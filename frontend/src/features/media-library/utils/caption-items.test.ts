@@ -75,6 +75,7 @@ import {
   buildSubtitleTextItemsForClip,
   buildCaptionTrack,
   buildCaptionTrackAbove,
+  buildCaptionTrackAtTop,
   buildSubtitleSegmentForClip,
   consolidateCaptionTextItemsToSegments,
   findCaptionTargetClipsForMedia,
@@ -820,6 +821,196 @@ describe('caption-items', () => {
     })
   })
 
+  it('draws a video/audio pair captions once, from the video half', () => {
+    const captions = {
+      type: 'transcript' as const,
+      mediaId: 'media-1',
+      enabled: true,
+      updatedAt: 1,
+      cues: [{ id: 'active', startSeconds: 0, endSeconds: 2, text: 'Active' }],
+    }
+    const baseItem = {
+      from: 0,
+      durationInFrames: 60,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 60,
+      sourceDuration: 60,
+      sourceFps: 30,
+      transcriptCaptions: captions,
+    }
+    const videoTrack: TimelineTrack = {
+      id: 'track-v',
+      name: 'V1',
+      kind: 'video',
+      height: 64,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 1,
+      items: [{ ...baseItem, id: 'video-clip', type: 'video', trackId: 'track-v' }],
+    }
+    const audioTrack: TimelineTrack = {
+      ...videoTrack,
+      id: 'track-a',
+      name: 'A1',
+      kind: 'audio',
+      order: 2,
+      items: [{ ...baseItem, id: 'audio-clip', type: 'audio', trackId: 'track-a' }],
+    }
+
+    const tracks = appendVirtualTranscriptCaptionTrack([videoTrack, audioTrack], 30, 1920, 1080)
+
+    const virtualTrack = tracks.find((track) => track.id === VIRTUAL_TRANSCRIPT_CAPTION_TRACK_ID)
+    expect(virtualTrack?.items).toHaveLength(1)
+    const onlyItem = virtualTrack?.items[0]
+    expect(onlyItem?.type).toBe('subtitle')
+    expect(onlyItem?.type === 'subtitle' ? onlyItem.source : null).toMatchObject({
+      clipId: 'video-clip',
+    })
+  })
+
+  it('draws only the subtitle track when the clip transcript was moved onto it', () => {
+    const captions = {
+      type: 'transcript' as const,
+      mediaId: 'media-1',
+      enabled: true,
+      updatedAt: 1,
+      cues: [{ id: 'active', startSeconds: 0, endSeconds: 2, text: 'Clip copy' }],
+    }
+    const baseItem = {
+      from: 0,
+      durationInFrames: 60,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 60,
+      sourceDuration: 60,
+      sourceFps: 30,
+      transcriptCaptions: captions,
+    }
+    const clipTrack: TimelineTrack = {
+      id: 'track-v',
+      name: 'V1',
+      kind: 'video',
+      height: 64,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 1,
+      items: [{ ...baseItem, id: 'video-clip', type: 'video', trackId: 'track-v' }],
+    }
+    const captionTrack: TimelineTrack = {
+      ...clipTrack,
+      id: 'track-captions',
+      name: 'V2',
+      order: 0,
+      items: [
+        {
+          id: 'subtitle-1',
+          type: 'subtitle',
+          trackId: 'track-captions',
+          from: 0,
+          durationInFrames: 60,
+          label: 'Transcript',
+          source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-clip' },
+          cues: [{ id: 'segment-cue', startSeconds: 0, endSeconds: 2, text: 'Track copy' }],
+        } as unknown as TimelineItem,
+      ],
+    }
+
+    const tracks = appendVirtualTranscriptCaptionTrack([clipTrack, captionTrack], 30, 1920, 1080)
+
+    expect(tracks.some((track) => track.id === VIRTUAL_TRANSCRIPT_CAPTION_TRACK_ID)).toBe(false)
+  })
+
+  it('draws only the subtitle track when the transcript moved from the pair video', () => {
+    const baseItem = {
+      from: 0,
+      durationInFrames: 60,
+      label: 'Clip',
+      mediaId: 'media-1',
+      src: 'blob:test',
+      sourceStart: 0,
+      sourceEnd: 60,
+      sourceDuration: 60,
+      sourceFps: 30,
+    }
+    const videoTrack: TimelineTrack = {
+      id: 'track-v',
+      name: 'V1',
+      kind: 'video',
+      height: 64,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 1,
+      items: [{ ...baseItem, id: 'video-clip', type: 'video', trackId: 'track-v' }],
+    }
+    const audioTrack: TimelineTrack = {
+      ...videoTrack,
+      id: 'track-a',
+      name: 'A1',
+      kind: 'audio',
+      order: 2,
+      items: [
+        {
+          ...baseItem,
+          id: 'audio-clip',
+          type: 'audio',
+          trackId: 'track-a',
+          transcriptCaptions: {
+            type: 'transcript',
+            mediaId: 'media-1',
+            enabled: true,
+            updatedAt: 1,
+            cues: [{ id: 'stale', startSeconds: 0, endSeconds: 2, text: 'Stale copy' }],
+          },
+        },
+      ],
+    }
+    const captionTrack: TimelineTrack = {
+      ...videoTrack,
+      id: 'track-captions',
+      name: 'V2',
+      order: 0,
+      items: [
+        {
+          id: 'subtitle-1',
+          type: 'subtitle',
+          trackId: 'track-captions',
+          from: 0,
+          durationInFrames: 60,
+          label: 'Transcript',
+          source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-clip' },
+          cues: [{ id: 'segment-cue', startSeconds: 0, endSeconds: 2, text: 'Track copy' }],
+        } as unknown as TimelineItem,
+      ],
+    }
+
+    const tracks = appendVirtualTranscriptCaptionTrack(
+      [captionTrack, videoTrack, audioTrack],
+      30,
+      1920,
+      1080,
+    )
+
+    expect(tracks.some((track) => track.id === VIRTUAL_TRANSCRIPT_CAPTION_TRACK_ID)).toBe(false)
+  })
+
+  it('creates a caption track above every existing track', () => {
+    const tracks = [makeTrack('top', 0), makeTrack('middle', 1), makeTrack('bottom', 2)]
+
+    expect(buildCaptionTrackAtTop(tracks).order).toBe(-1)
+    expect(buildCaptionTrackAtTop([]).order).toBe(-1)
+  })
+
   it('suppresses all clip-owned captions while their source clip is reversed', () => {
     const reversedClip = {
       id: 'video-reversed',
@@ -881,12 +1072,7 @@ describe('caption-items', () => {
       items: [attachedText, attachedSubtitle, title],
     }
 
-    const tracks = appendVirtualTranscriptCaptionTrack(
-      [videoTrack, captionTrack],
-      30,
-      1920,
-      1080,
-    )
+    const tracks = appendVirtualTranscriptCaptionTrack([videoTrack, captionTrack], 30, 1920, 1080)
 
     expect(tracks).toHaveLength(2)
     expect(tracks.find((track) => track.id === 'track-captions')?.items).toEqual([title])

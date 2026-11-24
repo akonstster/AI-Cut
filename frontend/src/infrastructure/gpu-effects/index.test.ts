@@ -19,11 +19,17 @@ describe('GPU effect registry', () => {
         clock.mockReturnValue(987654321)
         effect.packUniforms(params, 960, 540, 90)
         expect(Array.from(effect.packUniforms(params, 960, 540, 17.25) ?? []), id).toEqual(first)
-        if (JSON.stringify(first) !== JSON.stringify(Array.from(effect.packUniforms(params, 960, 540, 0) ?? []))) animated++
+        if (
+          JSON.stringify(first) !==
+          JSON.stringify(Array.from(effect.packUniforms(params, 960, 540, 0) ?? []))
+        )
+          animated++
       }
       expect(animated).toBe(7)
       expect(clock).not.toHaveBeenCalled()
-    } finally { clock.mockRestore() }
+    } finally {
+      clock.mockRestore()
+    }
   })
 
   it('registers every effect with shader metadata and valid default uniforms', () => {

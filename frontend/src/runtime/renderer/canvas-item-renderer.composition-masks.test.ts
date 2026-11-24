@@ -31,9 +31,9 @@ vi.mock('./canvas-shapes', () => ({
 }))
 
 vi.mock('@/runtime/renderer/deps/composition-runtime-contract', async () => {
-  const actual = await vi.importActual<typeof import('@/runtime/renderer/deps/composition-runtime-contract')>(
-    '@/runtime/renderer/deps/composition-runtime-contract',
-  )
+  const actual = await vi.importActual<
+    typeof import('@/runtime/renderer/deps/composition-runtime-contract')
+  >('@/runtime/renderer/deps/composition-runtime-contract')
   return {
     ...actual,
     getShapePath: mockFns.getShapePathMock,

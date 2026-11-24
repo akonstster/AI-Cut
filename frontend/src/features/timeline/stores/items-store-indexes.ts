@@ -346,9 +346,7 @@ export function selectReplaceableCaptionClipIds(state: { items: TimelineItem[] }
 let consolidatableCaptionItems: TimelineItem[] | null = null
 let consolidatableCaptionClipIds: Set<string> = new Set()
 
-export function selectConsolidatableCaptionClipIds(state: {
-  items: TimelineItem[]
-}): Set<string> {
+export function selectConsolidatableCaptionClipIds(state: { items: TimelineItem[] }): Set<string> {
   if (consolidatableCaptionItems === state.items) return consolidatableCaptionClipIds
   const ids = new Set<string>()
   for (const item of state.items) {
@@ -553,10 +551,20 @@ function buildCaptionIdsByClipId(
 ): Record<string, string[]> {
   const grouped: Record<string, string[]> = {}
   for (const item of items) {
-    if (item.type !== 'text') continue
-    const clipId = item.captionSource?.clipId
-    if (clipId) {
-      ;(grouped[clipId] ??= []).push(item.id)
+    if (item.type === 'text') {
+      const clipId = item.captionSource?.clipId
+      if (clipId) {
+        ;(grouped[clipId] ??= []).push(item.id)
+      }
+      continue
+    }
+    // Subtitle segments ride along with the clip they were generated from: deleting the clip
+    // must not leave an orphaned caption track behind.
+    if (item.type === 'subtitle' && 'clipId' in item.source) {
+      const clipId = item.source.clipId
+      if (clipId) {
+        ;(grouped[clipId] ??= []).push(item.id)
+      }
     }
   }
 

@@ -106,7 +106,9 @@ describe('workflow files', () => {
   it('rejects edges that attach media to a prompt input', () => {
     const broken = JSON.parse(workflowFile(graph, 'x'))
     broken.graph.edges[0].targetHandle = 'prompt'
-    expect(() => readWorkflowFile(JSON.stringify(broken), counter())).toThrow('connects incompatible nodes')
+    expect(() => readWorkflowFile(JSON.stringify(broken), counter())).toThrow(
+      'connects incompatible nodes',
+    )
   })
 
   it('name what is wrong in a file', () => {

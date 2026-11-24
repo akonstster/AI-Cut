@@ -21,10 +21,7 @@ import { toVectorScalePercent } from '@/features/timeline/deps/keyframes-contrac
 import { usePlaybackStore } from '@/shared/state/playback'
 import * as timelineActions from '../stores/timeline-actions'
 import { useKeyframesStore } from '../stores/keyframes-store'
-import {
-  duplicateVectorKeyframeEntry,
-  getEditableVectorProxy,
-} from './keyframe-graph-panel-model'
+import { duplicateVectorKeyframeEntry, getEditableVectorProxy } from './keyframe-graph-panel-model'
 import type {
   AnimatableProperty,
   ItemKeyframes,

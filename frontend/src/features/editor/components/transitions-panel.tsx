@@ -209,48 +209,45 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
   }, [clearTransitionDrag])
 
   // Apply a transition by config index
-  const handleApplyByIndex = useCallback(
-    (configIndex: number) => {
-      const config = getTransitionPresentationConfigs()[configIndex]
-      if (!config) return
+  const handleApplyByIndex = useCallback((configIndex: number) => {
+    const config = getTransitionPresentationConfigs()[configIndex]
+    if (!config) return
 
-      // Get fresh state at click time
-      const { items: currentItems } = useItemsStore.getState()
-      const { transitions: currentTransitions } = useTransitionsStore.getState()
-      const { fps: currentFps } = useTimelineSettingsStore.getState()
-      const currentSelectedIds = useSelectionStore.getState().selectedItemIds
-      const info = resolveTransitionTargetFromSelection({
-        selectedItemIds: currentSelectedIds,
-        items: currentItems,
-        transitions: currentTransitions,
-        timelineFps: currentFps,
-      })
+    // Get fresh state at click time
+    const { items: currentItems } = useItemsStore.getState()
+    const { transitions: currentTransitions } = useTransitionsStore.getState()
+    const { fps: currentFps } = useTimelineSettingsStore.getState()
+    const currentSelectedIds = useSelectionStore.getState().selectedItemIds
+    const info = resolveTransitionTargetFromSelection({
+      selectedItemIds: currentSelectedIds,
+      items: currentItems,
+      transitions: currentTransitions,
+      timelineFps: currentFps,
+    })
 
-      if (!info || (!info.hasExisting && !info.canApply)) return
+    if (!info || (!info.hasExisting && !info.canApply)) return
 
-      const { leftClipId, rightClipId, hasExisting, existingTransitionId } = info
-      const presentation = config.id
-      const direction = (config.direction ?? config.defaultDirection) as
-        | WipeDirection
-        | SlideDirection
-        | FlipDirection
-        | undefined
+    const { leftClipId, rightClipId, hasExisting, existingTransitionId } = info
+    const presentation = config.id
+    const direction = (config.direction ?? config.defaultDirection) as
+      | WipeDirection
+      | SlideDirection
+      | FlipDirection
+      | undefined
 
-      if (hasExisting && existingTransitionId) {
-        updateTransition(existingTransitionId, { presentation, direction })
-      } else {
-        addTransition(
-          leftClipId,
-          rightClipId,
-          'crossfade',
-          info.suggestedDurationInFrames,
-          presentation,
-          direction,
-        )
-      }
-    },
-    [],
-  )
+    if (hasExisting && existingTransitionId) {
+      updateTransition(existingTransitionId, { presentation, direction })
+    } else {
+      addTransition(
+        leftClipId,
+        rightClipId,
+        'crossfade',
+        info.suggestedDurationInFrames,
+        presentation,
+        direction,
+      )
+    }
+  }, [])
 
   const hasValidClickTarget = !!adjacentInfo && (adjacentInfo.hasExisting || adjacentInfo.canApply)
 
@@ -264,9 +261,7 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
             {hasValidClickTarget ? (
               <span className="text-primary">{t('editor.transitions.hintClickToApply')}</span>
             ) : adjacentInfo?.reason ? (
-              <span>
-                {t('editor.transitions.hintUnavailable', { reason: adjacentInfo.reason })}
-              </span>
+              <span>{t('timeline.transitionDrop.notEnoughFrames')}</span>
             ) : selectionCount === 1 ? (
               <span>{t('editor.transitions.hintSelectOne')}</span>
             ) : selectionCount > 1 ? (

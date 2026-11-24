@@ -28,12 +28,23 @@ import type { LottieItem, TimelineItem, TimelineTrack } from '@/types/timeline'
 import { createLogger } from '@/shared/logging/logger'
 import { recordPreviewCompositionRender } from '@/shared/logging/preview-scrub-performance'
 import { isItemFullyOccluding, type FrameOcclusionContext } from './frame-occlusion'
-import { renderMasksToGpuTexture as renderMasksToGpuTexturePure, applyTrackScopedMasks as applyTrackScopedMasksPure, type RenderedTaskResult } from './frame-mask-helpers'
-import { renderTransitionFallbackCanvas as renderTransitionFallbackCanvasPure, renderItemWithEffects as renderItemWithEffectsPure, type FrameItemRenderDeps } from './frame-render-tasks'
+import {
+  renderMasksToGpuTexture as renderMasksToGpuTexturePure,
+  applyTrackScopedMasks as applyTrackScopedMasksPure,
+  type RenderedTaskResult,
+} from './frame-mask-helpers'
+import {
+  renderTransitionFallbackCanvas as renderTransitionFallbackCanvasPure,
+  renderItemWithEffects as renderItemWithEffectsPure,
+  type FrameItemRenderDeps,
+} from './frame-render-tasks'
 import { compositeFrameResults } from './frame-compositing'
 import { getCompositeOperation } from '@/types/blend-mode-css'
 import { doesMaskAffectTrack } from '@/shared/utils/mask-scope'
-import { hasCornerPin, resolveFrameRenderScene } from '@/runtime/renderer/deps/composition-runtime-contract'
+import {
+  hasCornerPin,
+  resolveFrameRenderScene,
+} from '@/runtime/renderer/deps/composition-runtime-contract'
 import { renderTransitionToGpuTexture } from './canvas-item-renderer'
 import { resolveFrameRenderOptimization } from './render-path-optimizer'
 import { shouldRenderResolvedItemAtFrame } from './render-engine-predicates'
@@ -137,8 +148,14 @@ export interface FrameRenderDeps {
   activePreviewFallbackUsed: boolean
   cacheRenderedFrame: (frame: number) => void
   detectFrameGpuEffects: (frame: number) => boolean
-  discardFrameResults: (results: Array<RenderedTaskResult | null>, contentCanvas: OffscreenCanvas) => void
-  ensureFrameGpuPipelines: (hasAnyGpuEffects: boolean, hasActiveTransitions: boolean) => Promise<void>
+  discardFrameResults: (
+    results: Array<RenderedTaskResult | null>,
+    contentCanvas: OffscreenCanvas,
+  ) => void
+  ensureFrameGpuPipelines: (
+    hasAnyGpuEffects: boolean,
+    hasActiveTransitions: boolean,
+  ) => Promise<void>
   ensureLottieOverridesFresh: () => Promise<void>
   lottieOverridesAreStale: () => boolean
   refreshFrameRenderContext: (frame: number) => void
@@ -146,9 +163,13 @@ export interface FrameRenderDeps {
   perfMarkIfEnabled: (enabledMs: number) => number
   getCurrentKeyframes: (itemId: string) => ItemKeyframes | undefined
   getCurrentItem: <TItem extends TimelineItem>(item: TItem) => TItem
-  getPreviewTransformOverride: ((itemId: string) => Partial<ResolvedTransform> | undefined) | undefined
+  getPreviewTransformOverride:
+    | ((itemId: string) => Partial<ResolvedTransform> | undefined)
+    | undefined
   getPreviewEffectsOverride: ((itemId: string) => ItemEffect[] | undefined) | undefined
-  getPreviewCornerPinOverride: ((itemId: string) => TimelineItem['cornerPin'] | undefined) | undefined
+  getPreviewCornerPinOverride:
+    | ((itemId: string) => TimelineItem['cornerPin'] | undefined)
+    | undefined
   getLiveItemSnapshot: ((itemId: string) => TimelineItem | undefined) | undefined
 }
 
@@ -197,8 +218,7 @@ export class FrameRenderPass {
     this.deps.activePreviewFallbackUsed = false
     itemRenderContext.previewRootTimelineFrame = frame
     const isSupersededActivePreviewFrame = () =>
-      renderMode === 'preview' &&
-      itemRenderContext.isActivePreviewFrameSuperseded?.(frame) === true
+      renderMode === 'preview' && itemRenderContext.isActivePreviewFrameSuperseded?.(frame) === true
     const abortActivePreviewRender = () => {
       if (!this.deps.lastRenderAborted) {
         recordScrubPerf(frame, 'aborted', scrubPerfStartMs)

@@ -1,10 +1,7 @@
 import { memo } from 'react'
 import { cn } from '@/shared/ui/cn'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  type MotionPreset,
-  type MotionPresetCategory,
-} from '@/features/editor/deps/keyframes'
+import { type MotionPreset, type MotionPresetCategory } from '@/features/editor/deps/keyframes'
 import { MotionPresetThumbnail } from './motion-preset-thumbnail'
 
 interface MotionPresetSectionProps {

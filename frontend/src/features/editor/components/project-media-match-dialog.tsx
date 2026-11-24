@@ -11,10 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
-import {
-  markDirty,
-  useTimelineSettingsStore,
-} from '@/features/editor/deps/timeline-store'
+import { markDirty, useTimelineSettingsStore } from '@/features/editor/deps/timeline-store'
 import { toast } from 'sonner'
 import { useProjectMediaMatchDialogStore } from '@/shared/state/project-media-match-dialog'
 import {

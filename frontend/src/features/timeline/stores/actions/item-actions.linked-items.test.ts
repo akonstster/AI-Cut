@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
-import type { AudioItem, TextItem, TimelineTrack, VideoItem } from '@/types/timeline'
+import type { AudioItem, TextItem, TimelineItem, TimelineTrack, VideoItem } from '@/types/timeline'
 import { useItemsStore } from '../items-store'
 import { useTransitionsStore } from '../transitions-store'
 import { useKeyframesStore } from '../keyframes-store'
@@ -296,10 +296,12 @@ describe('linked timeline items', () => {
       parentTrackId: group.id,
     })
     useItemsStore.getState().setTracks([group, firstChild, secondChild])
-    useItemsStore.getState().setItems([
-      makeVideoItem({ id: 'child-item-1', trackId: firstChild.id, linkedGroupId: undefined }),
-      makeVideoItem({ id: 'child-item-2', trackId: secondChild.id, linkedGroupId: undefined }),
-    ])
+    useItemsStore
+      .getState()
+      .setItems([
+        makeVideoItem({ id: 'child-item-1', trackId: firstChild.id, linkedGroupId: undefined }),
+        makeVideoItem({ id: 'child-item-2', trackId: secondChild.id, linkedGroupId: undefined }),
+      ])
 
     removeItems(['child-item-1'])
     expect(useItemsStore.getState().tracks.map((track) => track.id)).toEqual([
@@ -316,6 +318,31 @@ describe('linked timeline items', () => {
       group.id,
       secondChild.id,
     ])
+  })
+
+  it('marks the source clip when its subtitle segment is deleted', () => {
+    const clip = makeVideoItem({ id: 'video-1', autoCaptionedAt: undefined })
+    const subtitle = {
+      id: 'subtitle-1',
+      type: 'subtitle',
+      trackId: 'captions-track',
+      linkedGroupId: 'group-1',
+      from: 0,
+      durationInFrames: 60,
+      label: 'Transcript',
+      source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-1' },
+      cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hi' }],
+    } as unknown as TimelineItem
+
+    useItemsStore.getState().setItems([clip, subtitle])
+
+    removeItems(['subtitle-1'])
+
+    expect(useItemsStore.getState().itemById['subtitle-1']).toBeUndefined()
+    // Deleting the captions leaves the picture alone, even when they share a linked group.
+    expect(useItemsStore.getState().itemById['video-1']).toBeDefined()
+    // Auto-captioning must not generate the deleted subtitles again on the next open.
+    expect(useItemsStore.getState().itemById['video-1']?.autoCaptionedAt).toBeTypeOf('number')
   })
 
   it('ripple deletes a linked pair when only one member is targeted', () => {

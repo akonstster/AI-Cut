@@ -48,7 +48,8 @@ interface DopesheetShellRootProps {
 }
 
 export interface DopesheetLanesPresentationProps
-  extends DopesheetShellRootProps,
+  extends
+    DopesheetShellRootProps,
     Pick<
       DopesheetPaneElements,
       | 'graphPaneElement'
@@ -126,11 +127,11 @@ export function DopesheetLanesPresentation({
       ) : null}
     </div>
   )
-
 }
 
 export interface DopesheetClassicPresentationProps
-  extends DopesheetShellRootProps,
+  extends
+    DopesheetShellRootProps,
     Pick<
       DopesheetPaneElements,
       | 'rulerHeaderElement'
@@ -234,12 +235,10 @@ export function DopesheetClassicPresentation({
       </div>
     </div>
   )
-
 }
 
 export interface DopesheetEditorPresentationProps
-  extends DopesheetPaneElements,
-    DopesheetShellRootProps {
+  extends DopesheetPaneElements, DopesheetShellRootProps {
   width: number
   t: TFunction
   visualizationMode: 'dopesheet' | 'graph' | 'split'

@@ -99,12 +99,8 @@ export function useDopesheetCoordinates({
   }, [affectedFrameRange, effectiveTimelineWidth, frameToX])
   const sharedGridFrameToX = useCallback(
     (frame: number) =>
-      getFrameAxisX(
-        frame,
-        viewport,
-        effectiveTimelineWidth + timelineCellBorderWidth,
-        0,
-      ) - timelineCellBorderWidth,
+      getFrameAxisX(frame, viewport, effectiveTimelineWidth + timelineCellBorderWidth, 0) -
+      timelineCellBorderWidth,
     [effectiveTimelineWidth, timelineCellBorderWidth, viewport],
   )
   const getRenderedKeyframeX = useCallback(
@@ -125,13 +121,7 @@ export function useDopesheetCoordinates({
         inlinePropertyGroupIdSet,
         expandedGroups,
       }),
-    [
-      expandedGroups,
-      groupedSheetRows,
-      inlinePropertyGroupIdSet,
-      presentation,
-      textMotionBandCount,
-    ],
+    [expandedGroups, groupedSheetRows, inlinePropertyGroupIdSet, presentation, textMotionBandCount],
   )
   // Marquee points are only needed while a selection marquee is moving.
   // Building them eagerly duplicated the viewport-sensitive keyframe position

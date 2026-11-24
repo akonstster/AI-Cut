@@ -276,8 +276,9 @@ describe('resolveGpuShapePathVertices', () => {
     expect(direct).toHaveLength(MAX_GPU_SHAPE_PATH_VERTICES)
     // Straight contour: uniform arc length, so the progress tags are the flattened ones.
     expect(direct!.map((vertex) => vertex[2])).toEqual(
-      Array.from({ length: MAX_GPU_SHAPE_PATH_VERTICES }, (_, index) =>
-        index / (MAX_GPU_SHAPE_PATH_VERTICES - 1),
+      Array.from(
+        { length: MAX_GPU_SHAPE_PATH_VERTICES },
+        (_, index) => index / (MAX_GPU_SHAPE_PATH_VERTICES - 1),
       ),
     )
   })
@@ -287,8 +288,9 @@ describe('resolveGpuShapePathVertices', () => {
     const resampled = resolveGpuShapePathVertices(shape, BASE_TRANSFORM)
     expect(resampled).toHaveLength(MAX_GPU_SHAPE_PATH_VERTICES)
     expect(resampled!.map((vertex) => vertex[2])).toEqual(
-      Array.from({ length: MAX_GPU_SHAPE_PATH_VERTICES }, (_, index) =>
-        index / MAX_GPU_SHAPE_PATH_VERTICES,
+      Array.from(
+        { length: MAX_GPU_SHAPE_PATH_VERTICES },
+        (_, index) => index / MAX_GPU_SHAPE_PATH_VERTICES,
       ),
     )
   })
@@ -314,7 +316,11 @@ describe('resolveGpuShapePathVertices', () => {
     ).toBeNull()
     expect(
       resolveGpuShapePathVertices(
-        { ...BASE_SHAPE, pathClosed: false, pathVertices: [straightVertex(0, 2), straightVertex(1, 2)] },
+        {
+          ...BASE_SHAPE,
+          pathClosed: false,
+          pathVertices: [straightVertex(0, 2), straightVertex(1, 2)],
+        },
         BASE_TRANSFORM,
       ),
     ).toHaveLength(2)
@@ -724,16 +730,20 @@ describe('resolveGpuShapeUnsupportedReason', () => {
       fillColor: 'bogus',
       pathVertices: [straightVertex(0, 3), straightVertex(1, 3), straightVertex(2, 3)],
     }
-    expect(resolveGpuShapeUnsupportedReason(openPath, BASE_TRANSFORM, {
-      hasShapePipeline: true,
-      hasEffectsPipeline: true,
-      hasEffects: false,
-    })).toBeNull()
-    expect(resolveGpuShapeUnsupportedReason({ ...openPath, pathClosed: true }, BASE_TRANSFORM, {
-      hasShapePipeline: true,
-      hasEffectsPipeline: true,
-      hasEffects: false,
-    })).toBe('unsupported-shape-fill')
+    expect(
+      resolveGpuShapeUnsupportedReason(openPath, BASE_TRANSFORM, {
+        hasShapePipeline: true,
+        hasEffectsPipeline: true,
+        hasEffects: false,
+      }),
+    ).toBeNull()
+    expect(
+      resolveGpuShapeUnsupportedReason({ ...openPath, pathClosed: true }, BASE_TRANSFORM, {
+        hasShapePipeline: true,
+        hasEffectsPipeline: true,
+        hasEffects: false,
+      }),
+    ).toBe('unsupported-shape-fill')
   })
 
   it('detects a drifted ladder, so the oracle comparison can fail', () => {

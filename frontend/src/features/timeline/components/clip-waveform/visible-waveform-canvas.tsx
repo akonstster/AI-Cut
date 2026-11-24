@@ -157,9 +157,9 @@ function flushLiveCanvasPositionUpdate(): void {
     needsRedraw: boolean
   }> = []
 
-    // Timeline items use arithmetic from the shared live zoom/viewport snapshot.
-    // Only transformed items or legacy/malformed markup fall back to DOM reads.
-    // Read every fallback rect before writing any style to avoid layout thrash.
+  // Timeline items use arithmetic from the shared live zoom/viewport snapshot.
+  // Only transformed items or legacy/malformed markup fall back to DOM reads.
+  // Read every fallback rect before writing any style to avoid layout thrash.
   for (const registration of liveCanvasRegistrations) {
     if (!registration.canvas.isConnected) continue
     let geometry = computeLiveTimelineGeometryFromItem(
@@ -190,15 +190,15 @@ function flushLiveCanvasPositionUpdate(): void {
   }
   for (const update of updates) {
     if (update.needsRedraw) {
-        // A scale change needs real new pixels even when the bounded window is
-        // shrinking. Redraw imperatively from the current live store snapshot;
-        // React remains on settled geometry and therefore cannot fan out one
-        // state update per waveform during the wheel gesture.
+      // A scale change needs real new pixels even when the bounded window is
+      // shrinking. Redraw imperatively from the current live store snapshot;
+      // React remains on settled geometry and therefore cannot fan out one
+      // state update per waveform during the wheel gesture.
       update.registration.redraw(update.geometry)
       update.registration.lastPixelsPerSecond = snapshot.pixelsPerSecond
     } else {
-        // Keep the existing sharp bitmap and backing size; only move it into the
-        // new viewport window until the cadence-limited redraw catches up.
+      // Keep the existing sharp bitmap and backing size; only move it into the
+      // new viewport window until the cadence-limited redraw catches up.
       update.registration.canvas.style.left = `${update.geometry.left}px`
     }
   }

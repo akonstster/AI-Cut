@@ -17,7 +17,10 @@ const log = createLogger('LocalModelCacheControl')
 
 interface LocalModelCacheControlProps {
   className?: string
-  prepare?: (id: LocalModelCacheSummary['id'], onProgress: (percent: number) => void) => Promise<void>
+  prepare?: (
+    id: LocalModelCacheSummary['id'],
+    onProgress: (percent: number) => void,
+  ) => Promise<void>
 }
 
 export function LocalModelCacheControl({ className, prepare }: LocalModelCacheControlProps) {
@@ -105,7 +108,8 @@ export function LocalModelCacheControl({ className, prepare }: LocalModelCacheCo
       })
       if (mountedRef.current) setPreparedId(summary.id)
     } catch (error) {
-      if (mountedRef.current) setPrepareError(error instanceof Error ? error.message : String(error))
+      if (mountedRef.current)
+        setPrepareError(error instanceof Error ? error.message : String(error))
     } finally {
       await refreshCacheSummaries()
       if (mountedRef.current) setPreparingId(undefined)
@@ -142,9 +146,19 @@ export function LocalModelCacheControl({ className, prepare }: LocalModelCacheCo
     <div className={cn('space-y-3', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-medium">{t(prepare ? 'projects.settings.modelCache.manageTitle' : 'projects.settings.modelCache.title')}</p>
+          <p className="text-sm font-medium">
+            {t(
+              prepare
+                ? 'projects.settings.modelCache.manageTitle'
+                : 'projects.settings.modelCache.title',
+            )}
+          </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {t(prepare ? 'projects.settings.modelCache.manageDescription' : 'projects.settings.modelCache.description')}
+            {t(
+              prepare
+                ? 'projects.settings.modelCache.manageDescription'
+                : 'projects.settings.modelCache.description',
+            )}
           </p>
         </div>
         <Button
@@ -169,7 +183,11 @@ export function LocalModelCacheControl({ className, prepare }: LocalModelCacheCo
         </p>
       )}
 
-      {prepareError && <p role="alert" className="break-words text-xs text-destructive">{prepareError}</p>}
+      {prepareError && (
+        <p role="alert" className="break-words text-xs text-destructive">
+          {prepareError}
+        </p>
+      )}
       {inspectionSupported &&
         cacheSummaries.map((summary) => {
           const isClearing = clearingCacheId === summary.id
@@ -195,36 +213,64 @@ export function LocalModelCacheControl({ className, prepare }: LocalModelCacheCo
               <div className="min-w-0 flex-1 text-sm">
                 <span className="truncate font-medium">{summary.label}</span>
                 <span className="ml-2 text-xs text-muted-foreground">{sizeLabel}</span>
-                {prepare && <p className="mt-1 text-xs text-muted-foreground">{t(`projects.settings.modelCache.purpose.${summary.id}`)}</p>}
-                {preparingId === summary.id && preparePercent !== undefined && <progress
-                  className="mt-1 w-full" max={100} value={preparePercent}
-                  aria-label={t('projects.settings.modelCache.preparing')} />}
-                {preparedId === summary.id && <p role="status" className="mt-1 text-xs text-emerald-400">{t('projects.settings.modelCache.prepared')}</p>}
+                {prepare && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t(`projects.settings.modelCache.purpose.${summary.id}`)}
+                  </p>
+                )}
+                {preparingId === summary.id && preparePercent !== undefined && (
+                  <progress
+                    className="mt-1 w-full"
+                    max={100}
+                    value={preparePercent}
+                    aria-label={t('projects.settings.modelCache.preparing')}
+                  />
+                )}
+                {preparedId === summary.id && (
+                  <p role="status" className="mt-1 text-xs text-emerald-400">
+                    {t('projects.settings.modelCache.prepared')}
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
-              {prepare && <Button variant="outline" size="sm" disabled={!!preparingId || !!clearingCacheId}
-                onClick={() => void handlePrepare(summary)}>
-                {t(preparingId === summary.id ? 'projects.settings.modelCache.preparing' : summary.downloaded
-                  ? 'projects.settings.modelCache.prepare' : 'projects.settings.modelCache.install')}
-              </Button>}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-28 shrink-0 gap-1.5"
-                onClick={() => {
-                  void handleClear(summary)
-                }}
-                disabled={!!clearingCacheId || !!preparingId || (prepare && !summary.downloaded)}
-              >
-                {isClearing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {isCleared && !isClearing && <Check className="h-3.5 w-3.5" />}
-                {!isClearing && !isCleared && <Trash2 className="h-3.5 w-3.5" />}
-                {isClearing
-                  ? t('common.clearing')
-                  : isCleared
-                    ? t('projects.settings.modelCache.cleared')
-                    : t(prepare ? 'projects.settings.modelCache.removeFiles' : 'projects.settings.modelCache.clear')}
-              </Button>
+                {prepare && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!!preparingId || !!clearingCacheId}
+                    onClick={() => void handlePrepare(summary)}
+                  >
+                    {t(
+                      preparingId === summary.id
+                        ? 'projects.settings.modelCache.preparing'
+                        : summary.downloaded
+                          ? 'projects.settings.modelCache.prepare'
+                          : 'projects.settings.modelCache.install',
+                    )}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-28 shrink-0 gap-1.5"
+                  onClick={() => {
+                    void handleClear(summary)
+                  }}
+                  disabled={!!clearingCacheId || !!preparingId || (prepare && !summary.downloaded)}
+                >
+                  {isClearing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isCleared && !isClearing && <Check className="h-3.5 w-3.5" />}
+                  {!isClearing && !isCleared && <Trash2 className="h-3.5 w-3.5" />}
+                  {isClearing
+                    ? t('common.clearing')
+                    : isCleared
+                      ? t('projects.settings.modelCache.cleared')
+                      : t(
+                          prepare
+                            ? 'projects.settings.modelCache.removeFiles'
+                            : 'projects.settings.modelCache.clear',
+                        )}
+                </Button>
               </div>
             </div>
           )

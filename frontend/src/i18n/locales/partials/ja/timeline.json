@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "この側に隣接するクリップがありません。",
+      "dropOnExisting": "既存のトランジションにドロップすると置き換えられます。",
+      "notEnoughFrames": "このカットにトランジションを追加するための素材フレームが足りません。",
+      "dropToTrim": "ドロップして、トランジションに必要なトリミング量を確認します。",
+      "trimTitle": "クリップをトリミングしてトランジションを追加しますか？",
+      "trimDescription": "トランジションの長さは {{duration}} です。このトラックで後に続くクリップは {{shift}} 前に移動します。同期ロックがオンの他のトラックでも同じ区間が削除され、音声や字幕が短くなる場合があります。",
+      "cancel": "キャンセル",
+      "trimAndAdd": "トリミングして追加",
+      "trimFailed": "トリミングしてトランジションを追加できませんでした。トラックのロックと前後のトランジションを確認してください。"
+    },
     "track": {
       "unableToAddDroppedItem": "ドロップした項目を追加できません",
       "unableToAddDroppedMediaItems": "ドロップしたメディア項目を追加できません",

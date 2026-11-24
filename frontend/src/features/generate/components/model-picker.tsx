@@ -4,7 +4,16 @@ import { ChevronDown, KeyRound, Loader2, RefreshCw } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/shared/ui/cn'
-import { generateApi, PROVIDER_LABELS, PROVIDERS, type CatalogAnswer, type ModelEntry, type ModelForm, type Provider, type Task } from '../services/generate-api'
+import {
+  generateApi,
+  PROVIDER_LABELS,
+  PROVIDERS,
+  type CatalogAnswer,
+  type ModelEntry,
+  type ModelForm,
+  type Provider,
+  type Task,
+} from '../services/generate-api'
 
 import { modelKey, useGenerateStore } from '../stores/generate-store'
 
@@ -60,7 +69,9 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
         setAnswer(result)
         setError(null)
         if (!value && result.models.length > 0) {
-          const withKey = result.models.find((entry) => result.keys[entry.provider] && entry.status === 'live')
+          const withKey = result.models.find(
+            (entry) => result.keys[entry.provider] && entry.status === 'live',
+          )
           onChange(withKey ?? result.models[0]!)
         }
       })
@@ -77,7 +88,8 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
   }, [task, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selected = useMemo(
-    () => answer?.models.find((entry) => entry.provider === value?.provider && entry.id === value?.id),
+    () =>
+      answer?.models.find((entry) => entry.provider === value?.provider && entry.id === value?.id),
     [answer, value],
   )
 
@@ -86,7 +98,9 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
     return (answer?.models ?? []).filter(
       (entry) =>
         (provider === 'all' || entry.provider === provider) &&
-        words.every((word) => `${entry.name} ${entry.id} ${entry.description}`.toLowerCase().includes(word)),
+        words.every((word) =>
+          `${entry.name} ${entry.id} ${entry.description}`.toLowerCase().includes(word),
+        ),
     )
   }, [answer, provider, query])
 
@@ -125,10 +139,14 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
             <div className="flex items-center gap-1.5">
               {value && <ProviderBadge provider={value.provider} />}
               <span className="truncate text-xs font-medium">
-                {selected?.name ?? value?.id ?? (loading ? t('generate.model.loading') : t('generate.model.choose'))}
+                {selected?.name ??
+                  value?.id ??
+                  (loading ? t('generate.model.loading') : t('generate.model.choose'))}
               </span>
             </div>
-            {selected?.price && <div className="truncate text-[10px] text-muted-foreground">{selected.price}</div>}
+            {selected?.price && (
+              <div className="truncate text-[10px] text-muted-foreground">{selected.price}</div>
+            )}
           </div>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </button>
@@ -150,7 +168,9 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
                 onClick={() => setProvider(each)}
                 className={cn(
                   'rounded px-2 py-0.5 text-[11px]',
-                  provider === each ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary',
+                  provider === each
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-secondary',
                 )}
               >
                 {each === 'all' ? t('generate.model.all') : PROVIDER_LABELS[each]}
@@ -165,7 +185,9 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
               type="button"
               title={t('generate.model.refresh')}
               onClick={() => {
-                void generateApi.refreshCatalog().catch((reason: unknown) => setError(String(reason)))
+                void generateApi
+                  .refreshCatalog()
+                  .catch((reason: unknown) => setError(String(reason)))
               }}
               className="ml-auto rounded p-1 text-muted-foreground hover:bg-secondary"
             >
@@ -173,15 +195,26 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
             </button>
           </div>
           {answer &&
-            PROVIDERS.filter((each) => keys[each] && (provider === 'all' || provider === each) && answer.providers[each]?.error).map((each) => (
+            PROVIDERS.filter(
+              (each) =>
+                keys[each] &&
+                (provider === 'all' || provider === each) &&
+                answer.providers[each]?.error,
+            ).map((each) => (
               <p key={each} className="text-[10px] text-destructive">
                 {PROVIDER_LABELS[each]}: {answer.providers[each]?.error}
               </p>
             ))}
-          {(unchecked.length > 0 || checking) && <button type="button" disabled={checking}
-            className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => void checkModels()}>
-            {t(checking ? 'generate.model.checkingInputs' : 'generate.model.checkInputs')}
-          </button>}
+          {(unchecked.length > 0 || checking) && (
+            <button
+              type="button"
+              disabled={checking}
+              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
+              onClick={() => void checkModels()}
+            >
+              {t(checking ? 'generate.model.checkingInputs' : 'generate.model.checkInputs')}
+            </button>
+          )}
           {error && <p className="text-[10px] text-destructive">{error}</p>}
         </div>
         <div className="min-h-12 max-h-[420px] flex-1 overflow-y-auto overscroll-contain py-1">
@@ -218,29 +251,59 @@ export function ModelPicker({ task, value, onChange, keys, checkInputs }: ModelP
                   <ProviderBadge provider={entry.provider} />
                   <span className="truncate text-xs font-medium">{entry.name}</span>
                   {isNew(entry) && (
-                    <span className="rounded bg-primary/20 px-1 text-[9px] text-primary">{t('generate.model.new')}</span>
+                    <span className="rounded bg-primary/20 px-1 text-[9px] text-primary">
+                      {t('generate.model.new')}
+                    </span>
                   )}
                   {entry.status !== 'live' && (
-                    <span className="text-[9px] text-amber-400">{t('generate.model.deprecated')}</span>
+                    <span className="text-[9px] text-amber-400">
+                      {t('generate.model.deprecated')}
+                    </span>
                   )}
                   {!keys[entry.provider] && (
-                    <KeyRound className="ml-auto h-3 w-3 shrink-0 text-amber-400" aria-label={t('generate.keys.missing')} />
+                    <KeyRound
+                      className="ml-auto h-3 w-3 shrink-0 text-amber-400"
+                      aria-label={t('generate.keys.missing')}
+                    />
                   )}
                 </div>
                 <div className="flex gap-2 text-[10px] text-muted-foreground">
                   <span className="truncate">{entry.id}</span>
                   {entry.price && <span className="ml-auto shrink-0">{entry.price}</span>}
                 </div>
-                {form && <div className="flex flex-wrap gap-x-2 text-[10px] text-muted-foreground">
-                  {mediaFields.length === 0 ? t('generate.model.noMediaInputs') : mediaFields.map((field) =>
-                    field.type === 'media' && <span key={field.key}>{t('generate.model.mediaCapacity', {
-                      label: field.label, kind: t(`generate.media.${field.media}`), count: field.max,
-                    })}</span>)}
-                </div>}
-                {compatible !== undefined && <span className={cn('text-[10px]', compatible ? 'text-emerald-400' : 'text-amber-400')}>
-                  {t(compatible ? 'generate.model.inputsFit' : 'generate.model.inputsDoNotFit')}
-                </span>}
-                {!form && unavailable.has(key) && <span className="text-[10px] text-muted-foreground">{t('generate.model.inputsUnknown')}</span>}
+                {form && (
+                  <div className="flex flex-wrap gap-x-2 text-[10px] text-muted-foreground">
+                    {mediaFields.length === 0
+                      ? t('generate.model.noMediaInputs')
+                      : mediaFields.map(
+                          (field) =>
+                            field.type === 'media' && (
+                              <span key={field.key}>
+                                {t('generate.model.mediaCapacity', {
+                                  label: field.label,
+                                  kind: t(`generate.media.${field.media}`),
+                                  count: field.max,
+                                })}
+                              </span>
+                            ),
+                        )}
+                  </div>
+                )}
+                {compatible !== undefined && (
+                  <span
+                    className={cn(
+                      'text-[10px]',
+                      compatible ? 'text-emerald-400' : 'text-amber-400',
+                    )}
+                  >
+                    {t(compatible ? 'generate.model.inputsFit' : 'generate.model.inputsDoNotFit')}
+                  </span>
+                )}
+                {!form && unavailable.has(key) && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {t('generate.model.inputsUnknown')}
+                  </span>
+                )}
               </button>
             )
           })}

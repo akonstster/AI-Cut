@@ -81,17 +81,36 @@ function generateClip(filePath, { color, frequency, seconds }) {
   const result = spawnSync(
     'ffmpeg',
     [
-      '-v', 'error', '-y',
-      '-f', 'lavfi', '-i', `color=size=${WIDTH}x${HEIGHT}:rate=${FPS}:duration=${seconds}:color=${color}`,
-      '-f', 'lavfi', '-i', `sine=frequency=${frequency}:sample_rate=48000:duration=${seconds}`,
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-threads', '1',
-      '-c:a', 'aac', '-ac', '2', '-shortest',
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      `color=size=${WIDTH}x${HEIGHT}:rate=${FPS}:duration=${seconds}:color=${color}`,
+      '-f',
+      'lavfi',
+      '-i',
+      `sine=frequency=${frequency}:sample_rate=48000:duration=${seconds}`,
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-threads',
+      '1',
+      '-c:a',
+      'aac',
+      '-ac',
+      '2',
+      '-shortest',
       filePath,
     ],
     { encoding: 'utf8' },
   )
   if (result.error?.code === 'ENOENT' || result.status === null) {
-    throw new Error('ffmpeg is required by headless/frame-oracle.mjs (it synthesises the fixture clips)')
+    throw new Error(
+      'ffmpeg is required by headless/frame-oracle.mjs (it synthesises the fixture clips)',
+    )
   }
   assert.equal(result.status, 0, `ffmpeg failed: ${result.stderr}`)
 }
@@ -158,7 +177,15 @@ function videoTrack(id, order) {
 }
 
 /** Full-bleed transform: opaque, unrotated, uncropped — the occlusion recipe. */
-const FULL_BLEED = { x: 0, y: 0, width: WIDTH, height: HEIGHT, opacity: 1, rotation: 0, cornerRadius: 0 }
+const FULL_BLEED = {
+  x: 0,
+  y: 0,
+  width: WIDTH,
+  height: HEIGHT,
+  opacity: 1,
+  rotation: 0,
+  cornerRadius: 0,
+}
 
 /**
  * The fixture project. It is deliberately built around the branches the
@@ -321,7 +348,10 @@ async function main() {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'freecut-frame-oracle-'))
   const sources = path.join(workspace, 'sources')
   fs.mkdirSync(sources)
-  fs.writeFileSync(path.join(workspace, '.freecut-workspace.json'), '{"schemaVersion":"2.0","createdAt":1}\n')
+  fs.writeFileSync(
+    path.join(workspace, '.freecut-workspace.json'),
+    '{"schemaVersion":"2.0","createdAt":1}\n',
+  )
   const port = await freePort()
   const base = `http://127.0.0.1:${port}`
   log(`workspace ${workspace}`)
@@ -336,10 +366,14 @@ async function main() {
       clip.sha256 = sha256OfFile(file)
     }
 
-    service = spawn(process.execPath, ['headless/serve.mjs', '--workspace', workspace, '--port', String(port)], {
-      cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
+    service = spawn(
+      process.execPath,
+      ['headless/serve.mjs', '--workspace', workspace, '--port', String(port)],
+      {
+        cwd: ROOT,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    )
     service.stdout.on('data', (chunk) => (serviceLog += chunk))
     service.stderr.on('data', (chunk) => (serviceLog += chunk))
     service.on('exit', (code) => (serviceLog += `\n[service exited with ${code}]\n`))
@@ -367,7 +401,10 @@ async function main() {
     for (const clip of Object.values(CLIPS)) {
       const response = await fetch(`${base}/v1/media/import`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'idempotency-key': `import-${clip.mediaId}` },
+        headers: {
+          'content-type': 'application/json',
+          'idempotency-key': `import-${clip.mediaId}`,
+        },
         body: JSON.stringify({
           mediaId: clip.mediaId,
           sourceRelativePath: `sources/${clip.file}`,
@@ -375,7 +412,10 @@ async function main() {
           expectedSha256: clip.sha256,
         }),
       })
-      assert.ok(response.ok, `media import failed for ${clip.mediaId}: ${response.status} ${await response.text()}`)
+      assert.ok(
+        response.ok,
+        `media import failed for ${clip.mediaId}: ${response.status} ${await response.text()}`,
+      )
     }
 
     const created = await fetch(`${base}/v1/projects`, {
@@ -393,12 +433,28 @@ async function main() {
       const response = await fetch(`${base}/frame`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ project: 'oracle', frame, format: 'png', width: WIDTH, height: HEIGHT }),
+        body: JSON.stringify({
+          project: 'oracle',
+          frame,
+          format: 'png',
+          width: WIDTH,
+          height: HEIGHT,
+        }),
       })
       const bytes = Buffer.from(await response.arrayBuffer())
-      assert.ok(response.ok, `frame ${frame} failed: ${response.status} ${bytes.toString('utf8').slice(0, 500)}`)
-      assert.equal(response.headers.get('content-type'), 'image/png', `frame ${frame}: unexpected content type`)
-      assert.ok(bytes.length > 100, `frame ${frame}: suspiciously small response (${bytes.length} bytes)`)
+      assert.ok(
+        response.ok,
+        `frame ${frame} failed: ${response.status} ${bytes.toString('utf8').slice(0, 500)}`,
+      )
+      assert.equal(
+        response.headers.get('content-type'),
+        'image/png',
+        `frame ${frame}: unexpected content type`,
+      )
+      assert.ok(
+        bytes.length > 100,
+        `frame ${frame}: suspiciously small response (${bytes.length} bytes)`,
+      )
       assert.ok(bytes.subarray(0, 8).equals(PNG_MAGIC), `frame ${frame}: response is not a PNG`)
       if (dump) {
         fs.mkdirSync(dump, { recursive: true })

@@ -429,13 +429,18 @@ export const AudioMeterPanel = memo(function AudioMeterPanel() {
             continue
           }
 
-          void mediaLibraryService
-            .getMediaBlobUrl(mediaId)
-            .then(async (blobUrl) => {
+          // Persisted peaks first: the meter only needs the shape, and reading the
+          // source media (tens of MB over REST) for a picture is wasted work.
+          void waveformCache
+            .getCachedWaveform(mediaId)
+            .then(async (stored) => {
+              if (stored || cancelled) {
+                return
+              }
+              const blobUrl = await mediaLibraryService.getMediaBlobUrl(mediaId)
               if (!blobUrl) {
                 return
               }
-
               try {
                 await waveformCache.getWaveform(mediaId, blobUrl)
               } finally {

@@ -37,6 +37,7 @@
     "channel": "Channel",
     "dragHint": "Drag points to adjust {{channel}} curve",
     "resetChannel": "Reset Channel",
+    "resetShort": "Reset",
     "channelMaster": "Master",
     "channelRed": "Red",
     "channelGreen": "Green",
@@ -273,6 +274,11 @@
     "adjustmentLayerTooltip": "Create an adjustment layer to grade every clip below it",
     "savePreset": "Save",
     "savePresetTooltip": "Save this grade as a preset",
+    "tabs": {
+      "primary": "Primary",
+      "curves": "Curves",
+      "lut": "LUT"
+    },
     "presetNamePlaceholder": "Preset name…"
   },
   "lut": {

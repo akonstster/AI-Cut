@@ -112,9 +112,7 @@ export async function loadLanguageResources(lang: string): Promise<void> {
   const resolved = resolveSupportedLanguage(lang)
   if (loadedLanguages.has(resolved)) return
   const baseLoader = lazyBaseLocaleModules[`./locales/${resolved}.json`]
-  const tree: LocaleTree = baseLoader
-    ? structuredClone((await baseLoader()).default ?? {})
-    : {}
+  const tree: LocaleTree = baseLoader ? structuredClone((await baseLoader()).default ?? {}) : {}
   const prefix = `./locales/partials/${resolved}/`
   const entries = Object.entries(lazyPartialModules)
     .filter(([path]) => path.startsWith(prefix))
@@ -139,9 +137,7 @@ export const i18nReady: Promise<void> = (async () => {
   const persistedLanguage =
     typeof localStorage === 'undefined' ? null : localStorage.getItem(I18N_STORAGE_KEY)
   const detectedLanguage = typeof navigator === 'undefined' ? DEFAULT_LANGUAGE : navigator.language
-  const initial = resolveSupportedLanguage(
-    persistedLanguage ?? detectedLanguage,
-  )
+  const initial = resolveSupportedLanguage(persistedLanguage ?? detectedLanguage)
   if (initial !== DEFAULT_LANGUAGE) await loadLanguageResources(initial)
 })().catch((err) => {
   log.error('Failed to preload language resources', err)

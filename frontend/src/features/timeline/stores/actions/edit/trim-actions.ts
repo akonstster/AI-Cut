@@ -19,6 +19,7 @@ import {
 } from '../../../utils/trim-edit-constraints'
 import { clampToAdjacentItems, clampTrimAmount } from '../../../utils/trim-utils'
 import { getTransitionLinkedIds } from '../../items-store-indexes'
+import { resolveEffectiveTrackStates } from '../../../utils/group-utils'
 import {
   clampSlideDeltaToPreserveTransitions,
   clampSlipDeltaToPreserveTransitions,
@@ -321,142 +322,153 @@ export function trimItemBreakingTransition(
  */
 export function rippleTrimItem(id: string, handle: 'start' | 'end', trimDelta: number): void {
   if (trimDelta === 0) return
-  execute(
-    'RIPPLE_EDIT',
-    () => {
-      const store = useItemsStore.getState()
-      const item = store.items.find((candidate) => candidate.id === id)
-      if (!item) return
-      const synced = getSynchronizedLinkedItemsForEdit(store.items, id, isLinkedSelectionEnabled())
-      const syncedIds = new Set(synced.map((candidate) => candidate.id))
-      const oldById = new Map(synced.map((candidate) => [candidate.id, candidate]))
-      const transitions = useTransitionsStore.getState().transitions
-      const keyframesByItemId = useKeyframesStore.getState().keyframesByItemId
-      const timelineFps = useTimelineSettingsStore.getState().fps
-      let clampedTrimDelta = trimDelta
+  execute('RIPPLE_EDIT', () => applyRippleTrim(id, handle, trimDelta), { id, handle, trimDelta })
+}
+
+/** Used within the transition command, which owns history and rollback. */
+export function applyRippleTrim(
+  id: string,
+  handle: 'start' | 'end',
+  trimDelta: number,
+  forTransition = false,
+): void {
+  if (trimDelta === 0) return
+  const store = useItemsStore.getState()
+  const item = store.items.find((candidate) => candidate.id === id)
+  if (!item) return
+  const synced = getSynchronizedLinkedItemsForEdit(store.items, id, isLinkedSelectionEnabled())
+  const lockedTracks = forTransition
+    ? resolveEffectiveTrackStates(store.tracks).filter((track) => track.locked)
+    : []
+  if (synced.some((clip) => lockedTracks.some((track) => track.id === clip.trackId))) return
+  const syncedIds = new Set(synced.map((candidate) => candidate.id))
+  const oldById = new Map(synced.map((candidate) => [candidate.id, candidate]))
+  const transitions = useTransitionsStore.getState().transitions
+  const keyframesByItemId = useKeyframesStore.getState().keyframesByItemId
+  const timelineFps = useTimelineSettingsStore.getState().fps
+  let clampedTrimDelta = trimDelta
+  for (const syncedItem of synced) {
+    clampedTrimDelta = keepTightestDelta(
+      clampedTrimDelta,
+      clampRippleTrimDeltaToPreserveEditState(
+        syncedItem,
+        handle,
+        clampedTrimDelta,
+        store.items,
+        transitions,
+        keyframesByItemId,
+        timelineFps,
+        syncedIds,
+        false,
+      ),
+    )
+  }
+  if (clampedTrimDelta === 0) return
+  const oldFrom = item.from
+  const oldEnd = item.from + item.durationInFrames
+  if (handle === 'start') store._trimItemStart(id, clampedTrimDelta, { skipAdjacentClamp: true })
+  else store._trimItemEnd(id, clampedTrimDelta, { skipAdjacentClamp: true })
+  const trimmed = useItemsStore.getState().itemById[id]
+  if (!trimmed) return
+  let shift = 0
+  let interval: { start: number; end: number } | null = null
+  let insertAt: number | null = null
+  if (handle === 'end') {
+    const newEnd = trimmed.from + trimmed.durationInFrames
+    shift = newEnd - oldEnd
+    if (shift < 0) interval = { start: newEnd, end: oldEnd }
+    else if (shift > 0) insertAt = oldEnd
+    for (const syncedItem of synced) {
+      if (syncedItem.id !== id && shift !== 0) {
+        store._trimItemEnd(syncedItem.id, shift, { skipAdjacentClamp: true })
+      }
+    }
+  } else {
+    const actual = trimmed.from - oldFrom
+    if (actual !== 0) {
+      store._moveItem(id, oldFrom)
       for (const syncedItem of synced) {
-        clampedTrimDelta = keepTightestDelta(
-          clampedTrimDelta,
-          clampRippleTrimDeltaToPreserveEditState(
-            syncedItem,
-            handle,
-            clampedTrimDelta,
-            store.items,
-            transitions,
-            keyframesByItemId,
-            timelineFps,
-            syncedIds,
-            false,
-          ),
+        if (syncedItem.id === id) continue
+        store._trimItemStart(syncedItem.id, actual, { skipAdjacentClamp: true })
+        const before = oldById.get(syncedItem.id)
+        if (before) store._moveItem(syncedItem.id, before.from)
+      }
+    }
+    shift = -actual
+    if (shift < 0) {
+      interval = forTransition
+        ? { start: oldFrom, end: oldFrom - shift }
+        : { start: oldEnd + shift, end: oldEnd }
+    } else if (shift > 0) insertAt = oldEnd
+  }
+  let lockedAffected: string[] = []
+  let lockedRemoved: string[] = []
+  if (shift !== 0) {
+    const fresh = useItemsStore.getState().items
+    const deltas = new Map<string, number>()
+    for (const syncedItem of synced) {
+      const before = oldById.get(syncedItem.id)
+      if (!before) continue
+      const oldSyncedEnd = before.from + before.durationInFrames
+      const neighbors = new Set<string>()
+      for (const transition of transitions) {
+        if (transition.leftClipId === syncedItem.id) neighbors.add(transition.rightClipId)
+      }
+      for (const candidate of fresh) {
+        if (syncedIds.has(candidate.id) || candidate.trackId !== before.trackId) continue
+        if (candidate.from >= oldSyncedEnd || neighbors.has(candidate.id))
+          deltas.set(candidate.id, shift)
+      }
+    }
+    const updates = fresh.flatMap((candidate) => {
+      const delta = deltas.get(candidate.id) ?? 0
+      return delta === 0 ? [] : [{ id: candidate.id, from: candidate.from + delta }]
+    })
+    if (updates.length > 0) store._moveItems(updates)
+    const editedTracks = new Set([
+      ...synced.map((candidate) => candidate.trackId),
+      ...lockedTracks.map((track) => track.id),
+    ])
+    if (interval) {
+      const result = propagateRemovedIntervalsToSyncLockedTracks({
+        editedTrackIds: editedTracks,
+        intervals: [interval],
+      })
+      lockedAffected = result.affectedIds
+      lockedRemoved = result.removedIds
+    } else if (insertAt !== null) {
+      const result = propagateInsertedGapToSyncLockedTracks({
+        editedTrackIds: editedTracks,
+        cutFrame: insertAt,
+        amount: shift,
+      })
+      lockedAffected = result.affectedIds
+    }
+  }
+  const final = useItemsStore.getState().items
+  const affected = Array.from(
+    new Set([
+      ...synced.map((candidate) => candidate.id),
+      ...lockedAffected,
+      ...final
+        .filter(
+          (candidate) =>
+            !syncedIds.has(candidate.id) &&
+            synced.some(
+              (syncedItem) =>
+                candidate.trackId === syncedItem.trackId && candidate.from >= syncedItem.from,
+            ),
         )
-      }
-      if (clampedTrimDelta === 0) return
-      const oldFrom = item.from
-      const oldEnd = item.from + item.durationInFrames
-      if (handle === 'start')
-        store._trimItemStart(id, clampedTrimDelta, { skipAdjacentClamp: true })
-      else store._trimItemEnd(id, clampedTrimDelta, { skipAdjacentClamp: true })
-      const trimmed = useItemsStore.getState().itemById[id]
-      if (!trimmed) return
-      let shift = 0
-      let interval: { start: number; end: number } | null = null
-      let insertAt: number | null = null
-      if (handle === 'end') {
-        const newEnd = trimmed.from + trimmed.durationInFrames
-        shift = newEnd - oldEnd
-        if (shift < 0) interval = { start: newEnd, end: oldEnd }
-        else if (shift > 0) insertAt = oldEnd
-        for (const syncedItem of synced) {
-          if (syncedItem.id !== id && shift !== 0) {
-            store._trimItemEnd(syncedItem.id, shift, { skipAdjacentClamp: true })
-          }
-        }
-      } else {
-        const actual = trimmed.from - oldFrom
-        if (actual !== 0) {
-          store._moveItem(id, oldFrom)
-          for (const syncedItem of synced) {
-            if (syncedItem.id === id) continue
-            store._trimItemStart(syncedItem.id, actual, { skipAdjacentClamp: true })
-            const before = oldById.get(syncedItem.id)
-            if (before) store._moveItem(syncedItem.id, before.from)
-          }
-        }
-        shift = -actual
-        if (shift < 0) interval = { start: oldEnd + shift, end: oldEnd }
-        else if (shift > 0) insertAt = oldEnd
-      }
-      let lockedAffected: string[] = []
-      let lockedRemoved: string[] = []
-      if (shift !== 0) {
-        const fresh = useItemsStore.getState().items
-        const deltas = new Map<string, number>()
-        for (const syncedItem of synced) {
-          const before = oldById.get(syncedItem.id)
-          if (!before) continue
-          const oldSyncedEnd = before.from + before.durationInFrames
-          const neighbors = new Set<string>()
-          for (const transition of transitions) {
-            if (transition.leftClipId === syncedItem.id) neighbors.add(transition.rightClipId)
-          }
-          for (const candidate of fresh) {
-            if (syncedIds.has(candidate.id) || candidate.trackId !== before.trackId) continue
-            if (candidate.from >= oldSyncedEnd || neighbors.has(candidate.id))
-              deltas.set(candidate.id, shift)
-          }
-        }
-        const updates = fresh.flatMap((candidate) => {
-          const delta = deltas.get(candidate.id) ?? 0
-          return delta === 0 ? [] : [{ id: candidate.id, from: candidate.from + delta }]
-        })
-        if (updates.length > 0) store._moveItems(updates)
-        const editedTracks = new Set(synced.map((candidate) => candidate.trackId))
-        if (interval) {
-          const result = propagateRemovedIntervalsToSyncLockedTracks({
-            editedTrackIds: editedTracks,
-            intervals: [interval],
-          })
-          lockedAffected = result.affectedIds
-          lockedRemoved = result.removedIds
-        } else if (insertAt !== null) {
-          const result = propagateInsertedGapToSyncLockedTracks({
-            editedTrackIds: editedTracks,
-            cutFrame: insertAt,
-            amount: shift,
-          })
-          lockedAffected = result.affectedIds
-        }
-      }
-      const final = useItemsStore.getState().items
-      const affected = Array.from(
-        new Set([
-          ...synced.map((candidate) => candidate.id),
-          ...lockedAffected,
-          ...final
-            .filter(
-              (candidate) =>
-                !syncedIds.has(candidate.id) &&
-                synced.some(
-                  (syncedItem) =>
-                    candidate.trackId === syncedItem.trackId && candidate.from >= syncedItem.from,
-                ),
-            )
-            .map((candidate) => candidate.id),
-        ]),
-      )
-      if (lockedRemoved.length > 0) {
-        useTransitionsStore.getState()._removeTransitionsForItems(lockedRemoved)
-        useKeyframesStore.getState()._removeKeyframesForItems(lockedRemoved)
-      }
-      applyTransitionRepairs(
-        affected,
-        lockedRemoved.length > 0 ? new Set(lockedRemoved) : undefined,
-      )
-      requestPostEditWarmForItems(affected)
-      useTimelineSettingsStore.getState().markDirty()
-    },
-    { id, handle, trimDelta },
+        .map((candidate) => candidate.id),
+    ]),
   )
+  if (lockedRemoved.length > 0) {
+    useTransitionsStore.getState()._removeTransitionsForItems(lockedRemoved)
+    useKeyframesStore.getState()._removeKeyframesForItems(lockedRemoved)
+  }
+  applyTransitionRepairs(affected, lockedRemoved.length > 0 ? new Set(lockedRemoved) : undefined)
+  requestPostEditWarmForItems(affected)
+  useTimelineSettingsStore.getState().markDirty()
 }
 
 /**

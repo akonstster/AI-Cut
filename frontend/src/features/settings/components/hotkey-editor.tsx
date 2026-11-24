@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -56,6 +57,7 @@ import { useNaturalHeight } from '@/shared/ui/use-natural-height'
 import { useKeyboardLayoutLabels } from '../hooks/use-keyboard-layout'
 import { useResolvedHotkeys } from '../hooks/use-resolved-hotkeys'
 import { useSettingsStore } from '../stores/settings-store'
+import { computeHotkeyListMaxHeight } from './hotkey-editor-layout'
 
 interface KeyboardKeySpec {
   id: string
@@ -601,16 +603,36 @@ export function HotkeyEditor() {
 
   // The command list's height animates to fit its content so the dialog shrinks
   // for short sections instead of leaving dead space; tall content caps and
-  // scrolls. Measured from the natural content height (inside the scroller).
+  // scrolls. The cap follows the window: the dialog keeps 1vh above and below
+  // itself (98vh), so whatever the header and keyboard preview take is left for
+  // the list — a fixed 50vh cap used to push the last rows out of a short window.
   const commandListRef = useRef<HTMLDivElement | null>(null)
+  const headerRef = useRef<HTMLDivElement | null>(null)
+  const keyboardPreviewRef = useRef<HTMLDivElement | null>(null)
   const commandListNatural = useNaturalHeight(commandListRef)
   const [commandListReady, setCommandListReady] = useState(false)
   useEffect(() => {
     if (commandListNatural > 0 && !commandListReady) setCommandListReady(true)
   }, [commandListNatural, commandListReady])
-  const maxCommandListHeight = Math.round(
-    (typeof window === 'undefined' ? 900 : window.innerHeight) * 0.5,
+  const [maxCommandListHeight, setMaxCommandListHeight] = useState(() =>
+    computeHotkeyListMaxHeight(typeof window === 'undefined' ? 900 : window.innerHeight, 0),
   )
+  useLayoutEffect(() => {
+    const measure = () => {
+      const used =
+        (headerRef.current?.offsetHeight ?? 0) + (keyboardPreviewRef.current?.offsetHeight ?? 0)
+      setMaxCommandListHeight(computeHotkeyListMaxHeight(window.innerHeight, used))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    if (headerRef.current) observer.observe(headerRef.current)
+    if (keyboardPreviewRef.current) observer.observe(keyboardPreviewRef.current)
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
   const commandListHeight =
     commandListNatural > 0 ? Math.min(commandListNatural, maxCommandListHeight) : undefined
 
@@ -1006,7 +1028,7 @@ export function HotkeyEditor() {
       />
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-4 border-b border-white/6 px-5 py-2.5">
+      <div ref={headerRef} className="flex items-center gap-4 border-b border-white/6 px-5 py-2.5">
         <div className="flex flex-1 items-center gap-2.5">
           <Keyboard className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">
@@ -1026,8 +1048,8 @@ export function HotkeyEditor() {
       </div>
 
       {/* ── Full-width keyboard preview with section layers ── */}
-      <div className="px-4 pb-3 md:px-5">
-        <div className="flex min-h-[380px] overflow-hidden rounded-lg border border-white/7 bg-[#0d0d0f]/90">
+      <div ref={keyboardPreviewRef} className="px-4 pb-3 md:px-5">
+        <div className="flex min-h-[min(380px,46vh)] max-h-[52vh] overflow-hidden rounded-lg border border-white/7 bg-[#0d0d0f]/90">
           {/* Section layers sidebar */}
           <div className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-white/6 p-2 xl:w-52">
             <div className="relative mb-2">
@@ -1156,7 +1178,7 @@ export function HotkeyEditor() {
             )}
           </div>
           {/* Keyboard */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center p-4 md:p-5">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden p-4 md:p-5">
             <KeyboardPreview
               activeBinding={activePreviewBinding}
               layerTokens={layerTokens}
@@ -1175,7 +1197,7 @@ export function HotkeyEditor() {
           </div>
 
           {/* Selected command panel — beside keyboard */}
-          <div className="w-[280px] shrink-0 space-y-3 border-l border-white/6 p-4 pt-5">
+          <div className="min-h-0 w-[280px] shrink-0 space-y-3 overflow-y-auto overscroll-contain border-l border-white/6 p-4 pt-5">
             <div aria-live="polite" role="status" className="sr-only">
               {liveMessage}
             </div>

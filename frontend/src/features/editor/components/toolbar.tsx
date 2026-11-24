@@ -92,7 +92,7 @@ export const Toolbar = memo(function Toolbar({
   useEffect(() => {
     const controller = new AbortController()
     void fetch('/health', { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : null)
+      .then((response) => (response.ok ? response.json() : null))
       .then((health: { portable?: boolean } | null) => setPortable(health?.portable === true))
       .catch(() => {})
     return () => controller.abort()
@@ -109,18 +109,15 @@ export const Toolbar = memo(function Toolbar({
   const maxItemEndFrame = useItemsStore((state) => state.maxItemEndFrame)
   const mediaDependencyIds = useItemsStore((state) => state.mediaDependencyIds)
   const brokenMediaIds = useMediaLibraryStore((state) => state.brokenMediaIds)
-  const projectSummary = useMemo(
-    () => {
-      const projectMediaIds = new Set(mediaDependencyIds)
-      return {
-        durationSeconds: project.fps > 0 ? maxItemEndFrame / project.fps : 0,
-        clipCount: itemCount,
-        mediaCount: mediaDependencyIds.length,
-        brokenMediaCount: brokenMediaIds.filter((mediaId) => projectMediaIds.has(mediaId)).length,
-      }
-    },
-    [brokenMediaIds, itemCount, maxItemEndFrame, mediaDependencyIds, project.fps],
-  )
+  const projectSummary = useMemo(() => {
+    const projectMediaIds = new Set(mediaDependencyIds)
+    return {
+      durationSeconds: project.fps > 0 ? maxItemEndFrame / project.fps : 0,
+      clipCount: itemCount,
+      mediaCount: mediaDependencyIds.length,
+      brokenMediaCount: brokenMediaIds.filter((mediaId) => projectMediaIds.has(mediaId)).length,
+    }
+  }, [brokenMediaIds, itemCount, maxItemEndFrame, mediaDependencyIds, project.fps])
 
   useEffect(() => {
     setHasUnseenWhatsNew(hasUnseenChangelog())

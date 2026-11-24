@@ -26,6 +26,8 @@ describe('MediaPreviewDialog', () => {
     expect(video.hasAttribute('controls')).toBe(true)
     expect(video.getAttribute('src')).toBe('blob:original')
     fireEvent.error(video)
-    expect((await screen.findByLabelText('video.mp4', { selector: 'video' })).getAttribute('src')).toBe('blob:proxy')
+    expect(
+      (await screen.findByLabelText('video.mp4', { selector: 'video' })).getAttribute('src'),
+    ).toBe('blob:proxy')
   })
 })

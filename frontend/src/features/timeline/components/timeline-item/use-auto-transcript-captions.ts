@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type { TimelineItem as TimelineItemType } from '@/types/timeline'
+import { hasSynchronizedVideoCompanion } from '@/shared/timeline/caption-ownership'
 import { mediaTranscriptionService } from '../../deps/media-transcription-service'
+import { useItemsStore } from '../../stores/items-store'
 import type { CaptionDialogState } from './use-caption-dialog-state'
 
 interface UseAutoTranscriptCaptionsParams {
@@ -40,10 +42,25 @@ export function useAutoTranscriptCaptions({
     if (attemptRef.current === attemptKey) {
       return
     }
+    // A video/audio pair owns its captions on the video half only: the audio copy would
+    // draw the same lines twice and drift away from the text the user edits.
+    const { items, itemById } = useItemsStore.getState()
+    const current = itemById[item.id]
+    if (!current) {
+      return
+    }
+    if (hasSynchronizedVideoCompanion(items, current)) {
+      return
+    }
+    // Auto-captioning is a one-shot per clip: a marker left by an earlier pass (or by the
+    // captions the user has since deleted) keeps it from resurrecting them.
+    if (current.autoCaptionedAt) {
+      return
+    }
     attemptRef.current = attemptKey
 
     void mediaTranscriptionService
-      .enableTranscriptCaptions(item.mediaId, {
+      .insertTranscriptAsCaptions(item.mediaId, {
         clipIds: [item.id],
         replaceExisting: false,
         selectUpdatedClips: false,

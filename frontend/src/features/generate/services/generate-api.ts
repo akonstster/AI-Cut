@@ -129,7 +129,11 @@ export interface CatalogAnswer {
 }
 
 /** A file named in a job's request. */
-export type MediaRef = { media: string } | { job: string; index: number } | { file: string } | string
+export type MediaRef =
+  | { media: string }
+  | { job: string; index: number }
+  | { file: string }
+  | string
 
 export interface OutputFile {
   index: number
@@ -233,29 +237,40 @@ export const generateApi = {
     place_at?: number | null
   }) => request<{ jobs: Job[] }>('/api/jobs', { method: 'POST', body: JSON.stringify(body) }),
   jobs: (projectId: string | null, limit?: number) =>
-    request<{ jobs: Job[] }>(`/api/jobs?${new URLSearchParams({
-      project: projectId ?? '',
-      ...(limit === undefined ? {} : { limit: String(limit) }),
-    })}`),
+    request<{ jobs: Job[] }>(
+      `/api/jobs?${new URLSearchParams({
+        project: projectId ?? '',
+        ...(limit === undefined ? {} : { limit: String(limit) }),
+      })}`,
+    ),
   job: (id: string) => request<Job>(`/api/jobs/${id}`),
-  like: (id: string, liked: boolean) => request<Job>(`/api/jobs/${id}/liked`, { method: 'POST', body: JSON.stringify({ liked }) }),
+  like: (id: string, liked: boolean) =>
+    request<Job>(`/api/jobs/${id}/liked`, { method: 'POST', body: JSON.stringify({ liked }) }),
   cancel: (id: string) => request<Job>(`/api/jobs/${id}/cancel`, { method: 'POST' }),
   retry: (id: string) => request<{ jobs: Job[] }>(`/api/jobs/${id}/retry`, { method: 'POST' }),
   remove: (id: string) => request<void>(`/api/jobs/${id}`, { method: 'DELETE' }),
   markImported: (id: string, mediaIds: string[]) =>
-    request<Job>(`/api/jobs/${id}/imported`, { method: 'POST', body: JSON.stringify({ media_ids: mediaIds }) }),
+    request<Job>(`/api/jobs/${id}/imported`, {
+      method: 'POST',
+      body: JSON.stringify({ media_ids: mediaIds }),
+    }),
   fileUrl: (id: string, index: number) => `/api/jobs/${id}/files/${index}`,
   keys: () => request<{ keys: KeyState[] }>('/api/keys'),
   storeKey: (provider: Provider, key: string | null) =>
-    request<{ keys: KeyState[] }>(`/api/keys/${provider}`, { method: 'PUT', body: JSON.stringify({ key }) }),
+    request<{ keys: KeyState[] }>(`/api/keys/${provider}`, {
+      method: 'PUT',
+      body: JSON.stringify({ key }),
+    }),
   checkKey: (provider: Provider) =>
     request<KeyCheck>(`/api/keys/${provider}/check`, {
       method: 'POST',
     }),
   spend: (projectId: string | null) =>
-    request<{ total: number; today: number; providers: Array<{ provider: Provider; usd: number; jobs: number }> }>(
-      `/api/spend?${new URLSearchParams({ project: projectId ?? '' })}`,
-    ),
+    request<{
+      total: number
+      today: number
+      providers: Array<{ provider: Provider; usd: number; jobs: number }>
+    }>(`/api/spend?${new URLSearchParams({ project: projectId ?? '' })}`),
   settings: () => request<ServerSettings>('/api/settings'),
   storeSettings: (settings: ServerSettings) =>
     request<ServerSettings>('/api/settings', {

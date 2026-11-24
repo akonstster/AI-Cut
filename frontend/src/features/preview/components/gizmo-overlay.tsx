@@ -220,11 +220,7 @@ export function GizmoOverlay({
     () =>
       itemsSnapshot.map((item, index) => {
         const liveTransform = liveTransforms[index]
-        if (
-          !liveTransform ||
-          !('transform' in item) ||
-          Object.is(liveTransform, item.transform)
-        ) {
+        if (!liveTransform || !('transform' in item) || Object.is(liveTransform, item.transform)) {
           return item
         }
         return { ...item, transform: liveTransform } as TimelineItem
@@ -237,9 +233,7 @@ export function GizmoOverlay({
   // its hit targets without invalidating VideoPreview/MainComposition.
   const visualItems = useMemo(
     () =>
-      itemsWithLiveTransforms.filter(
-        (item) => item.type !== 'audio' && item.type !== 'adjustment',
-      ),
+      itemsWithLiveTransforms.filter((item) => item.type !== 'audio' && item.type !== 'adjustment'),
     [itemsWithLiveTransforms],
   )
   const tracks = useItemsStore((s) => s.tracks)
@@ -439,10 +433,7 @@ export function GizmoOverlay({
   const itemLabelById = useMemo(
     () =>
       new Map(
-        itemsSnapshot.map((item) => [
-          item.id,
-          item.label || item.type || 'the source layer',
-        ]),
+        itemsSnapshot.map((item) => [item.id, item.label || item.type || 'the source layer']),
       ),
     [itemsSnapshot],
   )
@@ -1051,12 +1042,7 @@ export function GizmoOverlay({
       }
       setForceUpdate((value) => value + 1)
     },
-    [
-      projectSize.height,
-      projectSize.width,
-      setOtherItemBounds,
-      visualItems,
-    ],
+    [projectSize.height, projectSize.width, setOtherItemBounds, visualItems],
   )
 
   // Handle group transform end - commit transforms for all items as a single undo operation
@@ -1519,9 +1505,7 @@ export function GizmoOverlay({
         ) : null}
 
         {/* Snap guides shown during drag */}
-        {!isExclusiveCanvasEditorActive && (
-          <LiveSnapGuides coordParams={coordParams} />
-        )}
+        {!isExclusiveCanvasEditorActive && <LiveSnapGuides coordParams={coordParams} />}
       </div>
 
       {/* Context menu for selecting from overlapping items - rendered via portal to ensure it's above all other elements */}

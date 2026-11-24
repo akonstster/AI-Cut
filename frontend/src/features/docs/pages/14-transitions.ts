@@ -71,7 +71,7 @@ const page = {
         {
           kind: 'note',
           tone: 'warning',
-          text: 'You need a real cut between two clips, and enough **source handle** on the relevant side. If a placement is blocked, pick another placement or trim less. Dragging onto a valid cut always works, even when click-to-apply is unavailable.',
+          text: 'You need a real cut between two clips, and enough **source handle** on the relevant side. Drop to review a trim proposal when frames are missing. Confirm the displayed duration and downstream shift. Tracks with Sync Lock enabled lose the same interval, which can trim audio or subtitles. Ctrl+Z undoes the whole operation.',
         },
       ],
     },

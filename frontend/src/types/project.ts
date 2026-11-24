@@ -287,4 +287,8 @@ export interface ProjectResolution {
   height: number
   fps: number
   backgroundColor?: string // Hex color, defaults to #000000
+  /** Folder this project exports into; Documents when absent. */
+  exportDir?: string
+  /** File name (without extension) remembered for this project's exports. */
+  exportFileName?: string
 }

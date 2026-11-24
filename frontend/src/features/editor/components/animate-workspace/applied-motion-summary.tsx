@@ -5,10 +5,7 @@ import type { CanvasSettings } from '@/types/transform'
 import { getTextMotionPreset } from '@/shared/typography/text-motion'
 import { AppliedContinuousMotionControls } from './applied-continuous-motion-controls'
 import { AppliedMotionRow } from './applied-motion-row'
-import type {
-  KeyframeApplicationSummary,
-  ManualKeyframeSummary,
-} from './motion-clip-summary'
+import type { KeyframeApplicationSummary, ManualKeyframeSummary } from './motion-clip-summary'
 
 /** One live text-motion slot applied to the selected clip. */
 export interface ActiveTextMotionEntry {

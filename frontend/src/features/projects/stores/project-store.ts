@@ -76,6 +76,11 @@ interface ProjectActions {
 
   // State management
   setCurrentProject: (project: Project | null) => void
+  /** Remembers where this project exports to, so the dialog opens with the same folder and name. */
+  setExportDestination: (
+    id: string,
+    destination: { dir?: string; fileName?: string },
+  ) => Promise<void>
   setSearchQuery: (query: string) => void
   setSortField: (field: ProjectState['sortField']) => void
   setSortDirection: (direction: ProjectState['sortDirection']) => void
@@ -186,6 +191,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>()(
           name: data.name ?? existingProject.name,
           description: data.description ?? existingProject.description,
           metadata: {
+            ...existingProject.metadata,
             width: data.width ?? existingProject.metadata.width,
             height: data.height ?? existingProject.metadata.height,
             fps: data.fps ?? existingProject.metadata.fps,
@@ -406,7 +412,8 @@ export const useProjectStore = create<ProjectState & ProjectActions>()(
 
         try {
           // Create the new project in DB
-          const { collectProjectGeneration, restoreProjectGeneration } = await import('@/features/generate/services/project-generation-transfer')
+          const { collectProjectGeneration, restoreProjectGeneration } =
+            await import('@/features/generate/services/project-generation-transfer')
           const generation = await collectProjectGeneration(id)
           await createProjectDB(newProject)
 
@@ -415,7 +422,11 @@ export const useProjectStore = create<ProjectState & ProjectActions>()(
           for (const mediaId of mediaIds) {
             await associateMediaWithProject(newProject.id, mediaId)
           }
-          await restoreProjectGeneration(newProject.id, generation, new Map(mediaIds.map((mediaId) => [mediaId, mediaId])))
+          await restoreProjectGeneration(
+            newProject.id,
+            generation,
+            new Map(mediaIds.map((mediaId) => [mediaId, mediaId])),
+          )
 
           return newProject
         } catch (error) {
@@ -503,6 +514,26 @@ export const useProjectStore = create<ProjectState & ProjectActions>()(
 
       // State setters
       setCurrentProject: (project) => set({ currentProject: project }),
+      setExportDestination: async (id, destination) => {
+        const currentProject = get().currentProject
+        const existing =
+          currentProject?.id === id ? currentProject : get().projects.find((p) => p.id === id)
+        if (!existing) return
+        const metadata: Project['metadata'] = {
+          ...existing.metadata,
+          ...(destination.dir !== undefined ? { exportDir: destination.dir } : {}),
+          ...(destination.fileName !== undefined ? { exportFileName: destination.fileName } : {}),
+        }
+        set({
+          projects: get().projects.map((project) =>
+            project.id === id ? { ...project, metadata } : project,
+          ),
+          ...(currentProject?.id === id ? { currentProject: { ...currentProject, metadata } } : {}),
+        })
+        await updateProjectDB(id, { metadata }).catch(() => {
+          // A project whose file is gone keeps the in-memory value; the dialog still opens with it.
+        })
+      },
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSortField: (field) => set({ sortField: field }),
       setSortDirection: (direction) => set({ sortDirection: direction }),

@@ -123,6 +123,7 @@ export function resolveTransitionTargetForEdge(params: {
   preferredDurationInFrames?: number
   alignment?: number
   allowDurationClamp?: boolean
+  allowCenteredFallback?: boolean
   timelineFps?: number
 }): ResolvedTransitionTarget | null {
   const {
@@ -133,6 +134,7 @@ export function resolveTransitionTargetForEdge(params: {
     preferredDurationInFrames = TRANSITION_CONFIGS.crossfade.defaultDuration,
     alignment = 0.5,
     allowDurationClamp = true,
+    allowCenteredFallback = false,
     timelineFps = 30,
   } = params
 
@@ -143,41 +145,55 @@ export function resolveTransitionTargetForEdge(params: {
     .filter((candidate) => candidate.trackId === item.trackId && isTransitionableItem(candidate))
     .toSorted((a, b) => a.from - b.from || a.id.localeCompare(b.id))
 
-  if (edge === 'right') {
-    const rightClip = trackItems.find(
-      (candidate) =>
-        candidate.id !== item.id &&
-        areFramesAligned(item.from + item.durationInFrames, candidate.from),
-    )
-    return rightClip
-      ? resolveTargetForPair(
-          item,
-          rightClip,
-          transitions,
-          preferredDurationInFrames,
-          alignment,
-          allowDurationClamp,
-          timelineFps,
+  const leftClip =
+    edge === 'right'
+      ? item
+      : trackItems.findLast(
+          (candidate) =>
+            candidate.id !== item.id &&
+            areFramesAligned(candidate.from + candidate.durationInFrames, item.from),
         )
-      : null
+  const rightClip =
+    edge === 'left'
+      ? item
+      : trackItems.find(
+          (candidate) =>
+            candidate.id !== item.id &&
+            areFramesAligned(item.from + item.durationInFrames, candidate.from),
+        )
+  if (!leftClip || !rightClip) return null
+
+  const resolveAtAlignment = (placement: number) =>
+    resolveTargetForPair(
+      leftClip,
+      rightClip,
+      transitions,
+      preferredDurationInFrames,
+      placement,
+      allowDurationClamp,
+      timelineFps,
+    )
+  const target = resolveAtAlignment(alignment)
+  if (
+    !allowCenteredFallback ||
+    alignment !== 0.5 ||
+    !target ||
+    target.hasExisting ||
+    target.suggestedDurationInFrames > 1
+  ) {
+    return target
   }
 
-  const leftClip = trackItems.findLast(
-    (candidate) =>
-      candidate.id !== item.id &&
-      areFramesAligned(candidate.from + candidate.durationInFrames, item.from),
-  )
-  return leftClip
-    ? resolveTargetForPair(
-        leftClip,
-        item,
-        transitions,
-        preferredDurationInFrames,
-        alignment,
-        allowDurationClamp,
-        timelineFps,
-      )
-    : null
+  // With handles on only one side, a centered drop may fit at most one frame.
+  const beforeCut = resolveAtAlignment(1)
+  const afterCut = resolveAtAlignment(0)
+  const best =
+    (beforeCut?.maxDurationInFrames ?? 0) > (afterCut?.maxDurationInFrames ?? 0)
+      ? beforeCut
+      : afterCut
+  return best?.canApply && best.suggestedDurationInFrames > target.suggestedDurationInFrames
+    ? best
+    : target
 }
 
 export function resolveTransitionTargetFromSelection(params: {

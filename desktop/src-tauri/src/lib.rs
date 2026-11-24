@@ -56,6 +56,17 @@ fn single_instance_wanted() -> bool {
     !cfg!(debug_assertions) && !service::port_is_explicit()
 }
 
+/// Changes whenever the built window changes, so the WebView never reuses a cached document from
+/// the previous build: the window opens `/projects?v=<index.html modification time>`.
+fn window_build_stamp(repo_root: &std::path::Path) -> u64 {
+    std::fs::metadata(repo_root.join("frontend").join("dist").join("index.html"))
+        .and_then(|meta| meta.modified())
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
 fn start_or_reuse_service(repo_root: &std::path::Path) -> Result<u16, String> {
     let port = service::listen_port_for(Some(repo_root))?;
     match service::claim_port(port, Duration::from_secs(20)).map_err(|busy| busy.to_string())? {
@@ -209,7 +220,7 @@ pub fn run() {
                     return Ok(());
                 }
             };
-            let url = format!("http://127.0.0.1:{port}/projects");
+            let url = format!("http://127.0.0.1:{port}/projects?v={}", window_build_stamp(&repo_root));
             let icon = app.default_window_icon().cloned();
             let (for_tabs, for_links) = (app.handle().clone(), app.handle().clone());
             let win = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().expect("a valid URL")))

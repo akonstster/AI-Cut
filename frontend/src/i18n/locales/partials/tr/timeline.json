@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "Bu tarafta bitişik klip yok.",
+      "dropOnExisting": "Değiştirmek için mevcut geçişin üzerine bırakın.",
+      "notEnoughFrames": "Bu kesim noktasında geçiş için yeterli kaynak karesi yok.",
+      "dropToTrim": "Geçiş için ne kadar kırpma gerektiğini görmek üzere bırakın.",
+      "trimTitle": "Geçiş eklemek için klipler kırpılsın mı?",
+      "trimDescription": "Geçiş {{duration}} sürecek. Bu izdeki sonraki klipler {{shift}} öne kayacak. Senkronizasyon kilidi açık olan diğer izlerde de aynı aralık kaldırılır. Bu işlem sesi veya altyazıları kırpabilir.",
+      "cancel": "İptal",
+      "trimAndAdd": "Kırp ve geçiş ekle",
+      "trimFailed": "Bu kırpmayla geçiş eklenemedi. İz kilitlerini ve yakındaki geçişleri kontrol edin."
+    },
     "track": {
       "unableToAddDroppedItem": "Bırakılan öğe eklenemedi",
       "unableToAddDroppedMediaItems": "Bırakılan medya öğeleri eklenemedi",

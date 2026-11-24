@@ -171,7 +171,6 @@ describe('renderEffectsFromMaskedSource', () => {
   })
 })
 
-
 describe('GPU effect timeline context', () => {
   it('carries frame-rate-derived time without serializing it into authored params', () => {
     const authored = createGpuEffect('timed', 0.5)

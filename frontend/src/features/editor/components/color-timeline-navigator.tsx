@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTranslation } from 'react-i18next'
 import {
@@ -41,6 +41,29 @@ import {
   type MiniFilmTileClip,
   type MiniTimelineClip,
 } from './mini-timeline'
+
+/** Coalesce drag/slider bursts to one store update per animation frame. */
+function useRafThrottled<T extends unknown[]>(callback: ((...args: T) => void) | undefined) {
+  const callbackRef = useRef(callback)
+  callbackRef.current = callback
+  const rafRef = useRef<number | null>(null)
+  const argsRef = useRef<T | null>(null)
+  useEffect(
+    () => () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    },
+    [],
+  )
+  return useCallback((...args: T) => {
+    argsRef.current = args
+    if (rafRef.current !== null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const pending = argsRef.current
+      if (pending) callbackRef.current?.(...pending)
+    })
+  }, [])
+}
 
 const TEST_ID_PREFIX = 'color-timeline'
 const STRIP_HEIGHT = 212
@@ -157,6 +180,8 @@ interface ColorFilmTileProps {
   selected: boolean
   fps: number
   posterUrl?: string
+  /** Fill the grid cell (media-style filmstrip column). */
+  fluid?: boolean
   onSelect: (clip: ColorTimelineClip) => void
 }
 
@@ -206,6 +231,7 @@ const ColorFilmTile = memo(function ColorFilmTile({
   selected,
   fps,
   posterUrl,
+  fluid,
   onSelect,
 }: ColorFilmTileProps) {
   const startFrameUrl = useClipStartFrameUrl(clip, fps)
@@ -230,6 +256,7 @@ const ColorFilmTile = memo(function ColorFilmTile({
       dataClipId={clip.id}
       imageStyle={imageGradeStyle}
       imageDataAttributes={imageDataAttributes}
+      fluid={fluid}
       overlay={
         <>
           {showCssGradeFallback && clip.gradeThumbnail.overlayStyle ? (
@@ -261,7 +288,45 @@ const ColorFilmTile = memo(function ColorFilmTile({
  * playhead). Clicking a tile or mini-clip seeks to + selects that clip; the
  * playhead is pinned while dragging the IO bar so it doesn't chase the markers.
  */
-export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
+interface ColorTimelineNavigatorProps {
+  /**
+   * Film tiles: a row above the mini timeline (default), a vertical column to the
+   * left of the viewer, or hidden (when the column is rendered separately).
+   */
+  filmStrip?: 'row' | 'column' | 'none'
+  /** Render the mini timeline itself; off for the standalone film-tile column. */
+  showTimeline?: boolean
+  /** Column width in px (filmStrip="column"); tiles scale with it. */
+  filmStripWidth?: number
+  /** Drag callback for the column's right-edge resize handle. */
+  onFilmStripWidthChange?: (width: number) => void
+  /** Minimum tile width in the column grid (px); larger = bigger previews. */
+  filmTileSize?: number
+  onFilmTileSizeChange?: (size: number) => void
+  /**
+   * Color page split: filmstrip column on the left, this preview in the middle,
+   * mini timeline underneath — all driven by ONE navigator instance (no
+   * duplicated derivation, subscriptions or thumbnail work).
+   */
+  preview?: ReactNode
+}
+
+export const FILMSTRIP_DEFAULT_WIDTH = 134
+export const FILMSTRIP_MIN_WIDTH = 96
+export const FILMSTRIP_MAX_WIDTH = 640
+export const FILM_TILE_SIZE_DEFAULT = 118
+export const FILM_TILE_SIZE_MIN = 80
+export const FILM_TILE_SIZE_MAX = 320
+
+export const ColorTimelineNavigator = memo(function ColorTimelineNavigator({
+  filmStrip = 'row',
+  showTimeline = true,
+  filmStripWidth = FILMSTRIP_DEFAULT_WIDTH,
+  onFilmStripWidthChange,
+  filmTileSize = FILM_TILE_SIZE_DEFAULT,
+  onFilmTileSizeChange,
+  preview,
+}: ColorTimelineNavigatorProps) {
   const { t } = useTranslation()
   const { items, tracks } = useItemsStore(useShallow((s) => ({ items: s.items, tracks: s.tracks })))
   const { markers, inPoint, outPoint } = useMarkersStore(
@@ -336,6 +401,7 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
     [filmClips],
   )
   const posterUrls = useMediaPosterUrls(posterMediaIds)
+  const scheduleTileSizeChange = useRafThrottled(onFilmTileSizeChange)
   const timelineMaxFrame = resolveMiniTimelineMaxFrame({ items, markers, inPoint, outPoint })
   const annotationModel = useMemo(
     () => buildTimelineAnnotationModel({ markers, inPoint, outPoint, maxFrame: timelineMaxFrame }),
@@ -368,93 +434,198 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
     [pausePlayback, selectMarker, setCurrentFrame, setPreviewFrame],
   )
 
-  return (
-    <section
-      className="panel-bg shrink-0 overflow-hidden border-y border-border bg-[#24252b]"
-      aria-label={t('editor.colorTimeline.label')}
-      data-testid="color-timeline-navigator"
-      style={{ height: STRIP_HEIGHT }}
-    >
-      <div className="flex h-full flex-col">
-        <div
-          className="flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-black/40 px-1 pt-1"
-          data-testid="color-timeline-filmstrip-scroll"
-          style={{
-            height: MINI_FILM_TILE_STRIP_HEIGHT,
-            paddingBottom: MINI_FILM_TILE_SCROLLBAR_GUTTER,
-          }}
-        >
-          {filmClips.length > 0 ? (
-            filmClips.map((clip, index) => (
-              <ColorFilmTile
-                key={`${clip.id}-film-tile`}
-                clip={clip}
-                index={index}
-                selected={selectedItemIdSet.has(clip.id)}
-                fps={fps}
-                posterUrl={clip.mediaId ? posterUrls.get(clip.mediaId) : undefined}
-                onSelect={seekToClip}
+  const scheduleWidthChange = useRafThrottled(onFilmStripWidthChange)
+
+  const startFilmstripResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!onFilmStripWidthChange) return
+      event.preventDefault()
+      const startX = event.clientX
+      const startWidth = filmStripWidth
+      const handleMove = (moveEvent: PointerEvent) => {
+        const next = Math.min(
+          FILMSTRIP_MAX_WIDTH,
+          Math.max(FILMSTRIP_MIN_WIDTH, Math.round(startWidth + moveEvent.clientX - startX)),
+        )
+        scheduleWidthChange(next)
+      }
+      const handleUp = () => {
+        window.removeEventListener('pointermove', handleMove)
+        window.removeEventListener('pointerup', handleUp)
+        window.removeEventListener('pointercancel', handleUp)
+      }
+      window.addEventListener('pointermove', handleMove)
+      window.addEventListener('pointerup', handleUp)
+      window.addEventListener('pointercancel', handleUp)
+    },
+    [filmStripWidth, scheduleWidthChange, onFilmStripWidthChange],
+  )
+
+  const renderNavigatorSection = (strip: 'row' | 'column' | 'none', timeline: boolean) => {
+    const isFilmColumn = strip === 'column'
+    const sectionHeight = isFilmColumn
+      ? undefined
+      : timeline
+        ? strip === 'none'
+          ? STRIP_HEIGHT - MINI_FILM_TILE_STRIP_HEIGHT
+          : STRIP_HEIGHT
+        : MINI_FILM_TILE_STRIP_HEIGHT
+
+    return (
+      <section
+        className={
+          isFilmColumn
+            ? 'panel-bg relative h-full shrink-0 overflow-hidden border-r border-border bg-[#24252b]'
+            : 'panel-bg shrink-0 overflow-hidden border-y border-border bg-[#24252b]'
+        }
+        aria-label={t('editor.colorTimeline.label')}
+        data-testid="color-timeline-navigator"
+        data-film-strip={strip}
+        style={sectionHeight ? { height: sectionHeight } : { width: filmStripWidth }}
+      >
+        <div className="flex h-full flex-col">
+          {isFilmColumn && onFilmTileSizeChange && (
+            <div className="flex h-6 shrink-0 items-center gap-1.5 border-b border-black/40 px-2">
+              <span className="truncate text-[10px] text-zinc-400">
+                {t('editor.colorTimeline.clipCount', { count: filmClips.length })}
+              </span>
+              <input
+                type="range"
+                min={FILM_TILE_SIZE_MIN}
+                max={FILM_TILE_SIZE_MAX}
+                step={4}
+                value={filmTileSize}
+                onChange={(event) => scheduleTileSizeChange(Number(event.target.value))}
+                aria-label={t('editor.colorTimeline.tileSize')}
+                title={t('editor.colorTimeline.tileSize')}
+                data-testid="color-filmstrip-tile-size"
+                className="ml-auto h-1 w-20 min-w-0 cursor-pointer accent-primary"
               />
-            ))
-          ) : (
-            <div className="flex h-full items-center px-2 text-[10px] font-medium text-zinc-500">
-              {t('editor.colorTimeline.noClip')}
+            </div>
+          )}
+          {strip !== 'none' && (
+            <div
+              className={
+                isFilmColumn
+                  ? 'grid min-h-0 flex-1 content-start gap-1 overflow-y-auto overflow-x-hidden px-1 pb-1 pt-1'
+                  : 'flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-black/40 px-1 pt-1'
+              }
+              data-testid="color-timeline-filmstrip-scroll"
+              style={
+                isFilmColumn
+                  ? // Media-library style grid: as many columns as fit, tiles grow
+                    // to fill the row, the slider sets the minimum tile width.
+                    { gridTemplateColumns: `repeat(auto-fill, minmax(${filmTileSize}px, 1fr))` }
+                  : {
+                      height: MINI_FILM_TILE_STRIP_HEIGHT,
+                      paddingBottom: MINI_FILM_TILE_SCROLLBAR_GUTTER,
+                    }
+              }
+            >
+              {filmClips.length > 0 ? (
+                filmClips.map((clip, index) => (
+                  <ColorFilmTile
+                    key={`${clip.id}-film-tile`}
+                    clip={clip}
+                    index={index}
+                    selected={selectedItemIdSet.has(clip.id)}
+                    fps={fps}
+                    posterUrl={clip.mediaId ? posterUrls.get(clip.mediaId) : undefined}
+                    fluid={isFilmColumn}
+                    onSelect={seekToClip}
+                  />
+                ))
+              ) : (
+                <div className="flex h-full items-center px-2 text-[10px] font-medium text-zinc-500">
+                  {t('editor.colorTimeline.noClip')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {timeline && (
+            <div
+              className="relative flex min-h-0 flex-1 cursor-ew-resize flex-col bg-[#1d1e23]"
+              data-testid="color-timeline-scrub-surface"
+              {...scrubHandlers}
+            >
+              <div
+                className="relative shrink-0 border-b border-black/40 bg-[#202127]"
+                style={{ height: MINI_TIMELINE_IO_LANE_HEIGHT }}
+              >
+                <MiniTimelineIoLane
+                  model={annotationModel}
+                  timelineMaxFrame={timelineMaxFrame}
+                  labelWidth={MINI_TIMELINE_LABEL_WIDTH}
+                  suppressPlayheadPreviewRef={suppressPlayheadPreviewRef}
+                  testIdPrefix={TEST_ID_PREFIX}
+                />
+              </div>
+              <div className="relative flex min-h-0 flex-1 flex-col">
+                <MiniTimelineAnnotations
+                  model={annotationModel}
+                  selectedMarkerId={selectedMarkerId}
+                  onMarkerPress={seekToMarker}
+                  labelWidth={MINI_TIMELINE_LABEL_WIDTH}
+                  testIdPrefix={TEST_ID_PREFIX}
+                />
+                <MiniTimelineRuler
+                  labelWidth={MINI_TIMELINE_LABEL_WIDTH}
+                  maxFrame={timelineMaxFrame}
+                  fps={fps}
+                />
+                <MiniTimelineTrackLanes
+                  tracks={videoTrackRows}
+                  clips={miniClips}
+                  selectedIds={selectedItemIdSet}
+                  maxFrame={timelineMaxFrame}
+                  trackAreaHeight={TRACK_AREA_HEIGHT}
+                  labelWidth={MINI_TIMELINE_LABEL_WIDTH}
+                  onSelectClip={seekToClip}
+                  fallbackLabelPrefix="V"
+                  clipTestId="color-timeline-mini-clip"
+                />
+                <MiniTimelinePlayhead
+                  labelWidth={MINI_TIMELINE_LABEL_WIDTH}
+                  maxFrame={timelineMaxFrame}
+                  handle="flag"
+                  pointer
+                  suppressPreviewRef={suppressPlayheadPreviewRef}
+                  testId="color-timeline-playhead"
+                />
+              </div>
             </div>
           )}
         </div>
-
-        <div
-          className="relative flex min-h-0 flex-1 cursor-ew-resize flex-col bg-[#1d1e23]"
-          data-testid="color-timeline-scrub-surface"
-          {...scrubHandlers}
-        >
+        {isFilmColumn && onFilmStripWidthChange && (
           <div
-            className="relative shrink-0 border-b border-black/40 bg-[#202127]"
-            style={{ height: MINI_TIMELINE_IO_LANE_HEIGHT }}
-          >
-            <MiniTimelineIoLane
-              model={annotationModel}
-              timelineMaxFrame={timelineMaxFrame}
-              labelWidth={MINI_TIMELINE_LABEL_WIDTH}
-              suppressPlayheadPreviewRef={suppressPlayheadPreviewRef}
-              testIdPrefix={TEST_ID_PREFIX}
-            />
-          </div>
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            <MiniTimelineAnnotations
-              model={annotationModel}
-              selectedMarkerId={selectedMarkerId}
-              onMarkerPress={seekToMarker}
-              labelWidth={MINI_TIMELINE_LABEL_WIDTH}
-              testIdPrefix={TEST_ID_PREFIX}
-            />
-            <MiniTimelineRuler
-              labelWidth={MINI_TIMELINE_LABEL_WIDTH}
-              maxFrame={timelineMaxFrame}
-              fps={fps}
-            />
-            <MiniTimelineTrackLanes
-              tracks={videoTrackRows}
-              clips={miniClips}
-              selectedIds={selectedItemIdSet}
-              maxFrame={timelineMaxFrame}
-              trackAreaHeight={TRACK_AREA_HEIGHT}
-              labelWidth={MINI_TIMELINE_LABEL_WIDTH}
-              onSelectClip={seekToClip}
-              fallbackLabelPrefix="V"
-              clipTestId="color-timeline-mini-clip"
-            />
-            <MiniTimelinePlayhead
-              labelWidth={MINI_TIMELINE_LABEL_WIDTH}
-              maxFrame={timelineMaxFrame}
-              handle="flag"
-              pointer
-              suppressPreviewRef={suppressPlayheadPreviewRef}
-              testId="color-timeline-playhead"
-            />
-          </div>
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t('editor.colorTimeline.resizeFilmstrip')}
+            title={t('editor.colorTimeline.resizeFilmstrip')}
+            data-testid="color-filmstrip-resize-handle"
+            className="absolute inset-y-0 right-0 z-10 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 active:bg-primary/60"
+            onPointerDown={startFilmstripResize}
+          />
+        )}
+      </section>
+    )
+  }
+
+  if (preview) {
+    // One navigator instance drives both surfaces: filmstrip column on the left,
+    // preview in the middle, mini timeline below. Two separately mounted
+    // navigators used to duplicate every derivation and subscription.
+    return (
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {renderNavigatorSection('column', false)}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{preview}</div>
+          {renderNavigatorSection('none', true)}
         </div>
       </div>
-    </section>
-  )
+    )
+  }
+
+  return renderNavigatorSection(filmStrip, showTimeline)
 })

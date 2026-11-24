@@ -23,7 +23,10 @@ import {
   resolveCornerPinForSize,
   resolveCornerPinTargetRect,
 } from '@/runtime/renderer/deps/composition-runtime-contract'
-import { resolveAnimatedShapeItem, resolveAnimatedTextItem } from '@/runtime/renderer/deps/keyframes-contract'
+import {
+  resolveAnimatedShapeItem,
+  resolveAnimatedTextItem,
+} from '@/runtime/renderer/deps/keyframes-contract'
 import type { EffectSourceMask } from '../canvas-effects'
 import { applyMasks } from '../canvas-masks'
 import { renderShape } from '../canvas-shapes'

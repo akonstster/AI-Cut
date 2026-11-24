@@ -12,7 +12,11 @@ const VIDEO_FPS = 24
 const PATH_COLOR = '#fbbf24'
 
 function fileName(name: string, extension: string): string {
-  const base = name.replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 80) || 'Previs'
+  const base =
+    name
+      .replace(/[^\p{L}\p{N} _-]/gu, '')
+      .trim()
+      .slice(0, 80) || 'Previs'
   return `${base}.${extension}`
 }
 
@@ -72,7 +76,8 @@ export async function importPrevisFrame(
     codec: 'png',
   })
   const library = useMediaLibraryStore.getState()
-  if (library.currentProjectId === project.id && !library.mediaById[media.id]) library.prependMediaItem(media)
+  if (library.currentProjectId === project.id && !library.mediaById[media.id])
+    library.prependMediaItem(media)
   return media.id
 }
 
@@ -93,7 +98,8 @@ export async function importPrevisVideo(
     tags: ['generated', 'previs'],
   })
   const library = useMediaLibraryStore.getState()
-  if (library.currentProjectId === project.id && !library.mediaById[media.id]) library.prependMediaItem(media)
+  if (library.currentProjectId === project.id && !library.mediaById[media.id])
+    library.prependMediaItem(media)
   return media.id
 }
 
@@ -123,11 +129,13 @@ export async function agentBlocking(input: {
           input.fresh ? null : (current?.scene ?? null),
         )
   input.accept?.(scene)
-  if (useProjectStore.getState().currentProject?.id !== project.id) throw new Error("The active project changed while preparing the shot")
-  if (!input.shotId) useGenerateStore.getState().setBlocking(project.id, {
-    description: input.description ?? current?.description ?? '',
-    scene,
-  })
+  if (useProjectStore.getState().currentProject?.id !== project.id)
+    throw new Error('The active project changed while preparing the shot')
+  if (!input.shotId)
+    useGenerateStore.getState().setBlocking(project.id, {
+      description: input.description ?? current?.description ?? '',
+      scene,
+    })
   return scene
 }
 

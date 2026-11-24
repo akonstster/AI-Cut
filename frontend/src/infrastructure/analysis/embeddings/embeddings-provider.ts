@@ -148,7 +148,11 @@ export const embeddingsProvider: EmbeddingsProvider = {
     if (!vector) throw new Error('Embedding returned no vector')
     return vector
   },
-  embedBatch: (texts, options) => embedBatch(texts.map((text) => `passage: ${text}`), options),
+  embedBatch: (texts, options) =>
+    embedBatch(
+      texts.map((text) => `passage: ${text}`),
+      options,
+    ),
   dispose() {
     if (!worker) return
     worker.postMessage({ type: 'dispose' })

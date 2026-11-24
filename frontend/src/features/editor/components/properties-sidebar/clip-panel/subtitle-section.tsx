@@ -1,13 +1,28 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { memo, useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Captions } from 'lucide-react'
+import { Captions, Trash2 } from 'lucide-react'
 import { i18n } from '@/i18n'
+import { editCaptionCue } from '@/shared/timeline/edit-caption-cue'
+import {
+  editedTranscriptCaptions,
+  newTranscriptCaptionCue,
+  withTranscriptCaptionCue,
+  withoutTranscriptCaptionCue,
+} from '@/shared/timeline/transcript-captions'
+import { hasTranscriptCaptionSegment } from '@/shared/timeline/caption-ownership'
+import { importMediaTranscriptionService } from '@/features/editor/deps/media-library'
 
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
-import { updateItem, useTimelineSettingsStore } from '@/features/editor/deps/timeline-store'
+import {
+  executeTimelineCommand,
+  updateItem,
+  useItemsStore,
+  useTimelineSettingsStore,
+} from '@/features/editor/deps/timeline-store'
 import { usePlaybackStore } from '@/shared/state/playback'
 import {
   buildCueText,
@@ -17,6 +32,7 @@ import {
   type CueFormatFlags,
 } from '@/shared/utils/subtitle-cue-format'
 import { cn } from '@/shared/ui/cn'
+import { useSyncedText } from '@/shared/ui/use-synced-text'
 import type {
   AudioItem,
   SubtitleSegmentItem,
@@ -53,6 +69,65 @@ interface SubtitleSectionPropsWithCanvas extends SubtitleSectionProps {
   canvas?: CanvasContext
 }
 
+type TranscriptCaptionClip = (AudioItem | VideoItem) & {
+  transcriptCaptions: NonNullable<(AudioItem | VideoItem)['transcriptCaptions']>
+}
+
+/** A video/audio clip that can carry transcript captions, with or without them yet. */
+type CaptionableClip = AudioItem | VideoItem
+
+function isCaptionableClip(item: TimelineItem): item is CaptionableClip {
+  return (
+    (item.type === 'video' || item.type === 'audio') &&
+    item.isReversed !== true &&
+    typeof item.mediaId === 'string' &&
+    item.mediaId.length > 0
+  )
+}
+
+function isTranscriptCaptionClip(item: TimelineItem): item is TranscriptCaptionClip {
+  return isCaptionableClip(item) && item.transcriptCaptions?.type === 'transcript'
+}
+
+/** Seconds → `mm:ss` (or `h:mm:ss`) for the clip scope label. */
+function formatClipTime(totalSeconds: number): string {
+  const whole = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(whole / 3600)
+  const minutes = Math.floor((whole % 3600) / 60)
+  const seconds = whole % 60
+  const mm = hours > 0 ? String(minutes).padStart(2, '0') : String(minutes)
+  const hh = hours > 0 ? `${hours}:` : ''
+  return `${hh}${mm}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * Writes a subtitle edit to the clip it belongs to. Reading the store instead of the render
+ * props keeps fast typing from folding a stale cue list back into the clip.
+ */
+function writeClipTranscriptCaptions(
+  clipId: string,
+  update: (
+    captions: TranscriptCaptionClip['transcriptCaptions'],
+    updatedAt: number,
+  ) => TranscriptCaptionClip['transcriptCaptions'] | null,
+): boolean {
+  const clip = useItemsStore.getState().itemById[clipId]
+  if (!clip || !isTranscriptCaptionClip(clip)) return false
+  const next = update(clip.transcriptCaptions, Date.now())
+  if (!next) return false
+  executeTimelineCommand(
+    'UPDATE_TRANSCRIPT_CAPTIONS',
+    () => {
+      useItemsStore
+        .getState()
+        ._updateItem(clipId, { transcriptCaptions: next } as Partial<TimelineItem>)
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    { ids: [clipId] },
+  )
+  return true
+}
+
 export const SubtitleSection = memo(function SubtitleSection({
   items,
   canvas,
@@ -71,16 +146,36 @@ export const SubtitleSection = memo(function SubtitleSection({
         } =>
           (item.type === 'video' || item.type === 'audio') &&
           item.isReversed !== true &&
-          item.transcriptCaptions?.type === 'transcript' &&
-          item.transcriptCaptions.cues.length > 0,
+          item.transcriptCaptions?.type === 'transcript',
+      ),
+    [items],
+  )
+  const restorableClips = useMemo(
+    () =>
+      items.filter(
+        (item): item is CaptionableClip =>
+          isCaptionableClip(item) &&
+          !!item.autoCaptionedAt &&
+          !item.transcriptCaptions &&
+          !hasTranscriptCaptionSegment(items, item.id),
       ),
     [items],
   )
 
-  if (segments.length === 0 && virtualTranscriptClips.length === 0) return null
+  if (
+    segments.length === 0 &&
+    virtualTranscriptClips.length === 0 &&
+    restorableClips.length === 0
+  ) {
+    return null
+  }
 
   const canvasWidth = canvas?.width ?? DEFAULT_PROJECT_WIDTH
   const canvasHeight = canvas?.height ?? DEFAULT_PROJECT_HEIGHT
+
+  if (segments.length === 0 && virtualTranscriptClips.length === 0) {
+    return <RestoreTranscriptCaptionsEditor clip={restorableClips[0]!} />
+  }
 
   if (segments.length === 0 && virtualTranscriptClips.length > 0) {
     return (
@@ -174,16 +269,14 @@ const VirtualTranscriptSubtitleEditor = memo(function VirtualTranscriptSubtitleE
   const applyStylePatch = useCallback(
     (patch: Partial<SubtitleSegmentItem | TextItem>) => {
       for (const clip of clips) {
-        updateItem(clip.id, {
-          transcriptCaptions: {
-            ...clip.transcriptCaptions,
-            style: {
-              ...(clip.transcriptCaptions.style ?? {}),
-              ...patch,
-            },
-            updatedAt: Date.now(),
+        writeClipTranscriptCaptions(clip.id, (captions, updatedAt) => ({
+          ...captions,
+          style: {
+            ...(captions.style ?? {}),
+            ...patch,
           },
-        } as Partial<TimelineItem>)
+          updatedAt,
+        }))
       }
     },
     [clips],
@@ -192,13 +285,11 @@ const VirtualTranscriptSubtitleEditor = memo(function VirtualTranscriptSubtitleE
   const setCaptionsVisible = useCallback(
     (enabled: boolean) => {
       for (const clip of clips) {
-        updateItem(clip.id, {
-          transcriptCaptions: {
-            ...clip.transcriptCaptions,
-            enabled,
-            updatedAt: Date.now(),
-          },
-        } as Partial<TimelineItem>)
+        writeClipTranscriptCaptions(clip.id, (captions, updatedAt) => ({
+          ...captions,
+          enabled,
+          updatedAt,
+        }))
       }
     },
     [clips],
@@ -206,19 +297,73 @@ const VirtualTranscriptSubtitleEditor = memo(function VirtualTranscriptSubtitleE
 
   const updateCue = useCallback(
     (cueId: string, patch: Partial<{ text: string; startSeconds: number; endSeconds: number }>) => {
-      const next = firstClip.transcriptCaptions.cues.map((cue) =>
-        cue.id === cueId ? { ...cue, ...patch } : cue,
+      writeClipTranscriptCaptions(firstClip.id, (captions, updatedAt) =>
+        editedTranscriptCaptions(captions, cueId, patch, updatedAt),
       )
-      updateItem(firstClip.id, {
-        transcriptCaptions: {
-          ...firstClip.transcriptCaptions,
-          cues: next,
-          updatedAt: Date.now(),
-        },
-      } as Partial<TimelineItem>)
     },
-    [firstClip],
+    [firstClip.id],
   )
+
+  const addCue = useCallback(() => {
+    const cue = newTranscriptCaptionCue(
+      firstClip,
+      fps,
+      usePlaybackStore.getState().currentFrame,
+      i18n.t('editor.subtitleSection.newCue', { defaultValue: 'New subtitle' }),
+    )
+    writeClipTranscriptCaptions(firstClip.id, (captions, updatedAt) =>
+      withTranscriptCaptionCue(captions, cue, updatedAt),
+    )
+  }, [firstClip, fps])
+
+  const deleteCue = useCallback(
+    (cueId: string) => {
+      writeClipTranscriptCaptions(firstClip.id, (captions, updatedAt) =>
+        withoutTranscriptCaptionCue(captions, cueId, updatedAt),
+      )
+    },
+    [firstClip.id],
+  )
+
+  // A clip-owned caption copy can be moved onto its own subtitle track without re-transcribing:
+  // the cues, their word timings and the style travel as they are.
+  const canMoveCaptionsToTrack = useItemsStore(
+    useCallback(
+      (state) =>
+        (firstClip.transcriptCaptions?.cues.length ?? 0) > 0 &&
+        !hasTranscriptCaptionSegment(state.items, firstClip.id),
+      [firstClip.id, firstClip.transcriptCaptions],
+    ),
+  )
+
+  const moveCaptionsToSubtitleTrack = useCallback(() => {
+    const mediaId = firstClip.mediaId
+    if (!mediaId) return
+    void importMediaTranscriptionService()
+      .then(({ mediaTranscriptionService }) =>
+        mediaTranscriptionService.insertTranscriptAsCaptions(mediaId, {
+          clipIds: [firstClip.id],
+          moveExistingCaptions: true,
+          selectUpdatedClips: false,
+        }),
+      )
+      .catch(() => {
+        // Silent: the explicit Generate Captions action stays the fallback.
+      })
+  }, [firstClip.id, firstClip.mediaId])
+
+  const trackName = useItemsStore(
+    useCallback(
+      (s) => s.tracks.find((track) => track.id === firstClip.trackId)?.name ?? null,
+      [firstClip.trackId],
+    ),
+  )
+  const clipScopeLabel = useMemo(() => {
+    if (fps <= 0) return trackName ?? ''
+    const start = formatClipTime(firstClip.from / fps)
+    const end = formatClipTime((firstClip.from + firstClip.durationInFrames) / fps)
+    return [trackName, `${start}–${end}`].filter(Boolean).join(' · ')
+  }, [firstClip.durationInFrames, firstClip.from, fps, trackName])
 
   const seekToCue = useCallback(
     (startSeconds: number) => {
@@ -283,6 +428,11 @@ const VirtualTranscriptSubtitleEditor = memo(function VirtualTranscriptSubtitleE
           })}{' '}
           - {i18n.t('editor.subtitleSection.transcript')}
         </p>
+        {clipScopeLabel && (
+          <p className="text-[11px] text-muted-foreground/80" data-subtitle-scope>
+            {clipScopeLabel}
+          </p>
+        )}
 
         <div className="flex items-center justify-between gap-3 rounded border border-border bg-muted/20 px-2 py-1.5">
           <Label htmlFor="virtual-transcript-captions-visible" className="text-xs font-medium">
@@ -308,7 +458,75 @@ const VirtualTranscriptSubtitleEditor = memo(function VirtualTranscriptSubtitleE
           cues={firstClip.transcriptCaptions.cues}
           onChange={updateCue}
           onSeek={seekToCue}
+          onDelete={deleteCue}
         />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={addCue}>
+            {i18n.t('editor.subtitleSection.addCue', { defaultValue: 'Add subtitle' })}
+          </Button>
+          {canMoveCaptionsToTrack && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={moveCaptionsToSubtitleTrack}
+              title={i18n.t('editor.subtitleSection.moveToTrackHint', {
+                defaultValue: 'Move these subtitles to their own subtitle track',
+              })}
+            >
+              {i18n.t('editor.subtitleSection.moveToTrack', {
+                defaultValue: 'Move to subtitle track',
+              })}
+            </Button>
+          )}
+        </div>
+      </div>
+    </PropertySection>
+  )
+})
+
+/**
+ * The caption track for a clip was removed, but its transcript is still on disk. Offer to build
+ * the subtitles again from that transcript without running speech recognition a second time.
+ */
+const RestoreTranscriptCaptionsEditor = memo(function RestoreTranscriptCaptionsEditor({
+  clip,
+}: {
+  clip: CaptionableClip
+}) {
+  const restore = useCallback(() => {
+    const mediaId = clip.mediaId
+    if (!mediaId) return
+    void importMediaTranscriptionService()
+      .then(({ mediaTranscriptionService }) =>
+        mediaTranscriptionService.insertTranscriptAsCaptions(mediaId, {
+          clipIds: [clip.id],
+          replaceExisting: true,
+          selectUpdatedClips: false,
+        }),
+      )
+      .catch(() => {
+        // Silent: the explicit Generate Captions action stays the fallback.
+      })
+  }, [clip.id, clip.mediaId])
+
+  return (
+    <PropertySection
+      title={i18n.t('editor.subtitleSection.title')}
+      icon={Captions}
+      defaultOpen={true}
+    >
+      <div className="space-y-2 px-1">
+        <p className="text-xs text-muted-foreground">
+          {i18n.t('editor.subtitleSection.restoreHint', {
+            defaultValue:
+              'Subtitles for this clip were removed. Build them again from the saved transcript.',
+          })}
+        </p>
+        <Button variant="outline" size="sm" onClick={restore}>
+          {i18n.t('editor.subtitleSection.restore', {
+            defaultValue: 'Create subtitles from transcript',
+          })}
+        </Button>
       </div>
     </PropertySection>
   )
@@ -340,8 +558,20 @@ const SingleSubtitleSegmentEditor = memo(function SingleSubtitleSegmentEditor({
 
   const updateCue = useCallback(
     (cueId: string, patch: Partial<{ text: string; startSeconds: number; endSeconds: number }>) => {
-      const next = cuesRef.current.map((cue) => (cue.id === cueId ? { ...cue, ...patch } : cue))
+      const next = cuesRef.current
+        .map((cue) => (cue.id === cueId ? editCaptionCue(cue, patch) : cue))
+        .sort((a, b) => a.startSeconds - b.startSeconds)
+      cuesRef.current = next
       updateItem(segment.id, { cues: next })
+    },
+    [segment.id],
+  )
+
+  const deleteCue = useCallback(
+    (cueId: string) => {
+      const cues = cuesRef.current.filter((cue) => cue.id !== cueId)
+      cuesRef.current = cues
+      updateItem(segment.id, { cues })
     },
     [segment.id],
   )
@@ -385,7 +615,39 @@ const SingleSubtitleSegmentEditor = memo(function SingleSubtitleSegmentEditor({
           canvasHeight={canvasHeight}
         />
 
-        <VirtualCueList cues={segment.cues} onChange={updateCue} onSeek={seekToCue} />
+        <VirtualCueList
+          cues={segment.cues}
+          onChange={updateCue}
+          onSeek={seekToCue}
+          onDelete={deleteCue}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const startSeconds =
+              Math.max(
+                0,
+                Math.min(
+                  segment.durationInFrames - 1,
+                  usePlaybackStore.getState().currentFrame - segment.from,
+                ),
+              ) / fps
+            const cues = [
+              ...cuesRef.current,
+              {
+                id: crypto.randomUUID(),
+                startSeconds,
+                endSeconds: Math.min(startSeconds + 2, segment.durationInFrames / fps),
+                text: i18n.t('editor.subtitleSection.newCue', { defaultValue: 'New subtitle' }),
+              },
+            ].sort((a, b) => a.startSeconds - b.startSeconds)
+            cuesRef.current = cues
+            updateItem(segment.id, { cues })
+          }}
+        >
+          {i18n.t('editor.subtitleSection.addCue', { defaultValue: 'Add subtitle' })}
+        </Button>
       </div>
     </PropertySection>
   )
@@ -404,6 +666,7 @@ interface VirtualCueListProps {
   cues: readonly { id: string; startSeconds: number; endSeconds: number; text: string }[]
   onChange: SubtitleCueRowProps['onChange']
   onSeek: SubtitleCueRowProps['onSeek']
+  onDelete?: SubtitleCueRowProps['onDelete']
 }
 
 /**
@@ -416,6 +679,7 @@ const VirtualCueList = memo(function VirtualCueList({
   cues,
   onChange,
   onSeek,
+  onDelete,
 }: VirtualCueListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -451,6 +715,7 @@ const VirtualCueList = memo(function VirtualCueList({
                 endSeconds={cue.endSeconds}
                 onChange={onChange}
                 onSeek={onSeek}
+                onDelete={onDelete}
               />
             </div>
           )
@@ -471,6 +736,7 @@ interface SubtitleCueRowProps {
     patch: Partial<{ text: string; startSeconds: number; endSeconds: number }>,
   ) => void
   onSeek?: (startSeconds: number) => void
+  onDelete?: (cueId: string) => void
 }
 
 /**
@@ -493,6 +759,7 @@ const SubtitleCueRow = memo(function SubtitleCueRow({
   endSeconds,
   onChange,
   onSeek,
+  onDelete,
 }: SubtitleCueRowProps) {
   const { t } = useTranslation()
   const parsed = useMemo(() => parseSubtitleCueText(text), [text])
@@ -504,6 +771,12 @@ const SubtitleCueRow = memo(function SubtitleCueRow({
     },
     [cueId, flags, onChange, text],
   )
+
+  // Typing mid-cue keeps the caret: the stored cue text comes from a deferred inspector snapshot.
+  const field = useSyncedText<HTMLTextAreaElement>({
+    value: parsed.plainText,
+    onChange: handlePlainTextChange,
+  })
 
   const handleToggle = useCallback(
     (format: keyof CueFormatFlags) => {
@@ -562,8 +835,7 @@ const SubtitleCueRow = memo(function SubtitleCueRow({
         />
       </div>
       <textarea
-        value={parsed.plainText}
-        onChange={(event) => handlePlainTextChange(event.target.value)}
+        {...field.fieldProps}
         rows={2}
         className="w-full resize-none rounded border border-input bg-transparent px-2 py-1 text-xs leading-snug focus:outline-none focus:ring-1 focus:ring-ring"
       />
@@ -589,6 +861,17 @@ const SubtitleCueRow = memo(function SubtitleCueRow({
           glyph="U"
           glyphStyle={{ textDecoration: 'underline' }}
         />
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(cueId)}
+            title={t('editor.subtitleSection.deleteCue')}
+            aria-label={t('editor.subtitleSection.deleteCue')}
+            className="ml-auto h-5 w-5 rounded border border-border text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-destructive"
+          >
+            <Trash2 className="mx-auto h-3 w-3" />
+          </button>
+        )}
         {parsed.alignment && (
           <span
             className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground"

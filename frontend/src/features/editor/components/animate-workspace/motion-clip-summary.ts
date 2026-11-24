@@ -68,7 +68,10 @@ export function summarizeManualKeyframes(
   let keyframeCount = 0
   let firstFrame = Number.POSITIVE_INFINITY
 
-  const collect = (label: string, lane: { keyframes: readonly { frame: number; source?: unknown }[] }) => {
+  const collect = (
+    label: string,
+    lane: { keyframes: readonly { frame: number; source?: unknown }[] },
+  ) => {
     const manualKeyframes = lane.keyframes.filter((keyframe) => !keyframe.source)
     if (manualKeyframes.length === 0) return
     properties.add(label)

@@ -111,14 +111,17 @@ function computeItemTypeInfo(items: TimelineItem[]) {
       (item) =>
         (item.type === 'video' || item.type === 'audio') &&
         item.isReversed !== true &&
-        item.transcriptCaptions?.type === 'transcript' &&
-        item.transcriptCaptions.cues.length > 0,
+        (item.transcriptCaptions?.type === 'transcript' ||
+          // Captions were removed: offer restoring them from the ready transcript.
+          (!!item.autoCaptionedAt && !item.transcriptCaptions)),
     ),
     isOnlyTextOrShape:
       items.length > 0 && items.every((item) => item.type === 'text' || item.type === 'shape'),
     // Pure text selection gets a text-specific tab layout: Text / Animation /
     // Effects instead of Video / Audio / Effects.
     isOnlyText: items.length > 0 && items.every((item) => item.type === 'text'),
+    // Subtitle segments are captions, not pictures: their inspector is the cue editor alone.
+    isOnlySubtitle: items.length > 0 && items.every((item) => item.type === 'subtitle'),
     // Pure shape selection gets a Shape tab (no audio) instead of Video.
     isOnlyShape: items.length > 0 && items.every((item) => item.type === 'shape'),
     isOnlyController: items.length > 0 && items.every((item) => item.type === 'controller'),
@@ -457,6 +460,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
     hasVirtualSubtitleItems,
     isOnlyTextOrShape,
     isOnlyText,
+    isOnlySubtitle,
     isOnlyShape,
     isOnlyController,
   } = itemTypeInfo
@@ -618,6 +622,18 @@ const ClipPanelCore = memo(function ClipPanelCore({
     return null
   }
 
+  // A subtitle segment has no picture to lay out: its inspector is the caption editor alone,
+  // not Transform/Video/Fill/Effects tabs borrowed from media clips.
+  if (isOnlySubtitle) {
+    return (
+      <div className="space-y-3">
+        <Suspense fallback={null}>
+          <LazySubtitleSection items={selectedItems} canvas={canvas} />
+        </Suspense>
+      </div>
+    )
+  }
+
   const motionUsesFullHeight = activeTab === 'motion' && showFullMotionLibrary
 
   return (
@@ -722,6 +738,13 @@ const ClipPanelCore = memo(function ClipPanelCore({
           {hasAudioItems && activeTab === 'audio' && (
             <Suspense fallback={null}>
               <LazyAudioSection items={audioPanelItems} />
+            </Suspense>
+          )}
+          {/* Audio clips can own captions too: keep their cue editor reachable here, next to
+              the sound controls, instead of hiding it behind the picture-only Video tab. */}
+          {(hasSubtitleItems || hasVirtualSubtitleItems) && activeTab === 'audio' && (
+            <Suspense fallback={null}>
+              <LazySubtitleSection items={selectedItems} canvas={canvas} />
             </Suspense>
           )}
         </TabsContent>

@@ -1,3 +1,6 @@
+import russianPages from './docs-ru.json'
+import russianDetails from './docs-ru-details.json'
+import russianReference from './docs-ru-reference.json'
 export type DocCategory = 'Start' | 'Core Editing' | 'Creative Tools' | 'Output' | 'Reference'
 
 export interface DocFigure {
@@ -64,4 +67,20 @@ export const DOC_GROUPS: DocCategory[] = [
 
 export function getDocPage(slug: string): DocPage | undefined {
   return DOC_PAGES.find((page) => page.slug === slug)
+}
+
+export function localizeDocPage(page: DocPage, language: 'en' | 'ru'): DocPage {
+  const translated = (
+    russianPages as Record<string, Pick<DocPage, 'title' | 'description' | 'sections'>>
+  )[page.slug]
+  if (language !== 'ru' || !translated) return page
+  const details = [
+    ...((russianDetails as Record<string, DocSection[]>)[page.slug] ?? []),
+    ...((russianReference as Record<string, DocSection[]>)[page.slug] ?? []),
+  ]
+  return {
+    ...page,
+    ...translated,
+    sections: [...translated.sections, ...details],
+  }
 }

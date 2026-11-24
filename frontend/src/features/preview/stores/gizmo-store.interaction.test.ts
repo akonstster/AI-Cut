@@ -78,8 +78,6 @@ describe('gizmo interaction ownership', () => {
     useGizmoStore.getState().clearInteraction(secondInteractionId)
 
     useGizmoStore.getState().completePresentationHandoff(firstInteractionId)
-    expect(useGizmoStore.getState().presentationHandoff?.interactionId).toBe(
-      secondInteractionId,
-    )
+    expect(useGizmoStore.getState().presentationHandoff?.interactionId).toBe(secondInteractionId)
   })
 })

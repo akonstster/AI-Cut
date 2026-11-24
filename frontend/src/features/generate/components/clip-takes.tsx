@@ -57,11 +57,19 @@ export function ClipTakes({ clipId, mediaId }: { clipId: string; mediaId: string
               )}
             >
               <span className="font-medium">{t('generate.takes.take', { n: index + 1 })}</span>
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">{new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }).format(job.created)}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {new Intl.DateTimeFormat(i18n.language, {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                }).format(job.created)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
-                className={cn('h-6 px-1.5', job.liked ? 'text-[var(--color-accent)]' : 'text-muted-foreground')}
+                className={cn(
+                  'h-6 px-1.5',
+                  job.liked ? 'text-[var(--color-accent)]' : 'text-muted-foreground',
+                )}
                 title={job.liked ? t('generate.actions.unlike') : t('generate.actions.like')}
                 aria-label={job.liked ? t('generate.actions.unlike') : t('generate.actions.like')}
                 aria-pressed={job.liked}

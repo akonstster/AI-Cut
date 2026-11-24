@@ -10,7 +10,7 @@ export async function rerankSceneCaptions(
 ): Promise<number[]> {
   const { signal, onProgress } = options
   signal?.throwIfAborted()
-  const activeWorker = worker ??= new RerankerWorker()
+  const activeWorker = (worker ??= new RerankerWorker())
   const id = ++nextId
 
   return new Promise((resolve, reject) => {

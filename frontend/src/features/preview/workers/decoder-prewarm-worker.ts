@@ -219,7 +219,10 @@ function pruneOldExtractors(activeSrc: string, maxExtractors = MAX_EXTRACTORS_PE
 
     const oldest = extractors.get(oldestSrc)
     extractors.delete(oldestSrc)
-    keyframeIndexBySrc.delete(oldestSrc)
+    // Keep the keyframe index: it is tiny, stable per source, and dropping it
+    // made every re-hover re-scan the file and re-post `keyframes_extracted`,
+    // which the main thread persisted again (a metadata.json write per clip
+    // per hover pass — a storm of REST file calls competing with skim I/O).
     if (oldest) {
       disposeExtractorState(oldest)
     }
@@ -266,11 +269,10 @@ function resetSampleIterator(state: ExtractorState, startTimestamp: number): voi
   // decoding a range. Starting at the requested presentation timestamp keeps
   // that necessary GOP decode inside the sink without yielding a keyframe-to-
   // target runway that this worker would only close and discard.
-  state.sampleIterator = state.sink.samples(Math.max(0, startTimestamp), Infinity) as AsyncGenerator<
-    WorkerSample,
-    void,
-    unknown
-  >
+  state.sampleIterator = state.sink.samples(
+    Math.max(0, startTimestamp),
+    Infinity,
+  ) as AsyncGenerator<WorkerSample, void, unknown>
   state.iteratorDone = false
   state.lastRequestedTimestamp = null
 }
@@ -624,10 +626,7 @@ self.onmessage = async (event: MessageEvent) => {
     if (src) {
       activePreviewGenerationBySrc.set(
         src,
-        Math.max(
-          activePreviewGenerationBySrc.get(src) ?? 0,
-          Number(msg.generation) || 0,
-        ),
+        Math.max(activePreviewGenerationBySrc.get(src) ?? 0, Number(msg.generation) || 0),
       )
     }
     return
@@ -687,10 +686,7 @@ self.onmessage = async (event: MessageEvent) => {
   if (isActivePreviewRequest) {
     activePreviewGenerationBySrc.set(
       msg.src,
-      Math.max(
-        activePreviewGenerationBySrc.get(msg.src) ?? 0,
-        Number(msg.generation) || 0,
-      ),
+      Math.max(activePreviewGenerationBySrc.get(msg.src) ?? 0, Number(msg.generation) || 0),
     )
   }
 

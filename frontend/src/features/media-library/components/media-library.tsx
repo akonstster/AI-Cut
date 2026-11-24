@@ -1279,17 +1279,19 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
             analysisProgress.modelLoading
               ? t('media.library.loadingSceneModel')
               : analysisProgress.total > 1
-              ? t('media.library.analyzingMultiple', {
-                  current: Math.min(analysisProgress.completed + 1, analysisProgress.total),
-                  total: analysisProgress.total,
-                })
-              : t('media.library.analyzingSingle')
+                ? t('media.library.analyzingMultiple', {
+                    current: Math.min(analysisProgress.completed + 1, analysisProgress.total),
+                    total: analysisProgress.total,
+                  })
+                : t('media.library.analyzingSingle')
           }
           progressAriaLabel={t('media.library.aiAnalysisProgress')}
           progressPercent={analysisProgress.modelLoading?.percent ?? analysisPercent}
           meta={
             <>
-              <span className="tabular-nums">{Math.round(analysisProgress.modelLoading?.percent ?? analysisPercent)}%</span>
+              <span className="tabular-nums">
+                {Math.round(analysisProgress.modelLoading?.percent ?? analysisPercent)}%
+              </span>
               {!analysisProgress.cancelRequested ? (
                 <button
                   type="button"

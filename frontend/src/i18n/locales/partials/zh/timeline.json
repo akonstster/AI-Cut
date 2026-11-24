@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "这一侧没有紧邻的片段。",
+      "dropOnExisting": "拖到现有转场上即可替换。",
+      "notEnoughFrames": "此剪切点没有足够的源素材帧来添加转场。",
+      "dropToTrim": "松开鼠标，查看添加转场所需的修剪量。",
+      "trimTitle": "修剪片段以添加转场？",
+      "trimDescription": "转场时长为 {{duration}}。此轨道上的后续片段将前移 {{shift}}。其他已开启同步锁定的轨道也会删除同一时间段，可能会截短音频或字幕。",
+      "cancel": "取消",
+      "trimAndAdd": "修剪并添加转场",
+      "trimFailed": "无法通过此次修剪添加转场。请检查轨道锁定状态及相邻转场。"
+    },
     "track": {
       "unableToAddDroppedItem": "无法添加拖放的项目",
       "unableToAddDroppedMediaItems": "无法添加拖放的媒体项目",

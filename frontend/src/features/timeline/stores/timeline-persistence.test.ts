@@ -225,12 +225,11 @@ describe('timeline project hydration', () => {
 
     await hydrateTimelineStoresFromProject(project)
 
-    const hydratedComposition =
-      useCompositionsStore.getState().compositionById['motion-comp']
+    const hydratedComposition = useCompositionsStore.getState().compositionById['motion-comp']
     expect(hydratedComposition?.durationInFrames).toBe(100)
-    expect(
-      hydratedComposition?.items.map((item) => item.from + item.durationInFrames),
-    ).toEqual([130])
+    expect(hydratedComposition?.items.map((item) => item.from + item.durationInFrames)).toEqual([
+      130,
+    ])
   })
 
   it('preserves versioned RGBA keyframe numbers during project hydration', async () => {
@@ -1014,9 +1013,12 @@ describe('timeline persistence (saveTimeline / loadTimeline)', () => {
       expect(
         savedTimeline.compositions?.find((composition) => composition.id === 'motion-comp'),
       ).toMatchObject({
-        items: [expect.objectContaining({ id: 'motion-base' }), expect.objectContaining({
-          id: 'motion-unsaved',
-        })],
+        items: [
+          expect.objectContaining({ id: 'motion-base' }),
+          expect.objectContaining({
+            id: 'motion-unsaved',
+          }),
+        ],
         durationInFrames: 100,
         busAudioEq: motionBus,
         markers: motionMarkers,
@@ -1300,9 +1302,7 @@ describe('timeline persistence (saveTimeline / loadTimeline)', () => {
     it('throws when project not found', async () => {
       indexedDbMocks.getProject.mockResolvedValue(null)
 
-      await expect(loadTimeline('nonexistent')).rejects.toThrow(
-        'Project not found',
-      )
+      await expect(loadTimeline('nonexistent')).rejects.toThrow('Project not found')
     })
 
     it('marks timeline as not loading after completion', async () => {

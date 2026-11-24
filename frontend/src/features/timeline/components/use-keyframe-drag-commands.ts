@@ -16,7 +16,10 @@
 import { useCallback, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { toast } from 'sonner'
 import type { TFunction } from 'i18next'
-import { buildEasingConfig, type getTransitionBlockedRanges } from '@/features/timeline/deps/keyframes'
+import {
+  buildEasingConfig,
+  type getTransitionBlockedRanges,
+} from '@/features/timeline/deps/keyframes'
 import { usePlaybackStore } from '@/shared/state/playback'
 import * as timelineActions from '../stores/timeline-actions'
 import { useKeyframesStore } from '../stores/keyframes-store'
@@ -449,9 +452,12 @@ export function useKeyframeDragCommands({
   )
 
   // Handle property change in graph editor
-  const handlePropertyChange = useCallback((property: AnimatableProperty | null) => {
-    setSelectedProperty(property)
-  }, [setSelectedProperty])
+  const handlePropertyChange = useCallback(
+    (property: AnimatableProperty | null) => {
+      setSelectedProperty(property)
+    },
+    [setSelectedProperty],
+  )
 
   const handleCopyKeyframes = useCallback(() => {
     if (selectedEditorKeyframes.length === 0) return

@@ -6,7 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/shared/ui/cn'
-import { formatUsd, generateApi, PROVIDER_LABELS, PROVIDERS, type KeyState, type Provider } from '../services/generate-api'
+import {
+  formatUsd,
+  generateApi,
+  PROVIDER_LABELS,
+  PROVIDERS,
+  type KeyState,
+  type Provider,
+} from '../services/generate-api'
 
 const KEY_PAGES: Record<Provider, string> = {
   openrouter: 'https://openrouter.ai/settings/keys',
@@ -42,17 +49,27 @@ function ProviderRow({ state, onChanged }: { state: KeyState; onChanged: () => v
     })
 
   return (
-    <div className="space-y-1.5 rounded-lg border border-border p-3" data-testid={`provider-${state.provider}`}>
+    <div
+      className="space-y-1.5 rounded-lg border border-border p-3"
+      data-testid={`provider-${state.provider}`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium">{PROVIDER_LABELS[state.provider]}</span>
-        <span className={cn('text-[11px]', state.set ? 'text-emerald-400' : 'text-muted-foreground')}>
+        <span
+          className={cn('text-[11px]', state.set ? 'text-emerald-400' : 'text-muted-foreground')}
+        >
           {state.set
             ? state.source === 'environment'
               ? t('settings.providers.fromEnv', { variable: state.variable })
               : t('settings.providers.stored')
             : t('settings.providers.none')}
         </span>
-        <a href={KEY_PAGES[state.provider]} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground underline">
+        <a
+          href={KEY_PAGES[state.provider]}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground underline"
+        >
           {t('generate.keys.getOne', { provider: PROVIDER_LABELS[state.provider] })}
           <ExternalLink className="h-3 w-3" />
         </a>
@@ -81,7 +98,13 @@ function ProviderRow({ state, onChanged }: { state: KeyState; onChanged: () => v
         >
           {t('generate.keys.save')}
         </Button>
-        <Button size="sm" variant="outline" className="h-8" disabled={busy || !state.set} onClick={() => void check()}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={busy || !state.set}
+          onClick={() => void check()}
+        >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('settings.providers.check')}
         </Button>
         {state.set && state.source === 'stored' && (
@@ -90,13 +113,19 @@ function ProviderRow({ state, onChanged }: { state: KeyState; onChanged: () => v
             variant="ghost"
             className="h-8 text-muted-foreground"
             disabled={busy}
-            onClick={() => void run(async () => void (await generateApi.storeKey(state.provider, null)))}
+            onClick={() =>
+              void run(async () => void (await generateApi.storeKey(state.provider, null)))
+            }
           >
             {t('settings.providers.remove')}
           </Button>
         )}
       </div>
-      {message && <p className={cn('text-[11px]', message.ok ? 'text-emerald-400' : 'text-destructive')}>{message.text}</p>}
+      {message && (
+        <p className={cn('text-[11px]', message.ok ? 'text-emerald-400' : 'text-destructive')}>
+          {message.text}
+        </p>
+      )}
     </div>
   )
 }
@@ -116,7 +145,6 @@ export function ProvidersSettings() {
   const [budgetSaved, setBudgetSaved] = useState(false)
   const [port, setPort] = useState('')
   const [portSaved, setPortSaved] = useState(false)
-  const [paths, setPaths] = useState<{ workspace: string; data: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
 
@@ -125,19 +153,15 @@ export function ProvidersSettings() {
       .then(([keyAnswer, spendAnswer, settings]) => {
         setKeys(keyAnswer.keys)
         setSpend(spendAnswer)
-        setBudget(settings.agent_daily_budget_usd === null ? '' : String(settings.agent_daily_budget_usd))
+        setBudget(
+          settings.agent_daily_budget_usd === null ? '' : String(settings.agent_daily_budget_usd),
+        )
         setPort(settings.server_port === null ? '' : String(settings.server_port))
         setError(null)
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
-    fetch('/api/info', { cache: 'no-store' })
-      .then(async (response) =>
-        response.ok ? ((await response.json()) as { workspace?: string; data?: string }) : null,
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : String(reason)),
       )
-      .then((info) => {
-        if (info?.workspace && info.data) setPaths({ workspace: info.workspace, data: info.data })
-      })
-      .catch(() => undefined)
   }, [])
 
   useEffect(() => load(), [load])
@@ -163,7 +187,10 @@ export function ProvidersSettings() {
     const value = readBudget()
     if (value === undefined) return
     const savedPort = port.trim() === '' ? null : Number(port.trim())
-    if (savedPort !== null && (!Number.isInteger(savedPort) || savedPort < 1024 || savedPort > 65535)) {
+    if (
+      savedPort !== null &&
+      (!Number.isInteger(savedPort) || savedPort < 1024 || savedPort > 65535)
+    ) {
       return setError(t('settings.providers.portInvalid'))
     }
     try {
@@ -210,11 +237,15 @@ export function ProvidersSettings() {
         <div className="space-y-1 rounded-lg border border-border p-3">
           <Label className="text-sm">{t('settings.providers.spend')}</Label>
           <p className="text-xs text-muted-foreground">
-            {t('settings.providers.spendLine', { today: formatUsd(spend.today), total: formatUsd(spend.total) })}
+            {t('settings.providers.spendLine', {
+              today: formatUsd(spend.today),
+              total: formatUsd(spend.total),
+            })}
           </p>
           {spend.providers.map((each) => (
             <p key={each.provider} className="text-[11px] text-muted-foreground">
-              {PROVIDER_LABELS[each.provider]}: {formatUsd(each.usd)} · {t('settings.providers.jobs', { count: each.jobs })}
+              {PROVIDER_LABELS[each.provider]}: {formatUsd(each.usd)} ·{' '}
+              {t('settings.providers.jobs', { count: each.jobs })}
             </p>
           ))}
         </div>
@@ -224,19 +255,43 @@ export function ProvidersSettings() {
         <Label className="text-sm">{t('settings.providers.agent')}</Label>
         <p className="text-xs text-muted-foreground">{t('settings.providers.agentHint')}</p>
         <div className="flex min-w-0 items-center gap-1.5">
-          <code className="min-w-0 flex-1 break-all rounded bg-secondary/50 px-2 py-1 text-[11px]">{claudeCommand}</code>
-          <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => copy(claudeCommand)}>
-            {copied === claudeCommand ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          <code className="min-w-0 flex-1 break-all rounded bg-secondary/50 px-2 py-1 text-[11px]">
+            {claudeCommand}
+          </code>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0"
+            onClick={() => copy(claudeCommand)}
+          >
+            {copied === claudeCommand ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
-          <code className="min-w-0 flex-1 break-all rounded bg-secondary/50 px-2 py-1 text-[11px]">{MCP_URL}</code>
-          <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => copy(MCP_URL)}>
-            {copied === MCP_URL ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          <code className="min-w-0 flex-1 break-all rounded bg-secondary/50 px-2 py-1 text-[11px]">
+            {MCP_URL}
+          </code>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0"
+            onClick={() => copy(MCP_URL)}
+          >
+            {copied === MCP_URL ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Label className="text-xs text-muted-foreground">{t('settings.providers.serverPort')}</Label>
+          <Label className="text-xs text-muted-foreground">
+            {t('settings.providers.serverPort')}
+          </Label>
           <Input
             value={port}
             onChange={(event) => setPort(event.target.value)}
@@ -244,7 +299,12 @@ export function ProvidersSettings() {
             inputMode="numeric"
             className="h-7 w-24 text-xs"
           />
-          <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => void savePort()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0"
+            onClick={() => void savePort()}
+          >
             {portSaved ? <Check className="h-3.5 w-3.5" /> : t('generate.keys.save')}
           </Button>
         </div>
@@ -259,32 +319,16 @@ export function ProvidersSettings() {
             placeholder={t('settings.providers.noLimit')}
             className="h-7 w-24 text-xs"
           />
-          <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => void saveBudget()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0"
+            onClick={() => void saveBudget()}
+          >
             {budgetSaved ? <Check className="h-3.5 w-3.5" /> : t('generate.keys.save')}
           </Button>
         </div>
       </div>
-
-      {paths && (
-        <div className="space-y-1.5 rounded-lg border border-border p-3">
-          <Label className="text-sm">{t('settings.providers.folders')}</Label>
-          {(
-            [
-              [t('settings.providers.workspace'), paths.workspace],
-              [t('settings.providers.data'), paths.data],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label} className="flex min-w-0 items-center gap-1.5">
-              <span className="w-28 shrink-0 text-[11px] text-muted-foreground">{label}</span>
-              <code className="min-w-0 flex-1 break-all rounded bg-secondary/50 px-2 py-1 text-[11px]">{value}</code>
-              <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => copy(value)}>
-                {copied === value ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-
     </div>
   )
 }

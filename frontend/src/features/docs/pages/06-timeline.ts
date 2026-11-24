@@ -35,9 +35,12 @@ const page = {
           kind: 'list',
           items: [
             'Drag a clip from the Media panel onto a video or audio track.',
+            'Hold Alt while dragging to copy selected clips using the same media. Place overlapping clips on separate tracks.',
             'Use the **Selection** tool (`V`) to move and rearrange clips.',
             '**Linked selection** keeps a video clip and its audio moving together; unlink them to edit one alone.',
-            'Nudge a selected item with `Shift+Arrow` (1px) or `Ctrl+Shift+Arrow` (10px).',
+            'Dragging a group keeps each half on its own lane: moving the picture up a video lane leaves the sound on its audio lane, and moving the picture does not drag subtitles or captions along. A drop that would overlap another clip is refused instead.',
+            'A red badge on a clip (`+`/`-` time next to the link icon) means its linked audio and picture no longer play the same moment — usually because one of them was moved, trimmed, slipped or rippled on its own track. Right-click the clip and choose **Restore Sync** to move the sound back onto its picture in one step.',
+            'Nudge the picture of a selected item inside the frame with `Shift+Arrow` (1px) or `Ctrl+Shift+Arrow` (10px); the Transform X/Y fields in Properties show the offset.',
           ],
         },
       ],
@@ -49,7 +52,7 @@ const page = {
           kind: 'list',
           items: [
             'Split at the playhead with `Alt+C`, or use the **Razor** tool (`C`) to cut wherever you click.',
-            'Join adjacent sections of the same clip with `Shift+J`.',
+            'Join adjacent sections of the same clip with `Shift+J` — the parts must come from one cut; linked video and audio halves rejoin together.',
             '**Delete** leaves a gap; **Ripple Delete** (`Ctrl+Delete`) removes the clip and closes the gap.',
             'Use **Close All Gaps** to pull clips together and remove empty space on a track.',
           ],

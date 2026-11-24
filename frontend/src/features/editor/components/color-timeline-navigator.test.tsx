@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vite-plus/test'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useItemsStore } from '@/features/editor/deps/timeline-store'
 import { setTimelineState } from '@/features/editor/deps/timeline-test-helpers-contract'
 import { useGizmoStore } from '@/features/editor/deps/preview'
@@ -293,5 +293,29 @@ describe('ColorTimelineNavigator', () => {
     })
 
     fireEvent.pointerUp(scrubSurface, { clientX: 486, pointerId: 4 })
+  })
+
+  it('renders the filmstrip as a resizable column when asked', async () => {
+    const onWidthChange = vi.fn()
+    render(
+      <ColorTimelineNavigator
+        filmStrip="column"
+        showTimeline={false}
+        filmStripWidth={200}
+        onFilmStripWidthChange={onWidthChange}
+      />,
+    )
+
+    const navigator = screen.getByTestId('color-timeline-navigator')
+    expect(navigator).toHaveAttribute('data-film-strip', 'column')
+    expect(navigator.style.width).toBe('200px')
+    expect(screen.queryByTestId('color-timeline-scrub-surface')).not.toBeInTheDocument()
+
+    const handle = screen.getByTestId('color-filmstrip-resize-handle')
+    fireEvent.pointerDown(handle, { clientX: 200, pointerId: 7 })
+    fireEvent.pointerMove(window, { clientX: 260, pointerId: 7 })
+    fireEvent.pointerUp(window, { clientX: 260, pointerId: 7 })
+
+    await waitFor(() => expect(onWidthChange).toHaveBeenCalledWith(260))
   })
 })

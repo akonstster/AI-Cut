@@ -212,11 +212,10 @@ const MediaGridBase = memo(function MediaGridBase({
           media.id,
           {
             onSelect: (event: React.MouseEvent) => handleCardSelect(media.id, event),
-            onDoubleClick: () => {
-              const type = getMediaType(media.mimeType)
-              if (type === 'image' || type === 'video') setPreviewMedia(media)
-              else setSourcePreviewMediaId(media.id)
-            },
+            onDoubleClick: () => setSourcePreviewMediaId(media.id),
+            onLargePreview: ['image', 'video'].includes(getMediaType(media.mimeType))
+              ? () => setPreviewMedia(media)
+              : undefined,
             onDelete: (mediaIds: string[]) => handleCardDelete(mediaIds),
             onRelink: () => {
               void handleRelink(media.id)
@@ -231,7 +230,11 @@ const MediaGridBase = memo(function MediaGridBase({
   return (
     <div>
       {previewMedia && (
-        <MediaPreviewDialog key={previewMedia.id} media={previewMedia} onClose={() => setPreviewMedia(null)} />
+        <MediaPreviewDialog
+          key={previewMedia.id}
+          media={previewMedia}
+          onClose={() => setPreviewMedia(null)}
+        />
       )}
       {/* Content */}
       {!items && isLoading ? (
@@ -309,6 +312,7 @@ const MediaGridBase = memo(function MediaGridBase({
                   isBroken={brokenMediaIdSet.has(media.id)}
                   onSelect={handlers?.onSelect}
                   onDoubleClick={handlers?.onDoubleClick}
+                  onLargePreview={handlers?.onLargePreview}
                   onDelete={handlers?.onDelete}
                   onRelink={handlers?.onRelink}
                 />

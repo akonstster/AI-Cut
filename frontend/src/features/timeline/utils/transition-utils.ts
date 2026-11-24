@@ -45,8 +45,8 @@ export function getMaxTransitionDurationForHandles(
   )
   if (maxByClipDuration < 1) return 0
 
-  const outgoingTailHandle = getAvailableHandle(leftClip, 'end', timelineFps)
-  const incomingHeadHandle = getAvailableHandle(rightClip, 'start', timelineFps)
+  const outgoingTailHandle = getAvailableTransitionHandle(leftClip, 'end', timelineFps)
+  const incomingHeadHandle = getAvailableTransitionHandle(rightClip, 'start', timelineFps)
 
   const canFitDuration = (duration: number): boolean => {
     const portions = calculateTransitionPortions(duration, alignment)
@@ -114,8 +114,8 @@ export function canAddTransition(
     }
   }
 
-  const leftHandle = getAvailableHandle(leftClip, 'end', timelineFps)
-  const rightHandle = getAvailableHandle(rightClip, 'start', timelineFps)
+  const leftHandle = getAvailableTransitionHandle(leftClip, 'end', timelineFps)
+  const rightHandle = getAvailableTransitionHandle(rightClip, 'start', timelineFps)
 
   if (isAdjacent) {
     const portions = calculateTransitionPortions(durationInFrames, alignment)
@@ -372,7 +372,7 @@ export function clampDeltaToLastValidValue(
  * @param side 'start' for head handle, 'end' for tail handle
  * @returns Number of available frames for transition
  */
-function getAvailableHandle(
+export function getAvailableTransitionHandle(
   clip: TimelineItem,
   side: 'start' | 'end',
   timelineFps: number,
@@ -398,7 +398,7 @@ function getAvailableHandle(
   const effectiveSourceEnd = sourceEnd ?? sourceDuration ?? 0
   const effectiveSourceDuration = sourceDuration ?? 0
 
-  if (side === 'start') {
+  if ((side === 'start') !== (clip.isReversed === true)) {
     // Head handle: how much source is available before current start
     return sourceToTimelineFrames(sourceStart, speed, effectiveSourceFps, timelineFps)
   } else {

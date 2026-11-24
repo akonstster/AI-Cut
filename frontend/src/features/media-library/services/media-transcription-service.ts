@@ -28,7 +28,7 @@ import { importMediaLibraryService } from './media-library-service-loader'
 import {
   buildSubtitleSegmentForClip,
   getCaptionStyleTemplateFromPreset,
-  buildCaptionTrackAbove,
+  buildCaptionTrackAtTop,
   type CaptionTextItemTemplate,
   findReplaceableCaptionItemsForClip,
   findCompatibleCaptionTrackForRanges,
@@ -59,6 +59,7 @@ import {
   normalizeWhisperLanguage,
 } from '@/shared/utils/whisper-settings'
 import { TRANSCRIPTION_CANCELLED_MESSAGE } from '@/shared/utils/transcription-cancellation'
+import { getSynchronizedMediaCompanion } from '@/shared/utils/linked-media'
 
 const logger = createLogger('MediaTranscriptionService')
 const DEFAULT_MODEL: MediaTranscriptModel = DEFAULT_WHISPER_MODEL
@@ -78,6 +79,8 @@ interface InsertTranscriptAsCaptionsOptions {
   clipIds?: readonly string[]
   replaceExisting?: boolean
   selectUpdatedClips?: boolean
+  /** Move a clip-owned caption copy onto the subtitle track instead of skipping the clip. */
+  moveExistingCaptions?: boolean
 }
 
 interface InsertTranscriptAsCaptionsResult {
@@ -745,16 +748,39 @@ class MediaTranscriptionService {
       : new Set<string>()
     const plannedItems = items.filter((item) => !generatedCaptionIdsToRemove.has(item.id))
     const insertedItems: SubtitleSegmentItem[] = []
+    const clipsToClear: string[] = []
+    const clipsProcessed: string[] = []
+    const clipGroupsToNormalize = new Map<string, string>()
+    let keptExistingCount = 0
 
     for (const clip of targetClips) {
       const clipRange = getCaptionRangeForClip(clip, transcript.segments, fps)
       if (!clipRange) {
         continue
       }
+      clipsProcessed.push(clip.id)
 
-      const existingGeneratedCaptions = options.replaceExisting
-        ? findReplaceableCaptionItemsForClip(items, clip, 'transcript')
-        : []
+      const existingGeneratedCaptions = findReplaceableCaptionItemsForClip(
+        items,
+        clip,
+        'transcript',
+      )
+      const clipCaptions =
+        clip.transcriptCaptions?.type === 'transcript' ? clip.transcriptCaptions : null
+      const clipHasOwnCaptions = (clipCaptions?.cues.length ?? 0) > 0
+      const moveExistingCaptions = options.moveExistingCaptions === true && clipHasOwnCaptions
+      // Without replaceExisting an already captioned clip keeps what it has: auto-enable must
+      // not rebuild — or drop — subtitles that are already on the timeline, including a
+      // clip-owned copy the user edited by hand.
+      if (
+        !options.replaceExisting &&
+        !moveExistingCaptions &&
+        (existingGeneratedCaptions.length > 0 || clipHasOwnCaptions)
+      ) {
+        keptExistingCount += 1
+        continue
+      }
+
       const preferredTrackId = this.resolvePreferredCaptionTrackId(
         newTracks,
         plannedItems,
@@ -769,17 +795,17 @@ class MediaTranscriptionService {
           ])
 
       if (!targetTrack) {
-        const clipTrack = newTracks.find((track) => track.id === clip.trackId)
-        targetTrack = clipTrack
-          ? buildCaptionTrackAbove(newTracks, clipTrack.order)
-          : buildCaptionTrackAbove(newTracks, 0)
+        targetTrack = buildCaptionTrackAtTop(newTracks)
         newTracks.push(targetTrack)
         newTracks.sort((a, b) => a.order - b.order)
       }
 
       const clipCaptionItem = buildSubtitleSegmentForClip({
         trackId: targetTrack.id,
-        cues: buildTimelineTranscriptCaptionCues(clip.id, transcript.segments),
+        cues:
+          moveExistingCaptions && clipCaptions
+            ? clipCaptions.cues
+            : buildTimelineTranscriptCaptionCues(clip.id, transcript.segments),
         clip,
         timelineFps: fps,
         canvasWidth,
@@ -790,20 +816,42 @@ class MediaTranscriptionService {
           mediaId,
           clipId: clip.id,
         },
-        styleTemplate: existingGeneratedCaptions[0]
-          ? getCaptionTextItemTemplate(existingGeneratedCaptions[0])
-          : defaultCaptionTemplate,
+        styleTemplate:
+          (moveExistingCaptions
+            ? (clipCaptions?.style as CaptionTextItemTemplate | undefined)
+            : undefined) ??
+          (existingGeneratedCaptions[0]
+            ? getCaptionTextItemTemplate(existingGeneratedCaptions[0])
+            : defaultCaptionTemplate),
       })
 
       if (!clipCaptionItem) {
         continue
       }
 
+      // Subtitles travel with their clip: both directions of a move, and a delete of the clip,
+      // take the caption track along. Deleting the captions themselves stays local (see the
+      // deletion expansion), so this link never drags the picture away by accident.
+      const captionGroupId = clip.linkedGroupId ?? clip.id
+      clipCaptionItem.linkedGroupId = captionGroupId
+      if (!clip.linkedGroupId) {
+        clipGroupsToNormalize.set(clip.id, captionGroupId)
+      }
+
       insertedItems.push(clipCaptionItem)
       plannedItems.push(clipCaptionItem)
+      clipsToClear.push(clip.id)
     }
 
     if (insertedItems.length === 0 && generatedCaptionIdsToRemove.size === 0) {
+      // Every target already carried subtitles and nothing was replaced — a no-op, not a failure.
+      if (keptExistingCount > 0) {
+        const captionedAt = Date.now()
+        for (const clipId of clipsProcessed) {
+          updateItem(clipId, { autoCaptionedAt: captionedAt } as Partial<TimelineItem>)
+        }
+        return { insertedItemCount: 0, removedItemCount: 0 }
+      }
       throw new Error('Transcript does not overlap the selected clip source range')
     }
 
@@ -818,9 +866,38 @@ class MediaTranscriptionService {
       removeTimelineItemsExact([...generatedCaptionIdsToRemove])
     }
 
+    // The captions now live on their own track; the clip copies would be stale duplicates.
+    // The paired video/audio half keeps its own copy too, and it is unreachable in the panel.
+    const clipsToClearWithCopies = new Set(clipsToClear)
+    for (const clipId of clipsToClear) {
+      const sourceClip = items.find((item) => item.id === clipId)
+      if (!sourceClip) continue
+      const companion = getSynchronizedMediaCompanion(items, sourceClip)
+      if (companion?.transcriptCaptions) {
+        clipsToClearWithCopies.add(companion.id)
+      }
+    }
+
+    // Remember that this clip was captioned: auto-captioning must not resurrect subtitles the
+    // user deletes later, and every target that already had them is marked as handled too.
+    if (insertedItems.length > 0 || keptExistingCount > 0) {
+      const captionedAt = Date.now()
+      for (const clipId of new Set([...clipsProcessed, ...clipsToClearWithCopies])) {
+        updateItem(clipId, {
+          autoCaptionedAt: captionedAt,
+          ...(clipsToClearWithCopies.has(clipId) ? { transcriptCaptions: undefined } : {}),
+          ...(clipGroupsToNormalize.has(clipId)
+            ? { linkedGroupId: clipGroupsToNormalize.get(clipId) }
+            : {}),
+        } as Partial<TimelineItem>)
+      }
+    }
+
     if (insertedItems.length > 0) {
       addItems(insertedItems)
-      useSelectionStore.getState().selectItems(insertedItems.map((item) => item.id))
+      if (options.selectUpdatedClips !== false) {
+        useSelectionStore.getState().selectItems(insertedItems.map((item) => item.id))
+      }
     }
 
     return {
@@ -863,9 +940,21 @@ class MediaTranscriptionService {
       : new Set<string>()
 
     let updatedClipCount = 0
+    let keptExistingCount = 0
     for (const clip of targetClips) {
       const clipRange = getCaptionRangeForClip(clip, transcript.segments, fps)
       if (!clipRange) continue
+
+      // Without replaceExisting, a clip that already has subtitles keeps its cues: the user's
+      // manual edits must survive an auto-enable or a second generate on the pair.
+      if (
+        !options.replaceExisting &&
+        clip.transcriptCaptions?.type === 'transcript' &&
+        clip.transcriptCaptions.cues.length > 0
+      ) {
+        keptExistingCount += 1
+        continue
+      }
 
       const existingGeneratedCaptions = options.replaceExisting
         ? findReplaceableCaptionItemsForClip(items, clip, 'transcript')
@@ -899,6 +988,10 @@ class MediaTranscriptionService {
     }
 
     if (updatedClipCount === 0 && generatedCaptionIdsToRemove.size === 0) {
+      // Every target already carried subtitles and nothing was replaced — a no-op, not a failure.
+      if (keptExistingCount > 0) {
+        return { updatedClipCount: 0, removedItemCount: 0 }
+      }
       throw new Error('Transcript does not overlap the selected clip source range')
     }
 

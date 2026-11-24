@@ -89,6 +89,7 @@ interface MediaCardProps {
   isBroken?: boolean
   onSelect?: (event: React.MouseEvent) => void
   onDoubleClick?: () => void
+  onLargePreview?: () => void
   onDelete?: (mediaIds: string[]) => void
   onRelink?: () => void
 }
@@ -712,6 +713,7 @@ const MediaCardInternal = memo(function MediaCardInternal({
   isBroken = false,
   onSelect,
   onDoubleClick,
+  onLargePreview,
   onDelete,
   onRelink,
   layout,
@@ -1585,37 +1587,49 @@ const MediaCardInternal = memo(function MediaCardInternal({
   )
 
   const actionMenuItems = (
-    <MediaCardActionMenuItems
-      isBroken={isBroken}
-      mediaId={media.id}
-      fileName={media.fileName}
-      onRelink={onRelink}
-      canGenerateProxy={canGenerateProxy}
-      hasProxy={hasProxy}
-      proxyStatus={proxyStatus}
-      canInterpolate={canInterpolate}
-      isInterpolating={isInterpolating}
-      onInterpolate={handleInterpolate}
-      onCancelInterpolation={handleCancelInterpolation}
-      canUpscale={canUpscaleMedia}
-      isUpscaling={isUpscaling}
-      onUpscale={handleUpscale}
-      onCancelUpscale={handleCancelUpscale}
-      isTranscribable={isTranscribable}
-      isTranscribing={isTranscribing}
-      hasTranscript={hasTranscript}
-      canExtractEmbeddedSubtitles={getTargetMediaItems().some(canExtractEmbeddedSubtitlesFromMedia)}
-      isExtractingEmbeddedSubtitles={isExtractingEmbeddedSubtitles}
-      isTaggable={isTaggable}
-      isTagging={isTagging}
-      onGenerateProxy={handleGenerateProxy}
-      onDeleteProxy={handleDeleteProxy}
-      onGenerateTranscript={handleOpenTranscribeDialog}
-      onDeleteTranscript={handleDeleteTranscript}
-      onExtractEmbeddedSubtitles={handleExtractEmbeddedSubtitles}
-      onAnalyzeWithAI={handleAnalyzeWithAI}
-      onDelete={handleDelete}
-    />
+    <>
+      {onLargePreview && !isBroken && !isPreparingMedia && (
+        <>
+          <ContextMenuItem onSelect={onLargePreview}>
+            {t('media.card.largePreview')}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      )}
+      <MediaCardActionMenuItems
+        isBroken={isBroken}
+        mediaId={media.id}
+        fileName={media.fileName}
+        onRelink={onRelink}
+        canGenerateProxy={canGenerateProxy}
+        hasProxy={hasProxy}
+        proxyStatus={proxyStatus}
+        canInterpolate={canInterpolate}
+        isInterpolating={isInterpolating}
+        onInterpolate={handleInterpolate}
+        onCancelInterpolation={handleCancelInterpolation}
+        canUpscale={canUpscaleMedia}
+        isUpscaling={isUpscaling}
+        onUpscale={handleUpscale}
+        onCancelUpscale={handleCancelUpscale}
+        isTranscribable={isTranscribable}
+        isTranscribing={isTranscribing}
+        hasTranscript={hasTranscript}
+        canExtractEmbeddedSubtitles={getTargetMediaItems().some(
+          canExtractEmbeddedSubtitlesFromMedia,
+        )}
+        isExtractingEmbeddedSubtitles={isExtractingEmbeddedSubtitles}
+        isTaggable={isTaggable}
+        isTagging={isTagging}
+        onGenerateProxy={handleGenerateProxy}
+        onDeleteProxy={handleDeleteProxy}
+        onGenerateTranscript={handleOpenTranscribeDialog}
+        onDeleteTranscript={handleDeleteTranscript}
+        onExtractEmbeddedSubtitles={handleExtractEmbeddedSubtitles}
+        onAnalyzeWithAI={handleAnalyzeWithAI}
+        onDelete={handleDelete}
+      />
+    </>
   )
 
   const getIcon = () => {

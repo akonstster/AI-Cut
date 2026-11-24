@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Activity } from 'lucide-react'
+import { Activity, X } from 'lucide-react'
 import { getResolvedPlaybackFrame, usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
 import { cn } from '@/shared/ui/cn'
@@ -443,12 +443,18 @@ interface ColorScopesViewProps {
   open: boolean
   embedded?: boolean
   embeddedLayout?: 'grid' | 'stack'
+  /** Optional heading shown in the compact stack header (Color page). */
+  title?: string
+  /** Optional close handler; renders an X in the compact stack header. */
+  onClose?: () => void
 }
 
 export const ColorScopesView = memo(function ColorScopesView({
   open,
   embedded = false,
   embeddedLayout = 'grid',
+  title,
+  onClose,
 }: ColorScopesViewProps) {
   const [status, setStatus] = useState<'idle' | 'live' | 'error'>('idle')
   const [gpuReady, setGpuReady] = useState<boolean | null>(null) // null = pending
@@ -979,9 +985,17 @@ export const ColorScopesView = memo(function ColorScopesView({
           : 'absolute bottom-3 right-3 z-20 rounded-md border border-border bg-background/95 backdrop-blur-sm shadow-lg p-2 pointer-events-none',
       )}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Scopes</div>
+      <div className={cn('flex items-center gap-1.5', isEmbeddedStackLayout ? 'mb-1 h-5' : 'mb-2')}>
+        <div className="flex min-w-0 items-center gap-1.5">
+          {isEmbeddedStackLayout ? (
+            title && (
+              <span className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                {title}
+              </span>
+            )
+          ) : (
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Scopes</div>
+          )}
           {isEmbeddedStackLayout && (
             <Select
               value={stackView}
@@ -1002,23 +1016,36 @@ export const ColorScopesView = memo(function ColorScopesView({
               </SelectContent>
             </Select>
           )}
+          {isEmbeddedStackLayout &&
+            gpuReady &&
+            (stackView === 'waveform' ? (
+              <ScopeModeBar mode={waveformMode} onChange={setWaveformMode} />
+            ) : stackView === 'histogram' ? (
+              <ScopeModeBar mode={histogramMode} onChange={setHistogramMode} />
+            ) : null)}
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
           <Activity
             className={`w-3 h-3 ${status === 'live' ? 'text-emerald-500' : status === 'error' ? 'text-red-500' : ''}`}
           />
           {status === 'live' ? (gpuReady ? 'gpu' : 'cpu') : status === 'error' ? 'err' : 'idle'}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="ml-0.5 rounded p-0.5 hover:bg-muted"
+              aria-label={title ? `Close ${title}` : 'Close scopes'}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
       {embedded ? (
         embeddedLayout === 'stack' ? (
-          <div className="h-[calc(100%-22px)] min-h-0 flex flex-col gap-2">
+          <div className="h-[calc(100%-24px)] min-h-0 flex flex-col gap-2">
             {showWaveform && (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="text-[10px] text-muted-foreground">Waveform</div>
-                  {gpuReady && <ScopeModeBar mode={waveformMode} onChange={setWaveformMode} />}
-                </div>
                 <ScopeCanvasFrame
                   containerRef={waveformContainerRef}
                   kind="waveform"
@@ -1031,7 +1058,6 @@ export const ColorScopesView = memo(function ColorScopesView({
 
             {showParade && (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="text-[10px] mb-1 text-muted-foreground">RGB Parade</div>
                 <ScopeCanvasFrame
                   containerRef={paradeContainerRef}
                   kind="parade"
@@ -1044,7 +1070,6 @@ export const ColorScopesView = memo(function ColorScopesView({
 
             {showVectorscope && (
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <div className="text-[10px] mb-1 text-muted-foreground">Vectorscope</div>
                 <ScopeCanvasFrame
                   containerRef={vectorscopeContainerRef}
                   kind="vectorscope"
@@ -1060,10 +1085,6 @@ export const ColorScopesView = memo(function ColorScopesView({
 
             {showHistogram && (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="text-[10px] text-muted-foreground">Histogram</div>
-                  {gpuReady && <ScopeModeBar mode={histogramMode} onChange={setHistogramMode} />}
-                </div>
                 <ScopeCanvasFrame
                   containerRef={histogramContainerRef}
                   kind="histogram"

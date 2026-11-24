@@ -99,7 +99,9 @@ export function getVisibleMotionRetimeRange(
   }
 }
 
-export function getRetimeKeyboardDelta(event: ReactKeyboardEvent<HTMLButtonElement>): number | null {
+export function getRetimeKeyboardDelta(
+  event: ReactKeyboardEvent<HTMLButtonElement>,
+): number | null {
   const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
   return direction === 0 ? null : direction * (event.shiftKey ? 10 : 1)
 }
@@ -519,10 +521,7 @@ export function createMotionSelectionRetimeCommands(input: {
     applyPreview()
   }
 
-  const begin = (
-    event: ReactPointerEvent<HTMLButtonElement>,
-    edge: 'start' | 'end',
-  ): void => {
+  const begin = (event: ReactPointerEvent<HTMLButtonElement>, edge: 'start' | 'end'): void => {
     if (!deps.selection || !deps.selectionTimeRange) return
     const ruler = deps.getRuler()
     if (!ruler) return

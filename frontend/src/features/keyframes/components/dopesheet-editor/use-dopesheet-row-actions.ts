@@ -17,16 +17,15 @@ import {
   removeSelectionIds,
 } from './row-action-helpers'
 
-export interface UseDopesheetRowActionsOptions
-  extends Pick<
-    DopesheetEditorProps,
-    | 'onCurveVisibilityChange'
-    | 'onPropertyChange'
-    | 'onActivePropertyChange'
-    | 'onRemoveKeyframes'
-    | 'onSelectionChange'
-    | 'onAddKeyframe'
-  > {
+export interface UseDopesheetRowActionsOptions extends Pick<
+  DopesheetEditorProps,
+  | 'onCurveVisibilityChange'
+  | 'onPropertyChange'
+  | 'onActivePropertyChange'
+  | 'onRemoveKeyframes'
+  | 'onSelectionChange'
+  | 'onAddKeyframe'
+> {
   disabled: boolean
   isPropertyLocked: (property: AnimatableProperty) => boolean
   itemId: string
@@ -230,9 +229,6 @@ export function useDopesheetRowActions({
     },
     [activateProperty, isPropertyLocked, itemId, toggleAutoKeyframeEnabled],
   )
-
-
-
 
   const nudgeSelectedKeyframes = useCallback(
     (deltaFrames: number) => {

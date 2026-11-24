@@ -214,6 +214,43 @@ describe('ColorGradeSection', () => {
     ])
   })
 
+  it('renders dock parameter tabs and reports the selected tab without unmounting weights', () => {
+    const onParamsTabChange = vi.fn()
+    const { rerender } = render(
+      <ColorGradeSection
+        items={[makeVideoItem()]}
+        layout="dock"
+        paramsTab="primary"
+        onParamsTabChange={onParamsTabChange}
+      />,
+    )
+
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs.map((tab) => tab.getAttribute('data-testid'))).toEqual([
+      'color-params-tab-primary',
+      'color-params-tab-curves',
+      'color-params-tab-lut',
+    ])
+    expect(screen.getByTestId('color-params-tab-primary')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByTestId('wheels-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('curves-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('effects-section')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('color-params-tab-curves'))
+    expect(onParamsTabChange).toHaveBeenCalledWith('curves')
+
+    rerender(
+      <ColorGradeSection
+        items={[makeVideoItem()]}
+        layout="dock"
+        paramsTab="curves"
+        onParamsTabChange={onParamsTabChange}
+      />,
+    )
+    expect(screen.getByTestId('curves-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('wheels-panel')).not.toBeInTheDocument()
+  })
+
   it('updates an existing curves effect instead of adding a duplicate', () => {
     const curves: ItemEffect = {
       id: 'curves-1',

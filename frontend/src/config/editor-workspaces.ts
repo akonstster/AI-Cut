@@ -1,7 +1,7 @@
 /**
  * Editor workspaces (DaVinci-style pages): named layout presets that
  * rearrange existing panels for a task. Switching workspaces never changes
- * project state — only which panels are visible and which tabs are active.
+ * project state вЂ” only which panels are visible and which tabs are active.
  *
  * Presets are starting points, not locks: the user can still toggle any
  * panel inside a workspace, and their per-workspace tweaks are persisted
@@ -24,37 +24,74 @@ export type EditorSidebarTab =
   | 'ai'
 export type EditorClipInspectorTab = 'video' | 'motion' | 'audio' | 'effects'
 
+/** Active tab of the Color page parameter dock (wheels / curves / LUT). */
+export type EditorColorParamsTab = 'primary' | 'curves' | 'lut'
+
 /** The slice of editor UI state that a workspace controls. */
 export interface EditorWorkspaceLayout {
   colorScopesOpen: boolean
+  colorParamsTab: EditorColorParamsTab
+  /** Width of the Color page clip filmstrip column, in px. */
+  colorFilmstripWidth: number
+  /** Minimum thumbnail width in the Color filmstrip grid, in px. */
+  colorFilmTileSize: number
   clipInspectorTab: EditorClipInspectorTab
   activeTab: EditorSidebarTab
   propertiesFullColumn: boolean
 }
 
+const DEFAULT_COLOR_FILMSTRIP_WIDTH = 134
+export const COLOR_FILMSTRIP_WIDTH_MIN = 96
+export const COLOR_FILMSTRIP_WIDTH_MAX = 640
+const DEFAULT_COLOR_FILM_TILE_SIZE = 118
+export const COLOR_FILM_TILE_SIZE_MIN = 80
+export const COLOR_FILM_TILE_SIZE_MAX = 320
+
+export function normalizeColorFilmTileSize(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_COLOR_FILM_TILE_SIZE
+  return Math.min(COLOR_FILM_TILE_SIZE_MAX, Math.max(COLOR_FILM_TILE_SIZE_MIN, Math.round(value)))
+}
+
+export function normalizeColorFilmstripWidth(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_COLOR_FILMSTRIP_WIDTH
+  return Math.min(COLOR_FILMSTRIP_WIDTH_MAX, Math.max(COLOR_FILMSTRIP_WIDTH_MIN, Math.round(value)))
+}
+
 const EDITOR_WORKSPACE_PRESETS: Record<EditorWorkspaceId, EditorWorkspaceLayout> = {
   edit: {
     colorScopesOpen: false,
+    colorParamsTab: 'primary',
+    colorFilmstripWidth: DEFAULT_COLOR_FILMSTRIP_WIDTH,
+    colorFilmTileSize: DEFAULT_COLOR_FILM_TILE_SIZE,
     clipInspectorTab: 'video',
     activeTab: 'media',
     propertiesFullColumn: false,
   },
   color: {
     colorScopesOpen: true,
+    colorParamsTab: 'primary',
+    colorFilmstripWidth: DEFAULT_COLOR_FILMSTRIP_WIDTH,
+    colorFilmTileSize: DEFAULT_COLOR_FILM_TILE_SIZE,
     clipInspectorTab: 'effects',
     activeTab: 'effects',
-    // The grade panel stacks wheels + curves + the effect list — give it
+    // The grade panel stacks wheels + curves + the effect list вЂ” give it
     // the full column height by default.
     propertiesFullColumn: true,
   },
   motion: {
     colorScopesOpen: false,
+    colorParamsTab: 'primary',
+    colorFilmstripWidth: DEFAULT_COLOR_FILMSTRIP_WIDTH,
+    colorFilmTileSize: DEFAULT_COLOR_FILM_TILE_SIZE,
     clipInspectorTab: 'video',
     activeTab: 'media',
     propertiesFullColumn: false,
   },
   canvas: {
     colorScopesOpen: false,
+    colorParamsTab: 'primary',
+    colorFilmstripWidth: DEFAULT_COLOR_FILMSTRIP_WIDTH,
+    colorFilmTileSize: DEFAULT_COLOR_FILM_TILE_SIZE,
     clipInspectorTab: 'video',
     activeTab: 'media',
     propertiesFullColumn: false,
@@ -63,7 +100,7 @@ const EDITOR_WORKSPACE_PRESETS: Record<EditorWorkspaceId, EditorWorkspaceLayout>
 
 /**
  * Timeline split (percent of vertical space) a workspace starts with.
- * `null` means "use the density preset default" — grading navigates clips
+ * `null` means "use the density preset default" вЂ” grading navigates clips
  * rather than editing them, so the color workspace shrinks the timeline.
  */
 export const EDITOR_WORKSPACE_TIMELINE_SIZE: Record<EditorWorkspaceId, number | null> = {
@@ -106,9 +143,14 @@ const CLIP_INSPECTOR_TABS: readonly EditorClipInspectorTab[] = [
   'audio',
   'effects',
 ]
+const COLOR_PARAMS_TABS: readonly EditorColorParamsTab[] = ['primary', 'curves', 'lut']
 
 function isSidebarTab(value: unknown): value is EditorSidebarTab {
   return SIDEBAR_TABS.includes(value as EditorSidebarTab)
+}
+
+function isColorParamsTab(value: unknown): value is EditorColorParamsTab {
+  return COLOR_PARAMS_TABS.includes(value as EditorColorParamsTab)
 }
 
 function isClipInspectorTab(value: unknown): value is EditorClipInspectorTab {
@@ -129,6 +171,11 @@ export function normalizeEditorWorkspaceLayout(
       typeof candidate.colorScopesOpen === 'boolean'
         ? candidate.colorScopesOpen
         : preset.colorScopesOpen,
+    colorParamsTab: isColorParamsTab(candidate.colorParamsTab)
+      ? candidate.colorParamsTab
+      : preset.colorParamsTab,
+    colorFilmstripWidth: normalizeColorFilmstripWidth(candidate.colorFilmstripWidth),
+    colorFilmTileSize: normalizeColorFilmTileSize(candidate.colorFilmTileSize),
     clipInspectorTab: isClipInspectorTab(candidate.clipInspectorTab)
       ? candidate.clipInspectorTab
       : preset.clipInspectorTab,

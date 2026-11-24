@@ -9,11 +9,22 @@
       "message": "The export was cancelled. No file was saved."
     },
     "complete": {
-      "audioSuccess": "Your audio is ready to download.",
+      "audioSuccess": "Your audio is ready.",
       "download": "Download",
       "fileSizeLabel": "Size",
+      "folderFallback": "The remembered folder is unavailable, so the file was saved to the default folder.",
+      "openFile": "Open",
+      "openFolder": "Open folder",
+      "savedTo": "Saved to",
       "timeTakenLabel": "Time",
-      "videoSuccess": "Your video is ready to download."
+      "videoSuccess": "Your video is ready."
+    },
+    "destination": {
+      "choose": "Choose…",
+      "defaultFolder": "Documents (default)",
+      "fileName": "File name",
+      "folder": "Save to folder",
+      "pickFailed": "Could not open the folder picker: {{reason}}"
     },
     "dialog": {
       "descCancelled": "The export was cancelled before it finished.",

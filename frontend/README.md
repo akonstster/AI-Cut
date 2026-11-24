@@ -68,7 +68,7 @@ request features, report bugs, and give feedback on browser-based editing workfl
 
 - Multi-track timeline with video, audio, text, image, shape, mask, Lottie, and compound clip items
 - Multiple timelines per project as Sequences with tabs, unified with compound clips (open a compound clip as its own sequence)
-- Linked audio/video editing with split, join, ripple, rolling, slip, slide, and rate-stretch tools
+- Linked audio/video editing with split, join, ripple, rolling, slip and slide trims, plus a rate-stretch tool
 - Cut-centered transitions with live resize, alignment, source-time anchoring, and preview overlays
 - Track mute/visibility/lock controls, linked sync badges, track push/pull, and close-gap workflows
 - Filmstrip thumbnails, stereo waveforms, snap guides, markers, timecode, and undo/redo

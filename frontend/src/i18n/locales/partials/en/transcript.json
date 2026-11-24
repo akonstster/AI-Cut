@@ -23,6 +23,25 @@
     "toastRemoved": "Removed {{count}} clip(s)",
     "toastNothingRemoved": "Nothing was removed",
     "toastRemoveFailed": "Could not remove the selected words",
-    "toastTranscribeFailed": "Transcription failed"
+    "toastTranscribeFailed": "Transcription failed",
+    "boundaryClip": "New clip",
+    "jumpTo": "Jump to {{time}}",
+    "selectedClip": "Selected clip",
+    "selectedClips": "{{count}} selected clips",
+    "emptyProject": "No video or audio clips in this project yet.",
+    "toastCopied": "Copied {{count}} words",
+    "toastCut": "Cut {{count}} words",
+    "approxMatches": "Approximate matches",
+    "pendingHidden": "{{count}} marked for deletion · {{seconds}}s",
+    "restoreAll": "Restore all",
+    "applyEdits": "Delete marked",
+    "ignoreHint": "Select words, then Backspace to mark them for deletion",
+    "ignoreSelection": "Mark for delete",
+    "restoreSelection": "Restore",
+    "copy": "Copy",
+    "copyHint": "Copy words (paste onto the timeline with Ctrl+V)",
+    "cut": "Cut",
+    "scopeSelection": "Selection",
+    "scopeProject": "Whole project"
   }
 }

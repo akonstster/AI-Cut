@@ -23,14 +23,7 @@ function keyframesWithPositionKeyframes(keyframes: VectorKeyframe[]): ItemKeyfra
 
 describe('vector property proxy', () => {
   it('maps every coupled transform lane to its vector property and axis', () => {
-    const lanes: readonly AnimatableProperty[] = [
-      'x',
-      'y',
-      'width',
-      'height',
-      'anchorX',
-      'anchorY',
-    ]
+    const lanes: readonly AnimatableProperty[] = ['x', 'y', 'width', 'height', 'anchorX', 'anchorY']
 
     expect(lanes.map((lane) => getVectorPropertyProxy(lane))).toEqual([
       { property: 'position', axis: 'x' },
@@ -43,13 +36,13 @@ describe('vector property proxy', () => {
   })
 
   it('declares a primary/secondary pair for every vector property', () => {
-    expect(VECTOR_PROPERTY_PAIRS.map((pair) => [pair.property, pair.primary, pair.secondary])).toEqual(
-      [
-        ['position', 'x', 'y'],
-        ['scale', 'width', 'height'],
-        ['anchor', 'anchorX', 'anchorY'],
-      ],
-    )
+    expect(
+      VECTOR_PROPERTY_PAIRS.map((pair) => [pair.property, pair.primary, pair.secondary]),
+    ).toEqual([
+      ['position', 'x', 'y'],
+      ['scale', 'width', 'height'],
+      ['anchor', 'anchorX', 'anchorY'],
+    ])
   })
 
   it('rejects uncoupled and non-transform properties', () => {

@@ -16,10 +16,7 @@ import type { BlendMode } from '@/types/blend-modes'
 import { BLEND_MODE_GROUPS, BLEND_MODE_LABELS } from '@/types/blend-modes'
 import type { TransformProperties, CanvasSettings } from '@/types/transform'
 import { useGizmoStore, useThrottledFrame } from '@/features/editor/deps/preview'
-import {
-  applyAutoKeyframeOperations,
-  updateItem,
-} from '@/features/editor/deps/timeline-store'
+import { applyAutoKeyframeOperations, updateItem } from '@/features/editor/deps/timeline-store'
 import { resolveTransform, getSourceDimensions } from '@/features/editor/deps/composition-runtime'
 import {
   getAutoKeyframeOperation,
@@ -174,12 +171,7 @@ export const FillSection = memo(function FillSection({
       })
       queueMicrotask(() => clearPreview())
     },
-    [
-      itemIds,
-      onTransformChange,
-      clearPreview,
-      autoKeyframeCornerRadius,
-    ],
+    [itemIds, onTransformChange, clearPreview, autoKeyframeCornerRadius],
   )
 
   // Get current blend mode (shared across selected items)

@@ -46,7 +46,10 @@ describe('semanticRank', () => {
       ['cafe:0', unit([0.9, Math.sqrt(1 - 0.9 ** 2)])],
       ['cup:0', unit([0.83, Math.sqrt(1 - 0.83 ** 2)])],
     ])
-    const result = semanticRank(unit([1, 0]), scenes, embeddings, { query: 'white cup', threshold: 0.7 })
+    const result = semanticRank(unit([1, 0]), scenes, embeddings, {
+      query: 'white cup',
+      threshold: 0.7,
+    })
     expect(result.map((match) => match.id)).toEqual(['cup:0', 'cafe:0'])
   })
 

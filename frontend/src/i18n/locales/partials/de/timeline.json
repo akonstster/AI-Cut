@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "Auf dieser Seite grenzt kein Clip an.",
+      "dropOnExisting": "Zum Ersetzen auf den vorhandenen Übergang ziehen.",
+      "notEnoughFrames": "An diesem Schnitt fehlen Quellframes für einen Übergang.",
+      "dropToTrim": "Loslassen, um den nötigen Beschnitt zu prüfen.",
+      "trimTitle": "Clips für den Übergang kürzen?",
+      "trimDescription": "Der Übergang dauert {{duration}}. Nachfolgende Clips auf dieser Spur rücken um {{shift}} nach vorn. Auf anderen Spuren mit aktiver Synchronisierungssperre wird derselbe Abschnitt entfernt. Dadurch können Audio oder Untertitel gekürzt werden.",
+      "cancel": "Abbrechen",
+      "trimAndAdd": "Kürzen und Übergang hinzufügen",
+      "trimFailed": "Der Übergang konnte nach dem Kürzen nicht hinzugefügt werden. Prüfe die Spursperren und benachbarten Übergänge."
+    },
     "track": {
       "unableToAddDroppedItem": "Nicht moglich zu Hinzufugen abgelegte Element",
       "unableToAddDroppedMediaItems": "Nicht moglich zu Hinzufugen abgelegte Medien Elemente",

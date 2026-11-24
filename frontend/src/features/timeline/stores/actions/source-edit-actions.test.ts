@@ -145,6 +145,77 @@ describe('source edit actions', () => {
       expect(items[2]).toMatchObject({ from: 110, durationInFrames: 70 })
     })
 
+    it('pushes the linked audio half together with its video so a pair never desyncs', async () => {
+      // An image source edits on the video track only, so the audio track is never patched.
+      setSourceMedia({ mimeType: 'image/png', duration: 0, fps: undefined })
+      useEditorStore.setState({ sourcePatchAudioEnabled: false })
+      useSourcePlayerStore.setState({ inPoint: null, outPoint: null })
+      useItemsStore.getState().setItems([
+        makeTimelineVideoItem({
+          id: 'video-1',
+          from: 40,
+          durationInFrames: 60,
+          linkedGroupId: 'group-1',
+        }) as TimelineItem,
+        {
+          ...makeTimelineVideoItem({
+            id: 'audio-1',
+            from: 40,
+            durationInFrames: 60,
+            linkedGroupId: 'group-1',
+          }),
+          type: 'audio',
+          trackId: 'track-a1',
+          src: '',
+        } as TimelineItem,
+      ])
+      usePlaybackStore.setState({ currentFrame: 40 })
+
+      await performInsertEdit()
+
+      const video = useItemsStore.getState().itemById['video-1']!
+      const audio = useItemsStore.getState().itemById['audio-1']!
+      // The image inserts as a 3 s still (90 frames) at 30 fps.
+      expect(video.from).toBe(130)
+      expect(audio.from).toBe(video.from)
+    })
+
+    it('splits the linked audio half at the cut when only the video track is patched', async () => {
+      setSourceMedia({ mimeType: 'image/png', duration: 0, fps: undefined })
+      useEditorStore.setState({ sourcePatchAudioEnabled: false })
+      useSourcePlayerStore.setState({ inPoint: null, outPoint: null })
+      useItemsStore.getState().setItems([
+        makeTimelineVideoItem({
+          id: 'video-1',
+          from: 0,
+          durationInFrames: 120,
+          linkedGroupId: 'group-1',
+        }) as TimelineItem,
+        {
+          ...makeTimelineVideoItem({
+            id: 'audio-1',
+            from: 0,
+            durationInFrames: 120,
+            linkedGroupId: 'group-1',
+          }),
+          type: 'audio',
+          trackId: 'track-a1',
+          src: '',
+        } as TimelineItem,
+      ])
+      usePlaybackStore.setState({ currentFrame: 50 })
+
+      await performInsertEdit()
+
+      const audioHalves = useItemsStore
+        .getState()
+        .items.filter((item) => item.trackId === 'track-a1')
+        .sort((left, right) => left.from - right.from)
+      expect(audioHalves).toHaveLength(2)
+      expect(audioHalves[0]).toMatchObject({ from: 0, durationInFrames: 50 })
+      expect(audioHalves[1]?.from).toBe(50 + 90)
+    })
+
     it('is undoable as a single entry', async () => {
       usePlaybackStore.setState({ currentFrame: 0 })
       const undoDepth = useTimelineCommandStore.getState().undoStack.length
@@ -201,6 +272,33 @@ describe('source edit actions', () => {
   })
 
   describe('performOverwriteEdit', () => {
+    it('cuts the linked audio half together with the overwritten video', async () => {
+      setSourceMedia({ mimeType: 'image/png', duration: 0, fps: undefined })
+      useEditorStore.setState({ sourcePatchAudioEnabled: false })
+      useSourcePlayerStore.setState({ inPoint: null, outPoint: null })
+      const pair = { from: 0, durationInFrames: 200, linkedGroupId: 'group-1' }
+      useItemsStore.getState().setItems([
+        makeTimelineVideoItem({ id: 'video-1', ...pair }) as TimelineItem,
+        {
+          ...makeTimelineVideoItem({ id: 'audio-1', ...pair }),
+          type: 'audio',
+          trackId: 'track-a1',
+          src: '',
+        } as TimelineItem,
+      ])
+      usePlaybackStore.setState({ currentFrame: 40 })
+
+      await performOverwriteEdit()
+
+      const audioHalves = useItemsStore
+        .getState()
+        .items.filter((item) => item.trackId === 'track-a1')
+        .sort((left, right) => left.from - right.from)
+      expect(audioHalves).toHaveLength(2)
+      expect(audioHalves[0]).toMatchObject({ from: 0, durationInFrames: 40 })
+      expect(audioHalves[1]).toMatchObject({ from: 130, durationInFrames: 70 })
+    })
+
     it('overwrites the middle of a clip, preserving head and tail', async () => {
       useItemsStore.getState().setItems([
         makeTimelineVideoItem({

@@ -20,13 +20,13 @@ import {
   useTrackDropPreviewStore,
 } from '../../stores/track-drop-preview-store'
 import { resolveTransitionTargetForEdge } from '@/features/timeline/utils/transition-targets'
+import { planTransitionTrim } from '../../utils/transition-trim-plan'
+import { useTransitionTrimStore } from '../../stores/transition-trim-store'
 import { resolveEffectiveTrackStates } from '@/features/timeline/utils/group-utils'
 import { isDragPointInsideElement, resolveEffectDropTargetIds } from '../../utils/effect-drop'
 import { getTemplateEffectsForDirectApplication } from '../../utils/generated-layer-items'
 
 type AddEffects = TimelineActions['addEffects']
-const CUT_DROP_LEFT_PLACEMENT_THRESHOLD = 1 / 3
-const CUT_DROP_RIGHT_PLACEMENT_THRESHOLD = 2 / 3
 
 interface UseTimelineItemDropHandlersParams {
   item: TimelineItemType
@@ -62,14 +62,23 @@ function readDraggedTransitionDescriptor(
   }
 }
 
-function resolveTransitionDropAlignment(event: React.DragEvent<HTMLDivElement>): number {
+function resolveTransitionDropTarget(
+  itemId: string,
+  edge: 'left' | 'right',
+  event: React.DragEvent<HTMLDivElement>,
+) {
   const rect = event.currentTarget.getBoundingClientRect()
-  if (rect.width <= 0) return 0.5
-
-  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
-  if (ratio < CUT_DROP_LEFT_PLACEMENT_THRESHOLD) return 1
-  if (ratio > CUT_DROP_RIGHT_PLACEMENT_THRESHOLD) return 0
-  return 0.5
+  const distanceFromCut = edge === 'left' ? event.clientX - rect.left : rect.right - event.clientX
+  const alignment = distanceFromCut <= rect.width / 3 ? 0.5 : edge === 'left' ? 0 : 1
+  return resolveTransitionTargetForEdge({
+    itemId,
+    edge,
+    items: useItemsStore.getState().items,
+    transitions: useTransitionsStore.getState().transitions,
+    timelineFps: useTimelineSettingsStore.getState().fps,
+    alignment,
+    allowCenteredFallback: true,
+  })
 }
 
 export function useTimelineItemDropHandlers({
@@ -85,23 +94,14 @@ export function useTimelineItemDropHandlers({
       }
 
       const dragState = useTransitionDragStore.getState()
-      const alignment = resolveTransitionDropAlignment(e)
-      const target = resolveTransitionTargetForEdge({
-        itemId: item.id,
-        edge,
-        items: useItemsStore.getState().items,
-        transitions: useTransitionsStore.getState().transitions,
-        timelineFps: useTimelineSettingsStore.getState().fps,
-        alignment,
-        allowDurationClamp: false,
-      })
+      const target = resolveTransitionDropTarget(item.id, edge, e)
 
       if (!target) {
         dragState.clearPreview()
         dragState.setInvalidHint({
           x: e.clientX,
           y: e.clientY,
-          message: 'No adjacent clip on this edge',
+          message: i18n.t('timeline.transitionDrop.noAdjacentClip'),
         })
         return
       }
@@ -111,17 +111,25 @@ export function useTimelineItemDropHandlers({
         dragState.setInvalidHint({
           x: e.clientX,
           y: e.clientY,
-          message: 'Drop on the existing transition bridge to replace it',
+          message: i18n.t('timeline.transitionDrop.dropOnExisting'),
         })
         return
       }
 
       if (!target.canApply) {
         dragState.clearPreview()
+        const plan = planTransitionTrim(target, useTimelineSettingsStore.getState().fps)
+        if (plan) {
+          e.preventDefault()
+          e.stopPropagation()
+          e.dataTransfer.dropEffect = 'copy'
+        }
         dragState.setInvalidHint({
           x: e.clientX,
           y: e.clientY,
-          message: target.reason ?? 'This cut cannot accept a transition',
+          message: i18n.t(
+            plan ? 'timeline.transitionDrop.dropToTrim' : 'timeline.transitionDrop.notEnoughFrames',
+          ),
         })
         return
       }
@@ -142,6 +150,7 @@ export function useTimelineItemDropHandlers({
 
   const handleTransitionCutDragLeave = useCallback(() => {
     const dragState = useTransitionDragStore.getState()
+    dragState.setInvalidHint(null)
     const preview = dragState.preview
     if (!preview || preview.existingTransitionId) {
       return
@@ -150,7 +159,6 @@ export function useTimelineItemDropHandlers({
     if (preview.leftClipId === item.id || preview.rightClipId === item.id) {
       dragState.clearPreview()
     }
-    dragState.setInvalidHint(null)
   }, [item.id])
 
   const handleTransitionCutDrop = useCallback(
@@ -160,17 +168,20 @@ export function useTimelineItemDropHandlers({
         return
       }
 
-      const target = resolveTransitionTargetForEdge({
-        itemId: item.id,
-        edge,
-        items: useItemsStore.getState().items,
-        transitions: useTransitionsStore.getState().transitions,
-        timelineFps: useTimelineSettingsStore.getState().fps,
-        alignment: resolveTransitionDropAlignment(e),
-        allowDurationClamp: false,
-      })
+      const target = resolveTransitionDropTarget(item.id, edge, e)
 
-      if (!target || target.hasExisting || !target.canApply) {
+      if (!target || target.hasExisting) {
+        useTransitionDragStore.getState().clearDrag()
+        return
+      }
+
+      if (!target.canApply) {
+        const plan = planTransitionTrim(target, useTimelineSettingsStore.getState().fps)
+        if (plan) {
+          e.preventDefault()
+          e.stopPropagation()
+          useTransitionTrimStore.getState().setPending({ plan, descriptor: dragDescriptor })
+        }
         useTransitionDragStore.getState().clearDrag()
         return
       }

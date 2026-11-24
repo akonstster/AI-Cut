@@ -10,7 +10,11 @@ import type { PrevisScene } from '../services/previs-scene'
 import { retimeShots, type Shot, type Storyboard } from '../services/storyboard'
 import { create } from 'zustand'
 import type { Job, MediaRef, ModelForm, Provider, Role, Task } from '../services/generate-api'
-import { readProjectGeneration, reportGenerationPersistenceError, writeProjectGeneration } from '../services/project-generation'
+import {
+  readProjectGeneration,
+  reportGenerationPersistenceError,
+  writeProjectGeneration,
+} from '../services/project-generation'
 import { getProjectsUsingMedia } from '@/infrastructure/storage/workspace-fs/project-media'
 
 const STORAGE_KEY = 'AI-Cut-generate'
@@ -67,16 +71,34 @@ export interface ProjectGeneration {
 }
 
 const EMPTY_PROJECT: ProjectGeneration = {
-  task: 'image', modelByTask: {}, valuesByModel: {}, repeat: 1,
-  placeOnTimeline: false, storyboardModels: {}, motionClips: [],
+  task: 'image',
+  modelByTask: {},
+  valuesByModel: {},
+  repeat: 1,
+  placeOnTimeline: false,
+  storyboardModels: {},
+  motionClips: [],
 }
 
 function load(): Persisted {
-  const fallback: Persisted = { task: 'image', modelByTask: {}, valuesByModel: {}, repeat: 1, placeOnTimeline: false, storyboards: {}, storyboardModels: {}, motionClips: [], blockings: {}, legacyElements: [] }
+  const fallback: Persisted = {
+    task: 'image',
+    modelByTask: {},
+    valuesByModel: {},
+    repeat: 1,
+    placeOnTimeline: false,
+    storyboards: {},
+    storyboardModels: {},
+    motionClips: [],
+    blockings: {},
+    legacyElements: [],
+  }
   try {
     const text = localStorage.getItem(STORAGE_KEY)
     if (!text) return fallback
-    const { elements, ...state } = JSON.parse(text) as Partial<Persisted> & { elements?: PromptElement[] }
+    const { elements, ...state } = JSON.parse(text) as Partial<Persisted> & {
+      elements?: PromptElement[]
+    }
     return { ...fallback, ...state, legacyElements: state.legacyElements ?? elements ?? [] }
   } catch {
     return fallback
@@ -138,31 +160,41 @@ const legacy = load()
 
 export async function legacyProjectGeneration(id: string): Promise<ProjectGeneration> {
   const lookups = new Map<string, Promise<string[]>>()
-  const entries = await Promise.all(Object.entries(legacy.valuesByModel).map(async ([model, values]) => {
-    const refs = Object.values(values).flatMap((value) => Array.isArray(value) ? value : [value])
-      .filter((value): value is { media: string } =>
-        !!value && typeof value === 'object' && typeof value.media === 'string')
-    let owners: string[] | undefined
-    for (const { media } of refs) {
-      let lookup = lookups.get(media)
-      if (!lookup) {
-        lookup = getProjectsUsingMedia(media)
-        lookups.set(media, lookup)
+  const entries = await Promise.all(
+    Object.entries(legacy.valuesByModel).map(async ([model, values]) => {
+      const refs = Object.values(values)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter(
+          (value): value is { media: string } =>
+            !!value && typeof value === 'object' && typeof value.media === 'string',
+        )
+      let owners: string[] | undefined
+      for (const { media } of refs) {
+        let lookup = lookups.get(media)
+        if (!lookup) {
+          lookup = getProjectsUsingMedia(media)
+          lookups.set(media, lookup)
+        }
+        const projects = await lookup
+        owners = owners ? owners.filter((project) => projects.includes(project)) : projects
+        if (!owners.includes(id)) break
       }
-      const projects = await lookup
-      owners = owners ? owners.filter((project) => projects.includes(project)) : projects
-      if (!owners.includes(id)) break
-    }
-    return owners?.length === 1 && owners[0] === id ? [[model, values] as const] : []
-  }))
+      return owners?.length === 1 && owners[0] === id ? [[model, values] as const] : []
+    }),
+  )
   const valuesByModel = Object.fromEntries(entries.flat())
   const hasOwnedDraft = Object.keys(valuesByModel).length > 0
   return {
     ...EMPTY_PROJECT,
-    ...(hasOwnedDraft ? {
-      task: legacy.task, repeat: legacy.repeat, placeOnTimeline: legacy.placeOnTimeline,
-      modelByTask: legacy.modelByTask, valuesByModel,
-    } : {}),
+    ...(hasOwnedDraft
+      ? {
+          task: legacy.task,
+          repeat: legacy.repeat,
+          placeOnTimeline: legacy.placeOnTimeline,
+          modelByTask: legacy.modelByTask,
+          valuesByModel,
+        }
+      : {}),
     storyboard: legacy.storyboards[id],
     storyboardModels: legacy.storyboards[id] ? legacy.storyboardModels : {},
     blocking: legacy.blockings[id],
@@ -175,10 +207,17 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
     const state = get()
     if (!id || id !== state.generationProjectId || !state.generationProjectReady) return
     void writeProjectGeneration(id, {
-      task: state.task, modelByTask: state.modelByTask, valuesByModel: state.valuesByModel,
-      repeat: state.repeat, placeOnTimeline: state.placeOnTimeline,
-      storyboard: state.storyboards[id], storyboardModels: state.storyboardModels,
-      blocking: state.blockings[id], motionClips: state.motionClips, motionDraft: state.motionDraft, archivedJobs: state.archivedJobs,
+      task: state.task,
+      modelByTask: state.modelByTask,
+      valuesByModel: state.valuesByModel,
+      repeat: state.repeat,
+      placeOnTimeline: state.placeOnTimeline,
+      storyboard: state.storyboards[id],
+      storyboardModels: state.storyboardModels,
+      blocking: state.blockings[id],
+      motionClips: state.motionClips,
+      motionDraft: state.motionDraft,
+      archivedJobs: state.archivedJobs,
     }).catch((error: unknown) => {
       const message = reportGenerationPersistenceError(error)
       if (get().generationProjectId === id) set({ generationPersistenceError: message })
@@ -195,14 +234,29 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
     activateProject: async (id) => {
       if (id === get().generationProjectId && get().generationProjectReady) return
       const version = ++activation
-      set({ ...EMPTY_PROJECT, motionDraft: undefined, archivedJobs: undefined, storyboards: {}, blockings: {}, pendingUse: null, generationProjectId: id, generationProjectReady: false, generationPersistenceError: null })
+      set({
+        ...EMPTY_PROJECT,
+        motionDraft: undefined,
+        archivedJobs: undefined,
+        storyboards: {},
+        blockings: {},
+        pendingUse: null,
+        generationProjectId: id,
+        generationProjectReady: false,
+        generationPersistenceError: null,
+      })
       if (!id) return
       try {
         const saved = await readProjectGeneration(id)
-        const snapshot = saved ?? await legacyProjectGeneration(id)
+        const snapshot = saved ?? (await legacyProjectGeneration(id))
         if (version !== activation) return
         const { storyboard, blocking, ...fields } = snapshot
-        set({ ...fields, storyboards: storyboard ? { [id]: storyboard } : {}, blockings: blocking ? { [id]: blocking } : {}, generationProjectReady: true })
+        set({
+          ...fields,
+          storyboards: storyboard ? { [id]: storyboard } : {},
+          blockings: blocking ? { [id]: blocking } : {},
+          generationProjectReady: true,
+        })
         if (!saved) saveProject(id)
       } catch (error) {
         const message = reportGenerationPersistenceError(error)
@@ -226,7 +280,12 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
       const id = modelKey(model.provider, model.id)
       const current = get().valuesByModel[id] ?? {}
       const next = { ...current }
-      if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
+      if (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
         delete next[key]
       } else {
         next[key] = value
@@ -235,7 +294,9 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
       saveProject()
     },
     replaceValues: (model, values) => {
-      set({ valuesByModel: { ...get().valuesByModel, [modelKey(model.provider, model.id)]: values } })
+      set({
+        valuesByModel: { ...get().valuesByModel, [modelKey(model.provider, model.id)]: values },
+      })
       saveProject()
     },
     setRepeat: (repeat) => {
@@ -244,16 +305,27 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
     },
     setStoryboard: (projectId, storyboard) => {
       if (get().generationProjectId !== projectId || !get().generationProjectReady) return
-      set({ storyboards: { ...get().storyboards, [projectId]: storyboard.shots.some((shot) => shot.startSeconds === undefined)
-        ? { ...storyboard, shots: retimeShots(storyboard.shots) }
-        : storyboard } })
+      set({
+        storyboards: {
+          ...get().storyboards,
+          [projectId]: storyboard.shots.some((shot) => shot.startSeconds === undefined)
+            ? { ...storyboard, shots: retimeShots(storyboard.shots) }
+            : storyboard,
+        },
+      })
       saveProject(projectId)
     },
     updateShot: (projectId, id, change) => {
       const board = get().storyboards[projectId]
       if (!board) return
-      const shots = board.shots.map((shot) => shot.id === id ? { ...shot, ...change, id } : shot)
-      get().setStoryboard(projectId, { ...board, shots: change.seconds === undefined ? shots : retimeShots(shots, board.shots[0]?.startSeconds ?? 0) })
+      const shots = board.shots.map((shot) => (shot.id === id ? { ...shot, ...change, id } : shot))
+      get().setStoryboard(projectId, {
+        ...board,
+        shots:
+          change.seconds === undefined
+            ? shots
+            : retimeShots(shots, board.shots[0]?.startSeconds ?? 0),
+      })
     },
     setStoryboardModel: (kind, model) => {
       set({ storyboardModels: { ...get().storyboardModels, [kind]: model } })
@@ -269,7 +341,9 @@ export const useGenerateStore = create<GenerateState>()((set, get) => {
       saveProject()
     },
     likeArchivedJob: (id, liked) => {
-      set({ archivedJobs: get().archivedJobs?.map((job) => job.id === id ? { ...job, liked } : job) })
+      set({
+        archivedJobs: get().archivedJobs?.map((job) => (job.id === id ? { ...job, liked } : job)),
+      })
       saveProject()
     },
     forgetLegacyElements: (elements) => {

@@ -1,6 +1,7 @@
 import { StrictMode, type ReactNode } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { fireEvent, render, waitFor } from '@testing-library/react'
+import { HOTKEYS } from '@/config/hotkeys'
 
 const editorStoreState = vi.hoisted(() => ({
   sourcePreviewMediaId: 'media-1' as string | null,
@@ -133,7 +134,7 @@ vi.mock('@/features/preview/deps/settings', () => {
     { getState: () => settingsState },
   )
 
-  return { useSettingsStore }
+  return { useSettingsStore, useResolvedHotkeys: () => HOTKEYS }
 })
 
 vi.mock('@/shared/state/editor', () => {
@@ -145,14 +146,19 @@ vi.mock('@/shared/state/editor', () => {
   return { useEditorStore }
 })
 
-vi.mock('@/shared/state/source-player', () => {
+vi.mock('@/shared/state/source-player', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/state/source-player')>()
   const useSourcePlayerStore = Object.assign(
     (selector: (state: typeof sourcePlayerStoreState) => unknown) =>
       selector(sourcePlayerStoreState),
     { getState: () => sourcePlayerStoreState },
   )
 
-  return { useSourcePlayerStore }
+  return {
+    useSourcePlayerStore,
+    isEventInsideSourceMonitor: actual.isEventInsideSourceMonitor,
+    isSourceMonitorFocused: actual.isSourceMonitorFocused,
+  }
 })
 
 vi.mock('@/shared/state/selection', () => {
@@ -256,6 +262,28 @@ describe('SourceMonitor current media ownership', () => {
 
     expect(playerMethodsState.seek).toHaveBeenCalledTimes(1)
     expect(playerMethodsState.seek).toHaveBeenCalledWith(112)
+  })
+
+  it('marks in and out on the source when the monitor holds the keyboard', async () => {
+    const rendered = render(<SourceMonitor mediaId="media-1" />)
+
+    await waitFor(() => {
+      expect(sourcePlayerStoreState.setCurrentMediaId).toHaveBeenCalledWith('media-1')
+    })
+
+    const monitor = rendered.container.querySelector<HTMLElement>('[data-source-monitor]')
+    if (!monitor) throw new Error('Expected the source monitor root')
+
+    monitor.focus()
+    sourcePlayerStoreState.currentSourceFrame = 42
+    fireEvent.keyDown(monitor, { key: 'i', code: 'KeyI' })
+
+    expect(sourcePlayerStoreState.setInPoint).toHaveBeenCalledWith(42)
+
+    // Outside the monitor the same key belongs to the timeline.
+    sourcePlayerStoreState.setInPoint.mockClear()
+    fireEvent.keyDown(document.body, { key: 'i', code: 'KeyI' })
+    expect(sourcePlayerStoreState.setInPoint).not.toHaveBeenCalled()
   })
 
   it('pauses playback when seek-bar scrubbing starts', async () => {

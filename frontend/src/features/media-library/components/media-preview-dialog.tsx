@@ -18,14 +18,25 @@ export function MediaPreviewDialog({
   useEffect(() => {
     let active = true
     void resolveMediaUrl(media.id).then(
-      (source) => { if (active) setUrl(source) },
-      () => { if (active) setUrl('') },
+      (source) => {
+        if (active) setUrl(source)
+      },
+      () => {
+        if (active) setUrl('')
+      },
     )
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [media.id])
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent
         aria-describedby={undefined}
         className="flex h-[min(90dvh,1100px)] w-[min(96vw,1600px)] max-w-none flex-col gap-0 overflow-hidden p-0"

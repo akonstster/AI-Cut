@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import type { TextItem, TextSpan } from '@/types/timeline'
 import { ColorPicker, NumberInput, PropertyGroupHeader } from '../components'
+import { useSyncedText } from '@/shared/ui/use-synced-text'
 import { FontPicker } from './font-picker'
 import { FONT_WEIGHT_OPTIONS } from './text-section-constants'
 import {
@@ -94,6 +95,33 @@ export function TextLayoutControls({
   )
 }
 
+/**
+ * One span's text. The span editor used to be keyed by its own text, which remounted the field on
+ * every keystroke; the stored text also arrives a frame late, so the field owns its text while the
+ * person types and takes the stored one again when focus leaves.
+ */
+function SpanTextField({
+  text,
+  placeholder,
+  rows,
+  onChange,
+}: {
+  text: string
+  placeholder: string
+  rows: number
+  onChange: (value: string) => void
+}) {
+  const field = useSyncedText<HTMLTextAreaElement>({ value: text, onChange })
+  return (
+    <Textarea
+      {...field.fieldProps}
+      placeholder={placeholder}
+      className="min-h-[52px] text-xs"
+      rows={rows}
+    />
+  )
+}
+
 interface TextSpanEditorsProps {
   spans: TextSpan[]
   /** First selected item, whose style fills in whatever a span leaves unset. */
@@ -143,14 +171,13 @@ export function TextSpanEditors({
         const emphasis = getSpanEditorEmphasis(span, fallbackItem)
 
         return (
-          <div key={`${index}:${span.text}`} className="rounded-md border border-border/70 p-2">
+          <div key={index} className="rounded-md border border-border/70 p-2">
             <PropertyGroupHeader className="pb-2">{config.label}</PropertyGroupHeader>
-            <Textarea
-              value={span.text}
-              onChange={(e) => onSpanTextChange(index, e.target.value)}
+            <SpanTextField
+              text={span.text}
               placeholder={config.placeholder}
-              className="min-h-[52px] text-xs"
               rows={config.rows}
+              onChange={(next) => onSpanTextChange(index, next)}
             />
             <div className="mt-2">
               <FontPicker
@@ -254,11 +281,19 @@ interface TextPlainEditorProps {
 /** The single plain-text field used when the selection has no structured spans. */
 export function TextPlainEditor({ value, isMixed, onChange }: TextPlainEditorProps) {
   const { t } = useTranslation()
+  // The inspector's snapshot is deferred: a plain controlled field would take the previous text
+  // back after each keystroke and move the caret to the end.
+  const field = useSyncedText<HTMLTextAreaElement>({ value })
 
   return (
     <Textarea
-      value={value}
-      onChange={onChange}
+      ref={field.fieldProps.ref}
+      value={field.fieldProps.value}
+      onChange={(event) => {
+        field.fieldProps.onChange(event)
+        onChange(event)
+      }}
+      onBlur={field.fieldProps.onBlur}
       placeholder={isMixed ? t('editor.textSection.mixed') : t('editor.textSection.enterText')}
       className="min-h-[60px] text-xs flex-1 min-w-0"
       rows={3}

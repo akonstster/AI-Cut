@@ -167,6 +167,38 @@ export function hasLinkedAudioCompanion(items: TimelineItem[], anchor: TimelineI
   return getLinkedAudioCompanion(items, anchor) !== null
 }
 
+/**
+ * The other half of a linked video/audio pair: the clip that plays the same media over the
+ * same source range. A pair carries its own transcript caption copy, so an edit has to reach
+ * both or the timeline keeps showing the old text on one of them.
+ */
+export function getSynchronizedMediaCompanion(
+  items: readonly TimelineItem[],
+  anchor: TimelineItem,
+): VideoItem | AudioItem | null {
+  if (anchor.type !== 'video' && anchor.type !== 'audio') return null
+  if (!anchor.mediaId) return null
+  return (
+    (items.find((candidate) => isSynchronizedMediaCompanion(anchor, candidate)) as
+      | AudioItem
+      | VideoItem
+      | undefined) ?? null
+  )
+}
+
+function isSynchronizedMediaCompanion(anchor: TimelineItem, candidate: TimelineItem): boolean {
+  if (candidate.id === anchor.id) return false
+  if (candidate.type === anchor.type) return false
+  if (candidate.type !== 'video' && candidate.type !== 'audio') return false
+  if (!anchor.mediaId || candidate.mediaId !== anchor.mediaId) return false
+  if (anchor.originId && candidate.originId && anchor.originId !== candidate.originId) return false
+  return (
+    candidate.from === anchor.from &&
+    candidate.durationInFrames === anchor.durationInFrames &&
+    (candidate.sourceStart ?? 0) === (anchor.sourceStart ?? 0)
+  )
+}
+
 export function getLinkedVideoIdsWithAudio(items: TimelineItem[]): Set<string> {
   const linkedVideoIds = new Set<string>()
 

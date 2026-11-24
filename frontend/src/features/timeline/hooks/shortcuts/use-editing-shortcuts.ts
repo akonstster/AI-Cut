@@ -18,8 +18,10 @@ import {
 } from '../../stores/timeline-actions'
 import { useSelectionStore } from '@/shared/state/selection'
 import { HOTKEY_OPTIONS } from '@/config/hotkeys'
-import { canJoinMultipleItems } from '@/features/timeline/utils/clip-utils'
+import { getJoinableSelection } from '@/features/timeline/utils/clip-utils'
 import { canLinkSelection, hasLinkedItems } from '@/features/timeline/utils/linked-items'
+import { toast } from 'sonner'
+import { i18n } from '@/i18n'
 import {
   insertFreezeFrame,
   linkItems,
@@ -299,19 +301,20 @@ export function useEditingShortcuts(callbacks: TimelineShortcutCallbacks) {
     (event) => {
       if (selectedItemIds.length < 2) return
 
-      const selectedItems = selectedItemIds
-        .map((id) => items.find((i) => i.id === id))
-        .filter((item): item is NonNullable<typeof item> => item !== undefined)
-
-      if (selectedItems.length < 2) return
-
-      if (canJoinMultipleItems(selectedItems)) {
+      // A linked pair selects its video and audio halves at once, and each half lives on its own
+      // track; join them per track instead of rejecting the whole selection.
+      const joinable = getJoinableSelection(items, selectedItemIds)
+      if (!joinable) {
         event.preventDefault()
-        joinItems(selectedItemIds)
+        toast.info(i18n.t('timeline.joinUnavailable'))
+        return
       }
+
+      event.preventDefault()
+      joinItems(joinable.map((item) => item.id))
     },
     HOTKEY_OPTIONS,
-    [selectedItemIds, items, joinItems],
+    [selectedItemIds, items],
   )
 
   useHotkeys(

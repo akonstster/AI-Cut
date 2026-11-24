@@ -52,8 +52,10 @@ type JoinActionsProps = ItemContextMenuSectionProps & {
 type LinkActionsProps = ItemContextMenuSectionProps & {
   canLinkSelected?: boolean
   canUnlinkSelected?: boolean
+  canRestoreSync?: boolean
   onLinkSelected?: () => void
   onUnlinkSelected?: () => void
+  onRestoreSync?: () => void
 }
 
 type KeyframeActionsProps = ItemContextMenuSectionProps & {
@@ -308,9 +310,7 @@ const ItemContextMenuFull = memo(function ItemContextMenuFull({
         </span>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        {itemName ? (
-          <CopyItemActions t={t} itemName={itemName} mediaId={mediaId} />
-        ) : null}
+        {itemName ? <CopyItemActions t={t} itemName={itemName} mediaId={mediaId} /> : null}
         <JoinActions t={t} hotkeys={hotkeys} {...joinActions} />
         {linkActions && <LinkActions t={t} hotkeys={hotkeys} {...linkActions} />}
         <KeyframeActions
@@ -486,13 +486,20 @@ function LinkActions({
   hotkeys,
   canLinkSelected,
   canUnlinkSelected,
+  canRestoreSync,
   onLinkSelected,
   onUnlinkSelected,
+  onRestoreSync,
 }: LinkActionsProps) {
-  if (!canLinkSelected && !canUnlinkSelected) return null
+  if (!canLinkSelected && !canUnlinkSelected && !canRestoreSync) return null
 
   return (
     <>
+      {canRestoreSync && onRestoreSync && (
+        <ContextMenuItem onClick={onRestoreSync}>
+          {t('timeline.contextMenu.restoreSync')}
+        </ContextMenuItem>
+      )}
       {canLinkSelected && onLinkSelected && (
         <ContextMenuItem onClick={onLinkSelected}>
           {t('timeline.contextMenu.linkClips')}

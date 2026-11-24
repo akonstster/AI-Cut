@@ -35,6 +35,17 @@ interface AppSettings {
 
   // Interface
   editorDensity: EditorDensityPresetName
+  // Open the project that was edited last as soon as the app starts. Off by default: the
+  // projects screen is the normal entry point.
+  openLastProjectOnStart: boolean
+  // Review generations before they are sent: canvas, storyboard and API-started generations fill
+  // the Generate panel instead of going to the provider, and the person presses Generate.
+  generationReviewMode: boolean
+  // Timeline audio skimming: `grains` fires a short window per pointer move, `tape` keeps one
+  // buffer playing and slides its speed with the pointer (pitch follows, like a reel).
+  audioSkimMode: 'grains' | 'tape'
+  /** Fastest tape speed, in multiples of real time. */
+  audioSkimMaxRate: number
 
   // Performance
   maxUndoHistory: number
@@ -146,6 +157,10 @@ const DEFAULT_SETTINGS: AppSettings = {
 
   // Interface
   editorDensity: DEFAULT_EDITOR_DENSITY_PRESET,
+  openLastProjectOnStart: false,
+  generationReviewMode: false,
+  audioSkimMode: 'grains',
+  audioSkimMaxRate: 4,
 
   // Performance
   maxUndoHistory: 50,
@@ -328,10 +343,17 @@ export const useSettingsStore = create<SettingsStore>()(
             typedState.captioningIntervalValue,
             captioningIntervalUnit,
           ),
-          captionSearchMode: normalizeCaptionSearchMode(typedState.captionSearchMode ?? currentState.captionSearchMode),
+          captionSearchMode: normalizeCaptionSearchMode(
+            typedState.captionSearchMode ?? currentState.captionSearchMode,
+          ),
           defaultCaptionStylePresetId: normalizeCaptionStylePresetId(
             typedState.defaultCaptionStylePresetId,
           ),
+          audioSkimMode: typedState.audioSkimMode === 'tape' ? 'tape' : 'grains',
+          audioSkimMaxRate:
+            Number.isFinite(typedState.audioSkimMaxRate) && (typedState.audioSkimMaxRate ?? 0) > 0
+              ? Math.min(8, Math.max(0.5, typedState.audioSkimMaxRate as number))
+              : currentState.audioSkimMaxRate,
         }
       },
     },

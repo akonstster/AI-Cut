@@ -175,7 +175,11 @@ export async function buildDroppedMediaLayers(input: {
         kind: entry.mediaType === 'audio' ? 'audio' : 'video',
         order: nextOrder + index,
       })
-      const sourceDuration = getDroppedMediaDurationInFrames(entry.media, entry.mediaType, canvas.fps)
+      const sourceDuration = getDroppedMediaDurationInFrames(
+        entry.media,
+        entry.mediaType,
+        canvas.fps,
+      )
       const [item] = buildDroppedMediaTimelineItems({
         media: entry.media,
         mediaId: entry.mediaId,
@@ -190,10 +194,7 @@ export async function buildDroppedMediaLayers(input: {
           primary: {
             trackId,
             from: dropFrame,
-            durationInFrames: Math.max(
-              1,
-              Math.min(durationInFrames - dropFrame, sourceDuration),
-            ),
+            durationInFrames: Math.max(1, Math.min(durationInFrames - dropFrame, sourceDuration)),
           },
         },
         linkVideoAudio: false,

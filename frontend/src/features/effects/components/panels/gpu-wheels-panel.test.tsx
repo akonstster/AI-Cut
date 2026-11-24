@@ -56,7 +56,8 @@ describe('GpuWheelsPanel', () => {
   it('renders a Resolve-style four-wheel primaries dock', () => {
     render(<GpuWheelsPanel {...makeProps()} layout="dock" />)
 
-    expect(screen.getByText('Primaries - Color Wheels')).toBeInTheDocument()
+    // The dock tab names the panel; a per-panel header would only eat a row.
+    expect(screen.queryByText('Primaries - Color Wheels')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Adjust Lift wheel' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Adjust Gamma wheel' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Adjust Gain wheel' })).toBeInTheDocument()
@@ -102,7 +103,10 @@ describe('GpuWheelsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset Temperature to default' }))
     expect(props.onParamChange).toHaveBeenCalledWith('fx-wheels', 'temperature', 0)
     expect(screen.getByRole('button', { name: 'Reset Tint to default' })).toBeDisabled()
-    expect(screen.getByText('Temperature')).toHaveClass('whitespace-nowrap', 'text-right')
+    // Labels sit above the field and truncate instead of overlapping it.
+    const temperatureLabel = screen.getByText('Temperature')
+    expect(temperatureLabel).toHaveClass('truncate')
+    expect(temperatureLabel).toHaveAttribute('title', 'Temperature')
     expect(screen.getByText('Mid/Detail')).toHaveAttribute('title', 'Mid/Detail')
   })
 

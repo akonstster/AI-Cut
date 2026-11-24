@@ -464,13 +464,7 @@ export function TransitionPanel() {
       const clamped = Math.max(minDuration, Math.min(maxDuration, defaultDuration))
       updateTransition(selectedTransitionId, { durationInFrames: clamped })
     }
-  }, [
-    selectedTransitionId,
-    transitionConfig,
-    defaultDuration,
-    minDuration,
-    maxDuration,
-  ])
+  }, [selectedTransitionId, transitionConfig, defaultDuration, minDuration, maxDuration])
 
   const selectedAlignment = selectedTransition?.alignment ?? 0.5
   const handlePlacementChange = useCallback(

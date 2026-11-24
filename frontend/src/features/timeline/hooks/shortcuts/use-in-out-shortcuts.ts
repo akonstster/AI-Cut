@@ -1,12 +1,26 @@
-/**
+﻿/**
  * Timeline in/out shortcuts: I, O, Shift+I/O, Alt+X.
  */
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { HOTKEY_OPTIONS } from '@/config/hotkeys'
 import { usePlaybackStore } from '@/shared/state/playback'
+import { isEventInsideSourceMonitor } from '@/shared/state/source-player'
 import { clearInOutPoints, setInPoint, setOutPoint } from '../../stores/timeline-actions'
 import { useResolvedHotkeys } from '@/features/timeline/deps/settings'
+
+/**
+ * In and out points belong to the panel with focus: while the Source Monitor has the keyboard its
+ * own I/O mark the source, so the timeline keys stand down.
+ */
+function ignoreWhenSourceMonitorFocused(event: KeyboardEvent): boolean {
+  return isEventInsideSourceMonitor(event.target)
+}
+
+const IN_OUT_OPTIONS = {
+  ...HOTKEY_OPTIONS,
+  ignoreEventWhen: ignoreWhenSourceMonitorFocused,
+}
 
 function addShiftModifier(binding: string): string {
   const parts = binding
@@ -35,7 +49,7 @@ export function useInOutShortcuts() {
       const { currentFrame } = usePlaybackStore.getState()
       setInPoint(currentFrame)
     },
-    HOTKEY_OPTIONS,
+    IN_OUT_OPTIONS,
     [],
   )
 
@@ -46,7 +60,7 @@ export function useInOutShortcuts() {
       const { previewFrame, currentFrame } = usePlaybackStore.getState()
       setInPoint(previewFrame ?? currentFrame)
     },
-    HOTKEY_OPTIONS,
+    IN_OUT_OPTIONS,
     [markInAtPreview],
   )
 
@@ -57,7 +71,7 @@ export function useInOutShortcuts() {
       const { currentFrame } = usePlaybackStore.getState()
       setOutPoint(currentFrame)
     },
-    HOTKEY_OPTIONS,
+    IN_OUT_OPTIONS,
     [],
   )
 
@@ -68,7 +82,7 @@ export function useInOutShortcuts() {
       const { previewFrame, currentFrame } = usePlaybackStore.getState()
       setOutPoint(previewFrame ?? currentFrame)
     },
-    HOTKEY_OPTIONS,
+    IN_OUT_OPTIONS,
     [markOutAtPreview],
   )
 
@@ -78,7 +92,7 @@ export function useInOutShortcuts() {
       event.preventDefault()
       clearInOutPoints()
     },
-    HOTKEY_OPTIONS,
+    IN_OUT_OPTIONS,
     [],
   )
 }

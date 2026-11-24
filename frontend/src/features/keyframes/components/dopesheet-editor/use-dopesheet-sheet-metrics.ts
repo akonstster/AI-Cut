@@ -83,13 +83,7 @@ export function useDopesheetSheetMetrics({
     linkedTimelineViewportWidth !== undefined &&
     linkedTimelineViewportWidth > 0
   const timelineCellBorderWidth =
-    presentation === 'classic'
-      ? hasLinkedTimelineAxis
-        ? 0
-        : 1
-      : presentation === 'lanes'
-        ? 1
-        : 0
+    presentation === 'classic' ? (hasLinkedTimelineAxis ? 0 : 1) : presentation === 'lanes' ? 1 : 0
   const effectiveTimelineWidth = Math.max(
     hasLinkedTimelineAxis
       ? linkedTimelineViewportWidth

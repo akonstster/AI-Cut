@@ -16,6 +16,7 @@ import { getMediaType, resolveMediaUrl } from '@/features/timeline/deps/media-li
 import { toast } from 'sonner'
 import { execute, applyTransitionRepairs, getLogger } from './shared'
 import { resolveSourceEditTrackTargets } from '../../utils/source-edit-targeting'
+import { getLinkedItemIds } from '../../utils/linked-items'
 import { buildMediaTimelineItems } from '../../utils/media-timeline-item-builder'
 import { DEFAULT_TRACK_HEIGHT } from '../../constants'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
@@ -249,6 +250,46 @@ export async function performInsertEdit(): Promise<void> {
       store.setTracks(ctx.resolvedTracks)
       const splitIds: string[] = []
       const shiftedIds: string[] = []
+      const shifted = new Set<string>()
+
+      /**
+       * An insert pushes the patched tracks. The other half of a linked pair lives on a track
+       * that was not patched, so it has to travel with its picture — otherwise one comma key
+       * leaves every video/audio pair on the timeline out of sync.
+       */
+      const shiftItem = (itemId: string) => {
+        if (shifted.has(itemId)) return
+        const state = useItemsStore.getState()
+        const item = state.itemById[itemId]
+        if (!item) return
+        shifted.add(itemId)
+        state._moveItem(item.id, item.from + clipDurationFrames)
+        shiftedIds.push(item.id)
+
+        for (const linkedId of getLinkedItemIds(state.items, item.id)) {
+          if (linkedId === item.id) continue
+          const companion = useItemsStore.getState().itemById[linkedId]
+          if (!companion) continue
+          if (targetTrackIds.includes(companion.trackId)) continue
+          if (companion.from < insertFrame) continue
+          shiftItem(companion.id)
+        }
+      }
+
+      const splitCompanionsAtCut = (itemId: string) => {
+        const state = useItemsStore.getState()
+        for (const linkedId of getLinkedItemIds(state.items, itemId)) {
+          if (linkedId === itemId) continue
+          const companion = useItemsStore.getState().itemById[linkedId]
+          if (!companion || targetTrackIds.includes(companion.trackId)) continue
+          const straddles =
+            companion.from < insertFrame &&
+            companion.from + companion.durationInFrames > insertFrame
+          if (!straddles) continue
+          const split = useItemsStore.getState()._splitItem(companion.id, insertFrame)
+          if (split) splitIds.push(split.leftItem.id, split.rightItem.id)
+        }
+      }
 
       for (const targetTrackId of targetTrackIds) {
         const straddleItem = useItemsStore
@@ -264,6 +305,7 @@ export async function performInsertEdit(): Promise<void> {
           const splitResult = store._splitItem(straddleItem.id, insertFrame)
           if (splitResult) {
             splitIds.push(splitResult.leftItem.id, splitResult.rightItem.id)
+            splitCompanionsAtCut(straddleItem.id)
           }
         }
 
@@ -271,8 +313,7 @@ export async function performInsertEdit(): Promise<void> {
           .getState()
           .items.filter((item) => item.trackId === targetTrackId && item.from >= insertFrame)
         for (const item of itemsToShift) {
-          store._moveItem(item.id, item.from + clipDurationFrames)
-          shiftedIds.push(item.id)
+          shiftItem(item.id)
         }
       }
 
@@ -313,6 +354,63 @@ export async function performOverwriteEdit(): Promise<void> {
       const store = useItemsStore.getState()
       store.setTracks(ctx.resolvedTracks)
       const affectedIds: string[] = []
+      const processed = new Set<string>()
+
+      /** Cuts the overwrite region out of one item (remove it, or trim/split its edges). */
+      const cutItem = (itemId: string) => {
+        if (processed.has(itemId)) return
+        processed.add(itemId)
+        const item = useItemsStore.getState().itemById[itemId]
+        if (!item) return
+        const itemEnd = item.from + item.durationInFrames
+        const startsBeforeRegion = item.from < overwriteStart
+        const endsAfterRegion = itemEnd > overwriteEnd
+
+        if (!startsBeforeRegion && !endsAfterRegion) {
+          useItemsStore.getState()._removeItems([item.id])
+          affectedIds.push(item.id)
+        } else if (startsBeforeRegion && endsAfterRegion) {
+          const splitResult = useItemsStore.getState()._splitItem(item.id, overwriteStart)
+          if (splitResult) {
+            affectedIds.push(splitResult.leftItem.id)
+            const splitResult2 = useItemsStore
+              .getState()
+              ._splitItem(splitResult.rightItem.id, overwriteEnd)
+            if (splitResult2) {
+              useItemsStore.getState()._removeItems([splitResult2.leftItem.id])
+              affectedIds.push(splitResult2.rightItem.id)
+            }
+          }
+        } else if (startsBeforeRegion) {
+          const splitResult = useItemsStore.getState()._splitItem(item.id, overwriteStart)
+          if (splitResult) {
+            useItemsStore.getState()._removeItems([splitResult.rightItem.id])
+            affectedIds.push(splitResult.leftItem.id)
+          }
+        } else {
+          const splitResult = useItemsStore.getState()._splitItem(item.id, overwriteEnd)
+          if (splitResult) {
+            useItemsStore.getState()._removeItems([splitResult.leftItem.id])
+            affectedIds.push(splitResult.rightItem.id)
+          }
+        }
+      }
+
+      /**
+       * The other half of a linked pair sits on a track the patch did not touch; leaving it
+       * behind would keep the old sound under the new picture. It gets the same cut.
+       */
+      const cutItemWithCompanions = (itemId: string) => {
+        const companions = getLinkedItemIds(useItemsStore.getState().items, itemId)
+          .filter((linkedId) => linkedId !== itemId)
+          .map((linkedId) => useItemsStore.getState().itemById[linkedId])
+          .filter(
+            (companion): companion is NonNullable<typeof companion> =>
+              !!companion && !targetTrackIds.includes(companion.trackId),
+          )
+        cutItem(itemId)
+        for (const companion of companions) cutItem(companion.id)
+      }
 
       for (const targetTrackId of targetTrackIds) {
         const overlapping = useItemsStore
@@ -325,37 +423,7 @@ export async function performOverwriteEdit(): Promise<void> {
           )
 
         for (const item of overlapping) {
-          const itemEnd = item.from + item.durationInFrames
-          const startsBeforeRegion = item.from < overwriteStart
-          const endsAfterRegion = itemEnd > overwriteEnd
-
-          if (!startsBeforeRegion && !endsAfterRegion) {
-            store._removeItems([item.id])
-          } else if (startsBeforeRegion && endsAfterRegion) {
-            const splitResult = store._splitItem(item.id, overwriteStart)
-            if (splitResult) {
-              affectedIds.push(splitResult.leftItem.id)
-              const splitResult2 = useItemsStore
-                .getState()
-                ._splitItem(splitResult.rightItem.id, overwriteEnd)
-              if (splitResult2) {
-                store._removeItems([splitResult2.leftItem.id])
-                affectedIds.push(splitResult2.rightItem.id)
-              }
-            }
-          } else if (startsBeforeRegion) {
-            const splitResult = store._splitItem(item.id, overwriteStart)
-            if (splitResult) {
-              store._removeItems([splitResult.rightItem.id])
-              affectedIds.push(splitResult.leftItem.id)
-            }
-          } else {
-            const splitResult = store._splitItem(item.id, overwriteEnd)
-            if (splitResult) {
-              store._removeItems([splitResult.leftItem.id])
-              affectedIds.push(splitResult.rightItem.id)
-            }
-          }
+          cutItemWithCompanions(item.id)
         }
       }
 

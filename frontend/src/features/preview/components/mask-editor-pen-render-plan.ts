@@ -206,10 +206,7 @@ function resolvePenVertexVisual(
 }
 
 /** Whether the cursor sits close enough to the first anchor to close the path. */
-function isPenCloseHovered(
-  state: PenPathRenderState,
-  positions: readonly OverlayPoint[],
-): boolean {
+function isPenCloseHovered(state: PenPathRenderState, positions: readonly OverlayPoint[]): boolean {
   if (positions.length < 3 || !state.cursorPos) return false
   const first = positions[0]!
   const cursor = projectOverlayPoint(state.bounds, state.cursorPos)

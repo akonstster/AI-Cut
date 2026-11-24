@@ -110,6 +110,19 @@ const page = {
       ],
     },
     {
+      title: 'Editing subtitles',
+      blocks: [
+        {
+          kind: 'list',
+          items: [
+            "A clip's captions can be **moved to a subtitle track** from the Subtitle section, turning per-clip lines into a cue track you edit as one item.",
+            'Add a cue with **Add cue** and remove one with the bin button on its row; each edit is a single undoable step.',
+            'Editing the text of a recognised line re-times its words, so **Words** and **Karaoke** keep working instead of falling back to the whole line.',
+          ],
+        },
+      ],
+    },
+    {
       title: 'Subtitles on export',
       blocks: [
         {

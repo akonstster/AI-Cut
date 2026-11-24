@@ -54,3 +54,43 @@ export function canJoinMultipleItems(items: TimelineItem[]): boolean {
 
   return true
 }
+
+/**
+ * The selected clips of one track that form a joinable chain, or null when there is none.
+ *
+ * A timeline selection often spans several tracks at once: a linked video/audio pair selected
+ * together has each half on its own track, so `canJoinMultipleItems` over the whole selection
+ * fails even though both halves can be rejoined. Joining works per track — this picks the
+ * joinable chain to hand to `joinItems`, which merges the linked counterpart by itself.
+ *
+ * @param items - Every timeline item
+ * @param selectedIds - Ids of the selected items
+ */
+export function getJoinableSelection(
+  items: readonly TimelineItem[],
+  selectedIds: readonly string[],
+): TimelineItem[] | null {
+  const selected = selectedIds
+    .map((id) => items.find((item) => item.id === id))
+    .filter((item): item is TimelineItem => item !== undefined)
+  if (selected.length < 2) return null
+
+  const byTrack = new Map<string, TimelineItem[]>()
+  for (const item of selected) {
+    const group = byTrack.get(item.trackId)
+    if (group) {
+      group.push(item)
+    } else {
+      byTrack.set(item.trackId, [item])
+    }
+  }
+
+  let best: TimelineItem[] | null = null
+  for (const group of byTrack.values()) {
+    if (group.length < 2 || !canJoinMultipleItems(group)) continue
+    if (!best || group.length > best.length) {
+      best = group
+    }
+  }
+  return best
+}

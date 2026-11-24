@@ -20,7 +20,7 @@ vi.mock('./root', () => ({
   notifyPermissionLost: vi.fn(),
 }))
 
-import { readJson, writeJsonAtomic, WorkspaceFileCorruptError } from './fs-primitives'
+import { readJson, removeEntry, writeJsonAtomic, WorkspaceFileCorruptError } from './fs-primitives'
 import {
   asHandle,
   createRoot,
@@ -143,5 +143,82 @@ describe('fs-primitives writeJsonAtomic move() fallback', () => {
       /did not support the requested type/,
     )
     expect(await readFileText(root, 'index.json')).toBeNull()
+  })
+})
+
+describe('fs-primitives directory handle cache', () => {
+  /** Build media/abc/metadata.json through the mock directly, bypassing the cache. */
+  async function plantMediaMetadata(root: MemDir, name = 'abc'): Promise<MemDir> {
+    const media = await root.getDirectoryHandle('media', { create: true })
+    const dir = await media.getDirectoryHandle(name, { create: true })
+    await writeRawText(dir, 'metadata.json', JSON.stringify({ id: name }))
+    return media
+  }
+
+  it('resolves each directory segment once across reads', async () => {
+    const root = createRoot()
+    const media = await plantMediaMetadata(root)
+    const rootSpy = vi.spyOn(root, 'getDirectoryHandle')
+    const mediaSpy = vi.spyOn(media, 'getDirectoryHandle')
+
+    await readJson(asHandle(root), ['media', 'abc', 'metadata.json'])
+    await readJson(asHandle(root), ['media', 'abc', 'metadata.json'])
+
+    expect(rootSpy.mock.calls.map(([name]) => name)).toEqual(['media'])
+    expect(mediaSpy.mock.calls.map(([name]) => name)).toEqual(['abc'])
+    rootSpy.mockRestore()
+    mediaSpy.mockRestore()
+  })
+
+  it('shares one walk between concurrent callers', async () => {
+    const root = createRoot()
+    const media = await plantMediaMetadata(root)
+    const rootSpy = vi.spyOn(root, 'getDirectoryHandle')
+    const mediaSpy = vi.spyOn(media, 'getDirectoryHandle')
+
+    await Promise.all([
+      readJson(asHandle(root), ['media', 'abc', 'metadata.json']),
+      readJson(asHandle(root), ['media', 'abc', 'metadata.json']),
+      readJson(asHandle(root), ['media', 'abc', 'metadata.json']),
+    ])
+
+    expect(rootSpy.mock.calls.map(([name]) => name)).toEqual(['media'])
+    expect(mediaSpy.mock.calls.map(([name]) => name)).toEqual(['abc'])
+    rootSpy.mockRestore()
+    mediaSpy.mockRestore()
+  })
+
+  it('does not remember a missing directory', async () => {
+    const root = createRoot()
+    const spy = vi.spyOn(root, 'getDirectoryHandle')
+
+    expect(await readJson(asHandle(root), ['media', 'metadata.json'])).toBeNull()
+    expect(await readJson(asHandle(root), ['media', 'metadata.json'])).toBeNull()
+    expect(spy.mock.calls.map(([name]) => name)).toEqual(['media', 'media'])
+
+    // The directory appearing later must be found, not shadowed by a cached miss.
+    await writeJsonAtomic(asHandle(root), ['media', 'metadata.json'], { id: 'media' })
+    expect(await readJson(asHandle(root), ['media', 'metadata.json'])).toEqual({ id: 'media' })
+    spy.mockRestore()
+  })
+
+  it('drops the subtree after a remove, so a re-created directory is resolved fresh', async () => {
+    const root = createRoot()
+    const media = await plantMediaMetadata(root)
+    await readJson(asHandle(root), ['media', 'abc', 'metadata.json'])
+
+    await removeEntry(asHandle(root), ['media', 'abc'], { recursive: true })
+    await plantMediaMetadata(root)
+    const rootSpy = vi.spyOn(root, 'getDirectoryHandle')
+    const mediaSpy = vi.spyOn(media, 'getDirectoryHandle')
+
+    expect(await readJson(asHandle(root), ['media', 'abc', 'metadata.json'])).toEqual({
+      id: 'abc',
+    })
+    // `media` is still valid and stays cached; only the removed subtree is re-walked.
+    expect(rootSpy.mock.calls.map(([name]) => name)).toEqual([])
+    expect(mediaSpy.mock.calls.map(([name]) => name)).toEqual(['abc'])
+    rootSpy.mockRestore()
+    mediaSpy.mockRestore()
   })
 })

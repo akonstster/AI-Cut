@@ -82,6 +82,12 @@
     },
     "general": {
       "autoSave": "Auto-save",
+      "openLastProject": "Open last project on start",
+      "openLastProjectHint": "Jump straight into the project you edited last when AI-Cut starts.",
+      "audioSkimTape": "Tape-style audio skimming",
+      "audioSkimTapeHint": "Keep the sound running while you drag the playhead and slide its speed with the pointer, like dragging a reel. Off: short grains on every move.",
+      "generationReview": "Review generations before sending",
+      "generationReviewHint": "Generations started from the Canvas, the storyboard or the API fill the Generate panel instead of going out at once — check the model, prompt and references, then press Generate.",
       "interval": "Interval",
       "undoHistoryDepth": "Undo History Depth",
       "uiSounds": "Interface sounds",

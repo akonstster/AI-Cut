@@ -92,95 +92,101 @@ export function useSheetPreviewDom({
   const marqueePreviewTouchedIdsRef = useRef(new Set<string>())
   const appliedDragPreviewFramesRef = useRef<Record<string, number> | null>(null)
 
-const setKeyframeButtonRef = useCallback((keyframeId: string, node: HTMLButtonElement | null) => {
-  if (node) {
-    keyframeButtonRefs.current.set(keyframeId, node)
-    const previewSelection = marqueePreviewSelectionRef.current
-    if (previewSelection) {
-      const previewSelected = previewSelection.has(keyframeId)
-      if (previewSelected !== committedKeyframeSelectionRef.current.has(keyframeId)) {
-        node.dataset.marqueeSelected = String(previewSelected)
-        marqueePreviewTouchedIdsRef.current.add(keyframeId)
+  const setKeyframeButtonRef = useCallback(
+    (keyframeId: string, node: HTMLButtonElement | null) => {
+      if (node) {
+        keyframeButtonRefs.current.set(keyframeId, node)
+        const previewSelection = marqueePreviewSelectionRef.current
+        if (previewSelection) {
+          const previewSelected = previewSelection.has(keyframeId)
+          if (previewSelected !== committedKeyframeSelectionRef.current.has(keyframeId)) {
+            node.dataset.marqueeSelected = String(previewSelected)
+            marqueePreviewTouchedIdsRef.current.add(keyframeId)
+          }
+        }
+      } else {
+        keyframeButtonRefs.current.delete(keyframeId)
       }
-    }
-  } else {
-    keyframeButtonRefs.current.delete(keyframeId)
-  }
-}, [committedKeyframeSelectionRef])
-const handleMarqueeSelectionPreviewChange = useCallback((nextSelection: Set<string> | null) => {
-  const touchedIds = new Set(marqueePreviewTouchedIdsRef.current)
-  for (const keyframeId of committedKeyframeSelectionRef.current) touchedIds.add(keyframeId)
-  if (nextSelection) {
-    for (const keyframeId of nextSelection) touchedIds.add(keyframeId)
-  }
+    },
+    [committedKeyframeSelectionRef],
+  )
+  const handleMarqueeSelectionPreviewChange = useCallback(
+    (nextSelection: Set<string> | null) => {
+      const touchedIds = new Set(marqueePreviewTouchedIdsRef.current)
+      for (const keyframeId of committedKeyframeSelectionRef.current) touchedIds.add(keyframeId)
+      if (nextSelection) {
+        for (const keyframeId of nextSelection) touchedIds.add(keyframeId)
+      }
 
-  const nextTouchedIds = new Set<string>()
-  for (const keyframeId of touchedIds) {
-    const button = keyframeButtonRefs.current.get(keyframeId)
-    if (!button) continue
-    if (!nextSelection) {
-      delete button.dataset.marqueeSelected
-      continue
-    }
+      const nextTouchedIds = new Set<string>()
+      for (const keyframeId of touchedIds) {
+        const button = keyframeButtonRefs.current.get(keyframeId)
+        if (!button) continue
+        if (!nextSelection) {
+          delete button.dataset.marqueeSelected
+          continue
+        }
 
-    const previewSelected = nextSelection.has(keyframeId)
-    const committedSelected = committedKeyframeSelectionRef.current.has(keyframeId)
-    if (previewSelected === committedSelected) {
-      delete button.dataset.marqueeSelected
-    } else {
-      button.dataset.marqueeSelected = String(previewSelected)
-      nextTouchedIds.add(keyframeId)
-    }
-  }
+        const previewSelected = nextSelection.has(keyframeId)
+        const committedSelected = committedKeyframeSelectionRef.current.has(keyframeId)
+        if (previewSelected === committedSelected) {
+          delete button.dataset.marqueeSelected
+        } else {
+          button.dataset.marqueeSelected = String(previewSelected)
+          nextTouchedIds.add(keyframeId)
+        }
+      }
 
-  marqueePreviewSelectionRef.current = nextSelection
-  marqueePreviewTouchedIdsRef.current = nextTouchedIds
-}, [committedKeyframeSelectionRef])
-const applyDragPreviewFrames = useCallback(
-  (nextPreviewFrames: Record<string, number> | null) => {
-    const previousPreviewFrames = appliedDragPreviewFramesRef.current
-    if (arePreviewFramesEqual(previousPreviewFrames, nextPreviewFrames)) {
-      return
-    }
+      marqueePreviewSelectionRef.current = nextSelection
+      marqueePreviewTouchedIdsRef.current = nextTouchedIds
+    },
+    [committedKeyframeSelectionRef],
+  )
+  const applyDragPreviewFrames = useCallback(
+    (nextPreviewFrames: Record<string, number> | null) => {
+      const previousPreviewFrames = appliedDragPreviewFramesRef.current
+      if (arePreviewFramesEqual(previousPreviewFrames, nextPreviewFrames)) {
+        return
+      }
 
-    const duplicatePreviewIds = resolveDuplicatePreviewIds(
-      dragStateRef.current,
-      nextPreviewFrames,
-    )
+      const duplicatePreviewIds = resolveDuplicatePreviewIds(
+        dragStateRef.current,
+        nextPreviewFrames,
+      )
 
-    flushSync(() => {
-      setSheetPreviewFrames(nextPreviewFrames)
-      setSheetPreviewDuplicateKeyframeIds(duplicatePreviewIds)
-    })
+      flushSync(() => {
+        setSheetPreviewFrames(nextPreviewFrames)
+        setSheetPreviewDuplicateKeyframeIds(duplicatePreviewIds)
+      })
 
-    if (duplicatePreviewIds) {
+      if (duplicatePreviewIds) {
+        appliedDragPreviewFramesRef.current = nextPreviewFrames
+        return
+      }
+
+      writeDragPreviewPositions(
+        keyframeButtonRefs.current,
+        keyframeMetaByIdRef.current,
+        previousPreviewFrames,
+        nextPreviewFrames,
+        getRenderedKeyframeX,
+      )
+
       appliedDragPreviewFramesRef.current = nextPreviewFrames
-      return
-    }
-
-    writeDragPreviewPositions(
-      keyframeButtonRefs.current,
-      keyframeMetaByIdRef.current,
-      previousPreviewFrames,
-      nextPreviewFrames,
+    },
+    [
+      dragStateRef,
       getRenderedKeyframeX,
-    )
-
-    appliedDragPreviewFramesRef.current = nextPreviewFrames
-  },
-  [
-    dragStateRef,
-    getRenderedKeyframeX,
-    keyframeMetaByIdRef,
-    setSheetPreviewDuplicateKeyframeIds,
-    setSheetPreviewFrames,
-  ],
-)
-const scheduleDragPreviewFrames = useCallback(
-  (nextPreviewFrames: Record<string, number> | null) => {
-    applyDragPreviewFrames(nextPreviewFrames)
-  },
-  [applyDragPreviewFrames],
-)
+      keyframeMetaByIdRef,
+      setSheetPreviewDuplicateKeyframeIds,
+      setSheetPreviewFrames,
+    ],
+  )
+  const scheduleDragPreviewFrames = useCallback(
+    (nextPreviewFrames: Record<string, number> | null) => {
+      applyDragPreviewFrames(nextPreviewFrames)
+    },
+    [applyDragPreviewFrames],
+  )
   return { setKeyframeButtonRef, handleMarqueeSelectionPreviewChange, scheduleDragPreviewFrames }
 }

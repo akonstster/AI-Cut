@@ -5,7 +5,7 @@ const page = {
   slug: 'editing-tools',
   title: 'Editing Tools',
   description:
-    'Selection, razor, trim, slip, slide, rate stretch, and the ripple and rolling trim behaviors.',
+    'Selection, razor, trim, rate stretch, and the ripple, rolling, slip and slide trim behaviors.',
   category: 'Core Editing',
   related: ['timeline', 'keyboard-shortcuts', 'properties'],
   sections: [
@@ -20,9 +20,26 @@ const page = {
             ['Trim edit', '`T`', 'Drag a clip edge to change where it starts or ends.'],
             ['Razor', '`C`', 'Cut a clip wherever you click.'],
             ['Rate stretch', '`R`', 'Change duration by changing playback speed.'],
-            ['Slip', '`Y`', 'Change the source frames inside a clip without moving it.'],
-            ['Slide', '`U`', 'Move a clip while adjusting the neighboring cuts.'],
           ],
+        },
+      ],
+    },
+    {
+      title: 'Slip and slide',
+      blocks: [
+        {
+          kind: 'list',
+          items: [
+            'Pick the **Trim edit** tool (`T`) and drag the **top strip** of a clip — the row where its name sits — to **slide** it: the clip moves along the track and the cuts beside it follow, so the sequence keeps its length.',
+            'Drag the **rest of the clip body** to **slip** it: different source frames play inside the clip, while the clip itself and its neighbors stay where they are.',
+            'The pointer turns into a slip or slide cursor over the strip you are about to use, and the clip shows a live preview of the frames while you drag.',
+            'Slip and slide work on video, audio and compound clips. They stop at the ends of the source and keep transitions intact.',
+          ],
+        },
+        {
+          kind: 'note',
+          tone: 'info',
+          text: 'Slip and slide have no separate tools or shortcuts. They live inside the **Trim edit** tool and depend on where you grab the clip.',
         },
       ],
     },
@@ -41,7 +58,7 @@ const page = {
         {
           kind: 'note',
           tone: 'info',
-          text: 'Ripple and rolling are behaviors of the **Trim edit** tool, not separate tools with their own shortcut.',
+          text: 'Ripple, rolling, slip and slide are behaviors of the **Trim edit** tool, not separate tools with their own shortcut.',
         },
       ],
     },

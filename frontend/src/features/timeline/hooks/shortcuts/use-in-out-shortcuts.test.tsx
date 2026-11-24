@@ -102,6 +102,25 @@ describe('useInOutShortcuts', () => {
     expect(useMarkersStore.getState().outPoint).toBe(180)
   })
 
+  it('leaves I/O to the source monitor while it has the keyboard', () => {
+    render(<ShortcutHarness />)
+    setTimelineState({ inPoint: 12, outPoint: 240 })
+
+    const registration = useHotkeysMock.mock.calls.find(([keys]) => keys === HOTKEYS.MARK_IN) as
+      | [string, HotkeyCallback, { ignoreEventWhen?: (event: KeyboardEvent) => boolean }]
+      | undefined
+    const ignoreEventWhen = registration?.[2]?.ignoreEventWhen
+    expect(ignoreEventWhen).toBeTypeOf('function')
+
+    const monitor = document.createElement('div')
+    monitor.setAttribute('data-source-monitor', '')
+    const control = document.createElement('button')
+    monitor.append(control)
+
+    expect(ignoreEventWhen?.({ target: control } as unknown as KeyboardEvent)).toBe(true)
+    expect(ignoreEventWhen?.({ target: document.body } as unknown as KeyboardEvent)).toBe(false)
+  })
+
   it('clears in/out points with the configured clear shortcut', () => {
     render(<ShortcutHarness />)
     setTimelineState({ inPoint: 24, outPoint: 120 })

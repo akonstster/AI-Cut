@@ -20,6 +20,8 @@ export const MiniFilmTile = memo(function MiniFilmTile({
   imageStyle,
   imageDataAttributes,
   overlay,
+  width = MINI_FILM_TILE_WIDTH,
+  fluid = false,
 }: {
   index: number
   label: string
@@ -33,8 +35,13 @@ export const MiniFilmTile = memo(function MiniFilmTile({
   imageStyle?: CSSProperties
   imageDataAttributes?: Record<string, string | undefined>
   overlay?: ReactNode
+  /** Tile width; height follows the default 118×80 aspect. */
+  width?: number
+  /** Fill the grid cell width (media-grid style); height follows the aspect. */
+  fluid?: boolean
 }) {
   const clipNumber = String(index + 1).padStart(2, '0')
+  const tileHeight = Math.round((width * MINI_FILM_TILE_HEIGHT) / MINI_FILM_TILE_WIDTH)
 
   return (
     <button
@@ -46,7 +53,14 @@ export const MiniFilmTile = memo(function MiniFilmTile({
           ? 'border-orange-500 shadow-[0_0_0_1px_rgba(249,115,22,0.65)]'
           : 'border-zinc-700 hover:border-zinc-500'
       }`}
-      style={{ width: MINI_FILM_TILE_WIDTH, height: MINI_FILM_TILE_HEIGHT }}
+      style={
+        fluid
+          ? {
+              width: '100%',
+              aspectRatio: `${MINI_FILM_TILE_WIDTH} / ${MINI_FILM_TILE_HEIGHT}`,
+            }
+          : { width, height: tileHeight }
+      }
       onClick={(event) => {
         // Mouse clicks are already handled by onPointerDown; only act on
         // keyboard activation (Enter/Space), which fires click with detail === 0.

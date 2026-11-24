@@ -55,7 +55,8 @@ function collectDragVisuals(
 ): HTMLElement[] {
   const itemIdSet = new Set(itemIds)
   const visuals = new Set<HTMLElement>([origin])
-  for (const row of scrollArea?.querySelectorAll<HTMLElement>('[data-motion-layer-item-id]') ?? []) {
+  for (const row of scrollArea?.querySelectorAll<HTMLElement>('[data-motion-layer-item-id]') ??
+    []) {
     if (!itemIdSet.has(row.dataset.motionLayerItemId ?? '')) continue
     for (const visual of row.querySelectorAll<HTMLElement>('[data-motion-span-drag-visual]')) {
       visuals.add(visual)
@@ -142,11 +143,11 @@ export function createMotionSpanDragCommands(input: {
   const move = (event: React.PointerEvent<HTMLButtonElement>): void => {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== event.pointerId) return
-    const rawDelta = Math.round(((event.clientX - drag.startX) / drag.laneWidth) * deps.visibleFrameRange)
-    const minDelta = -Math.min(...drag.items.map((item) => item.from))
-    const maxDelta = Math.min(
-      ...drag.items.map((item) => deps.durationInFrames - item.from - 1),
+    const rawDelta = Math.round(
+      ((event.clientX - drag.startX) / drag.laneWidth) * deps.visibleFrameRange,
     )
+    const minDelta = -Math.min(...drag.items.map((item) => item.from))
+    const maxDelta = Math.min(...drag.items.map((item) => deps.durationInFrames - item.from - 1))
     const deltaFrames = Math.max(minDelta, Math.min(maxDelta, rawDelta))
     if (deltaFrames === drag.deltaFrames) return
     const next = { ...drag, deltaFrames }
@@ -170,7 +171,9 @@ export function createMotionSpanDragCommands(input: {
     event.stopPropagation()
     release()
     if (drag.deltaFrames !== 0) {
-      deps.moveItems(drag.items.map((item) => ({ id: item.id, from: item.from + drag.deltaFrames })))
+      deps.moveItems(
+        drag.items.map((item) => ({ id: item.id, from: item.from + drag.deltaFrames })),
+      )
     }
   }
 

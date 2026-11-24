@@ -32,26 +32,20 @@ export const TransitionDropZones = memo(function TransitionDropZones({
     return null
   }
 
-  const halfHitWidth = hitWidth / 2
+  const edgeWidth = `min(${hitWidth / 2}px, 50%)`
 
   return (
     <>
       <div
-        className="absolute inset-y-0 z-40"
-        style={{
-          left: `${-halfHitWidth}px`,
-          width: `${hitWidth}px`,
-        }}
+        className="absolute inset-y-0 left-0 z-40"
+        style={{ width: edgeWidth }}
         onDragOver={onCutDragOver('left')}
         onDragLeave={onCutDragLeave}
         onDrop={onCutDrop('left')}
       />
       <div
-        className="absolute inset-y-0 z-40"
-        style={{
-          left: `calc(100% - ${halfHitWidth}px)`,
-          width: `${hitWidth}px`,
-        }}
+        className="absolute inset-y-0 right-0 z-40"
+        style={{ width: edgeWidth }}
         onDragOver={onCutDragOver('right')}
         onDragLeave={onCutDragLeave}
         onDrop={onCutDrop('right')}

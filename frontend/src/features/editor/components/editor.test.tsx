@@ -89,7 +89,16 @@ vi.mock('./color-grading-dock', () => ({
 }))
 
 vi.mock('./color-timeline-navigator', () => ({
-  ColorTimelineNavigator: () => <div data-testid="color-timeline-navigator" />,
+  ColorTimelineNavigator: ({ filmStrip, preview }: { filmStrip?: string; preview?: ReactNode }) =>
+    preview ? (
+      <>
+        <div data-testid="color-timeline-navigator" data-film-strip="column" />
+        {preview}
+        <div data-testid="color-timeline-navigator" data-film-strip="none" />
+      </>
+    ) : (
+      <div data-testid="color-timeline-navigator" data-film-strip={filmStrip ?? 'row'} />
+    ),
 }))
 
 vi.mock('./compose-workspace/compose-layout', () => ({
@@ -151,6 +160,7 @@ vi.mock('../hooks/use-auto-save', () => ({
 vi.mock('@/features/editor/deps/timeline-hooks', () => ({
   useTimelineShortcuts: vi.fn(),
   useTransitionBreakageNotifications: vi.fn(),
+  useTimelineAudioSkimPreview: vi.fn(),
 }))
 
 vi.mock('@/features/editor/deps/timeline-subscriptions', () => ({
@@ -297,6 +307,7 @@ vi.mock('@/features/projects/utils/project-helpers', () => ({
 }))
 
 import { LoadedEditor } from './editor'
+import { useTimelineAudioSkimPreview } from '@/features/editor/deps/timeline-hooks'
 
 describe('LoadedEditor migration metadata refresh', () => {
   beforeAll(() => {
@@ -447,7 +458,16 @@ describe('LoadedEditor migration metadata refresh', () => {
     )
 
     expect(await screen.findByTestId('color-grading-dock')).toBeInTheDocument()
-    expect(screen.getByTestId('color-timeline-navigator')).toBeInTheDocument()
+    // The Color page scrubs the same playhead as the Edit timeline, so it carries
+    // its own skim hook — without it, hovering the mini timeline was silent.
+    expect(useTimelineAudioSkimPreview).toHaveBeenCalled()
+    // The filmstrip moved to a vertical column left of the viewer; the mini
+    // timeline keeps its own strip below it.
+    const navigators = screen.getAllByTestId('color-timeline-navigator')
+    expect(navigators.map((navigator) => navigator.getAttribute('data-film-strip'))).toEqual([
+      'column',
+      'none',
+    ])
     expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
   })

@@ -37,18 +37,18 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 const MAX_WHEEL_SIZE = 100
-const MAX_DOCK_WHEEL_SIZE = 200
+const MAX_DOCK_WHEEL_SIZE = 260
 const MIN_WHEEL_SIZE = 64
-const MIN_DOCK_WHEEL_SIZE = 48
+const MIN_DOCK_WHEEL_SIZE = 64
 const GRID_GAP_PX = 4
-const DOCK_WHEEL_GRID_GAP_PX = 28
+const DOCK_WHEEL_GRID_GAP_PX = 16
 // Vertical space each dock wheel column needs besides the wheel itself:
-// header (20) + column gaps (2x8) + value chips with accents (24) + thumb wheel (16)
-const DOCK_WHEEL_EXTRAS_PX = 76
+// header (16) + gaps (2x2) + value chips with accents (20) + thumb wheel (12).
+const DOCK_WHEEL_EXTRAS_PX = 56
 const PUCK_RADIUS_PX = 4
 // Outer master ring (dock): a fill gauge like Resolve's. A bright metallic
 // ring sits under a pure-black cover that is revealed clockwise from 12
-// o'clock proportionally to the master value — fully black at the range
+// o'clock proportionally to the master value вЂ” fully black at the range
 // minimum, the full ring at the maximum.
 const DOCK_RING_THICKNESS = 5
 const DOCK_RING_GAP = 3
@@ -85,7 +85,7 @@ interface WheelControlProps {
   compact?: boolean
   dock?: boolean
   dockFields?: React.ReactNode
-  /** Master ring fill 0..1 — fraction of the bright ring revealed (dock only). */
+  /** Master ring fill 0..1 вЂ” fraction of the bright ring revealed (dock only). */
   masterRingFill?: number
   /** Anchor angle (deg from 12 o'clock) where the ring reveal starts. */
   masterRingFromDeg?: number
@@ -145,18 +145,20 @@ function DockWheelHeader({
 }) {
   if (!dock) return null
   return (
-    <div className="flex h-5 w-full items-center justify-center gap-1">
-      <span className="truncate text-[11px] font-semibold text-foreground">{label}</span>
+    <div className="flex h-4 w-full items-center justify-center gap-0.5">
+      <span className="truncate text-[10px] font-semibold leading-none text-foreground">
+        {label}
+      </span>
       <Button
         variant="ghost"
         size="icon"
-        className="h-5 w-5 text-muted-foreground"
+        className="h-4 w-4 text-muted-foreground"
         onClick={onReset}
         disabled={disabled}
         title={resetLabel}
         aria-label={resetLabel}
       >
-        <RotateCcw className="h-3 w-3" />
+        <RotateCcw className="h-2.5 w-2.5" />
       </Button>
     </div>
   )
@@ -384,7 +386,7 @@ const WheelControl = memo(function WheelControl({
     <div
       className={cn(
         'flex min-w-0 flex-col items-center',
-        dock ? 'gap-2' : 'gap-1',
+        dock ? 'gap-0.5' : 'gap-1',
         compact && 'gap-0.5',
       )}
     >
@@ -436,7 +438,7 @@ const WHEEL_DESCRIPTORS = [
  * Affine mapping between the stored shader param and the Resolve-style
  * display units shown in the dock fields: display = param * scale + bias.
  * Lift/gain read in native units, gamma reads 0-centered (param - 1), and
- * offset reads as Resolve's 25-anchored scale (-175..225 for param ±2).
+ * offset reads as Resolve's 25-anchored scale (-175..225 for param В±2).
  */
 interface WheelDisplay {
   scale: number
@@ -501,11 +503,11 @@ const DOCK_WHEEL_DESCRIPTORS = [
     levelKey: 'gain',
     masterChip: true,
     display: { scale: 1, bias: 0, step: 0.01 },
-    // Resolve renders gain's gauge phase-flipped 180° relative to the
-    // other wheels — same half-ring at default, on the opposite side.
+    // Resolve renders gain's gauge phase-flipped 180В° relative to the
+    // other wheels вЂ” same half-ring at default, on the opposite side.
     ring: { min: 0, max: 2, fromDeg: 180 },
   },
-  // Resolve's Offset wheel shows only R/G/B chips — the master scalar is
+  // Resolve's Offset wheel shows only R/G/B chips вЂ” the master scalar is
   // still driven by the thumb wheel below.
   {
     labelKey: 'effects.params.offset',
@@ -572,12 +574,12 @@ const WHEEL_CHANNEL_LABELS = ['Red', 'Green', 'Blue'] as const
 const WHEEL_CHANNEL_ACCENTS = ['bg-red-500', 'bg-green-500', 'bg-blue-500'] as const
 
 const THUMB_WHEEL_CLASS =
-  'mt-1 h-3 w-full cursor-ew-resize appearance-none rounded-full border border-black/80 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.22)_0_1px,rgba(0,0,0,0.65)_1px_5px)] shadow-inner disabled:cursor-not-allowed disabled:opacity-60 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/80 [&::-moz-range-thumb]:bg-zinc-200 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/80 [&::-webkit-slider-thumb]:bg-zinc-200'
+  'mt-0.5 h-2.5 w-full cursor-ew-resize appearance-none rounded-full border border-black/80 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.22)_0_1px,rgba(0,0,0,0.65)_1px_5px)] shadow-inner disabled:cursor-not-allowed disabled:opacity-60 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/80 [&::-moz-range-thumb]:bg-zinc-200 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/80 [&::-webkit-slider-thumb]:bg-zinc-200'
 
 /**
  * Range slider that previews live while dragging and commits once on release.
  * React fires `onChange` for range inputs on every input event, so committing
- * there would push a timeline mutation (and undo entry) per dragged pixel —
+ * there would push a timeline mutation (and undo entry) per dragged pixel вЂ”
  * local drag state keeps the thumb responsive without re-rendering the panel.
  */
 const DockThumbWheel = memo(function DockThumbWheel({
@@ -644,7 +646,7 @@ const SCRUB_THRESHOLD_PX = 3
  * the field slides the value by one step per pixel (Shift = 0.1x fine), a
  * plain click opens text editing. While interacting only the cheap live
  * preview path runs; the timeline commit (undo entry + auto-keyframe scan)
- * lands once per gesture — on release, Enter, blur, or arrow-key release.
+ * lands once per gesture вЂ” on release, Enter, blur, or arrow-key release.
  */
 const DockNumberInput = memo(function DockNumberInput({
   ariaLabel,
@@ -673,7 +675,7 @@ const DockNumberInput = memo(function DockNumberInput({
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState<string | null>(null)
-  // Ref mirror of draft — blur fires synchronously after Enter/Escape, before
+  // Ref mirror of draft вЂ” blur fires synchronously after Enter/Escape, before
   // React applies the state update, so guards must not read stale state.
   const draftRef = useRef<string | null>(null)
   const dragRef = useRef<{ startX: number; startValue: number; scrubbed: boolean } | null>(null)
@@ -704,7 +706,7 @@ const DockNumberInput = memo(function DockNumberInput({
 
   const handlePointerDown = (event: React.PointerEvent<HTMLInputElement>) => {
     if (disabled || event.button !== 0) return
-    // Already editing — let the caret/selection behave normally.
+    // Already editing вЂ” let the caret/selection behave normally.
     if (document.activeElement === inputRef.current) return
     // Keep focus off until release decides between scrub and click-to-edit.
     event.preventDefault()
@@ -828,7 +830,7 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
   const wheelGridRef = useRef<HTMLDivElement>(null)
   const [wheelSize, setWheelSize] = useState(MAX_WHEEL_SIZE)
   const isDock = layout === 'dock'
-  // Collapse only in the sidebar — the dock is the dedicated grading surface.
+  // Collapse only in the sidebar вЂ” the dock is the dedicated grading surface.
   const allowCollapse = collapsible && !isDock
   const [collapsed, setCollapsed] = useState(allowCollapse)
   const showBody = !(allowCollapse && collapsed)
@@ -878,7 +880,7 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
       const gridGap = isDock ? DOCK_WHEEL_GRID_GAP_PX : GRID_GAP_PX
       const slotWidth = (width - gridGap * (wheelCount - 1)) / wheelCount
       // In the dock the wheel column also stacks a header, value chips and a thumb
-      // wheel — cap the wheel diameter by the available height so the column never
+      // wheel вЂ” cap the wheel diameter by the available height so the column never
       // spills over the bottom parameter row.
       const slotHeight = isDock
         ? el.clientHeight - paddingY - DOCK_WHEEL_EXTRAS_PX
@@ -894,7 +896,7 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
     return () => observer.disconnect()
   }, [isDock])
 
-  // Ring gauge over the wheel's practical working span (param space) —
+  // Ring gauge over the wheel's practical working span (param space) вЂ”
   // Resolve's rings reflect a per-wheel range, not the full field range,
   // which is why lift/gamma/offset read half at default while gain reads
   // ~2/3. Values past the span peg the ring full/empty.
@@ -985,17 +987,28 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
     })
 
     return (
-      <div
-        key={key}
-        className="grid min-w-0 grid-cols-[minmax(3.75rem,1fr)_3.75rem_1rem] items-center gap-x-0.5"
-      >
-        <span
-          className="min-w-0 whitespace-nowrap text-right text-[10px] text-muted-foreground"
-          title={label}
-        >
-          {label}
-        </span>
-        <span className="flex min-w-0 flex-col items-center">
+      <div key={key} className="flex min-w-0 flex-col gap-px">
+        <div className="flex min-w-0 items-center gap-0.5">
+          <span
+            className="min-w-0 flex-1 truncate text-[9px] leading-none text-muted-foreground"
+            title={label}
+          >
+            {label}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => emitCommitParam(key, param.default)}
+            disabled={!effect.enabled || Object.is(value, param.default)}
+            title={resetLabel}
+            aria-label={resetLabel}
+          >
+            <RotateCcw className="h-2.5 w-2.5" />
+          </Button>
+        </div>
+        <div className="flex min-w-0 items-center gap-1">
           <DockNumberInput
             ariaLabel={label}
             name={`dock-${key}`}
@@ -1007,28 +1020,16 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
             disabled={!effect.enabled}
             onLive={(raw) => updateParamFromDisplay(key, display, raw, 'live')}
             onCommit={(raw) => updateParamFromDisplay(key, display, raw, 'commit')}
-            className="h-6 w-full rounded-[2px] border border-black/80 bg-black/75 px-1 text-center font-mono text-[11px] tabular-nums text-foreground shadow-inner focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-5 min-w-0 flex-1 rounded-[2px] border border-black/80 bg-black/75 px-1 text-center font-mono text-[10px] tabular-nums text-foreground shadow-inner focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <span
             aria-hidden="true"
             className={cn(
-              'mt-0.5 h-0.5 w-8 rounded-full bg-gradient-to-r',
+              'h-0.5 w-5 flex-shrink-0 rounded-full bg-gradient-to-r',
               getDockParamAccent(key),
             )}
           />
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-4 w-4 flex-shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={() => emitCommitParam(key, param.default)}
-          disabled={!effect.enabled || Object.is(value, param.default)}
-          title={resetLabel}
-          aria-label={resetLabel}
-        >
-          <RotateCcw className="h-2.5 w-2.5" />
-        </Button>
+        </div>
       </div>
     )
   }
@@ -1052,7 +1053,7 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
     const chipMin = displayMin - display.scale
     const chipMax = displayMax + display.scale
     const chipClass =
-      'h-5 w-full rounded-[2px] border border-black/80 bg-black/75 px-1 text-center font-mono text-[10px] leading-5 tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+      'h-4 w-full rounded-[2px] border border-black/80 bg-black/75 px-1 text-center font-mono text-[9px] leading-4 tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
 
     const updateLevelFromDisplay = (rawValue: string, mode: 'live' | 'commit') => {
       const next = Number(rawValue)
@@ -1087,8 +1088,8 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
     }
 
     return (
-      <div className="w-full max-w-[13rem] px-1">
-        <div className={cn('grid gap-1', masterChip ? 'grid-cols-4' : 'grid-cols-3')}>
+      <div className="w-full max-w-[12rem] px-0.5">
+        <div className={cn('grid gap-0.5', masterChip ? 'grid-cols-4' : 'grid-cols-3')}>
           {masterChip && (
             <span className="flex min-w-0 flex-col items-center">
               <DockNumberInput
@@ -1188,34 +1189,66 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
   return (
     <div className={cn('space-y-0', isDock && 'flex h-full min-h-0 flex-col overflow-hidden')}>
       {picking && <AppEyedropperOverlay onResolve={handlePicked} previewOnly />}
-      <EffectPanelHeaderRow
-        label={
-          isDock ? t('effects.wheels.primariesColorWheels') : getEffectDefinitionName(definition)
-        }
-        effectId={effect.id}
-        enabled={effect.enabled}
-        isDefault={isDefault}
-        onReset={onReset}
-        onToggle={onToggle}
-        onRemove={onRemove}
-        onMove={onMove}
-        canMoveUp={canMoveUp}
-        canMoveDown={canMoveDown}
-        collapsed={allowCollapse ? collapsed : undefined}
-        onToggleCollapsed={allowCollapse ? () => setCollapsed((value) => !value) : undefined}
-        onEditInColor={onEditInColor}
-      />
+      {!isDock && (
+        <EffectPanelHeaderRow
+          label={
+            isDock ? t('effects.wheels.primariesColorWheels') : getEffectDefinitionName(definition)
+          }
+          effectId={effect.id}
+          enabled={effect.enabled}
+          isDefault={isDefault}
+          onReset={onReset}
+          onToggle={onToggle}
+          onRemove={onRemove}
+          onMove={onMove}
+          canMoveUp={canMoveUp}
+          canMoveDown={canMoveDown}
+          collapsed={allowCollapse ? collapsed : undefined}
+          onToggleCollapsed={allowCollapse ? () => setCollapsed((value) => !value) : undefined}
+          onEditInColor={onEditInColor}
+        />
+      )}
 
       {showBody &&
         (isDock ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div
-              className="grid shrink-0 items-center gap-x-3 border-b border-border/70 px-4 py-1.5"
-              style={{
-                gridTemplateColumns: `auto repeat(${DOCK_TOP_PARAMS.length}, minmax(0, 1fr))`,
-              }}
-            >
-              <div className="flex items-center gap-0.5 pr-1">
+          // Lumetri/Resolve-style split: wheels own the full pane height, the
+          // numeric primaries live in a compact side column instead of two rows
+          // that used to steal the wheels' height.
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div ref={wheelGridRef} className="min-h-0 min-w-0 flex-1 overflow-hidden px-3 py-1">
+              <div className="grid h-full grid-cols-[repeat(4,minmax(3rem,1fr))] items-center gap-4">
+                {DOCK_WHEEL_DESCRIPTORS.map((desc) => (
+                  <WheelControl
+                    key={desc.labelKey}
+                    label={t(desc.labelKey)}
+                    hue={(displayParams[desc.hueKey] as number) ?? 0}
+                    amount={(displayParams[desc.amountKey] as number) ?? 0}
+                    size={wheelSize}
+                    disabled={!effect.enabled}
+                    dock
+                    masterRingFill={getMasterRingFill(desc)}
+                    masterRingFromDeg={desc.ring.fromDeg}
+                    dockFields={renderDockWheelFields(desc, t(desc.labelKey))}
+                    onLiveChange={(hue, amount) => {
+                      emitLiveBatch({ [desc.hueKey]: hue, [desc.amountKey]: amount })
+                    }}
+                    onCommit={(hue, amount) => {
+                      emitCommitBatch({ [desc.hueKey]: hue, [desc.amountKey]: amount })
+                    }}
+                    onReset={() => {
+                      // Reset the whole wheel: color push and its master level.
+                      emitCommitBatch({
+                        [desc.hueKey]: definition.params[desc.hueKey]?.default ?? 0,
+                        [desc.amountKey]: definition.params[desc.amountKey]?.default ?? 0,
+                        [desc.levelKey]: (definition.params[desc.levelKey]?.default as number) ?? 0,
+                      })
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex w-[17rem] shrink-0 flex-col gap-1 overflow-y-auto border-l border-border/70 px-2 py-1">
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1275,53 +1308,9 @@ export const GpuWheelsPanel = memo(function GpuWheelsPanel({
                   </span>
                 </Button>
               </div>
-              {DOCK_TOP_PARAMS.map(renderDockNumberControl)}
-            </div>
-            <div ref={wheelGridRef} className="min-h-0 flex-1 overflow-hidden px-6 py-3">
-              <div className="grid min-h-full grid-cols-[repeat(4,minmax(3rem,1fr))] items-center gap-7">
-                {DOCK_WHEEL_DESCRIPTORS.map((desc) => (
-                  <WheelControl
-                    key={desc.labelKey}
-                    label={t(desc.labelKey)}
-                    hue={(displayParams[desc.hueKey] as number) ?? 0}
-                    amount={(displayParams[desc.amountKey] as number) ?? 0}
-                    size={wheelSize}
-                    disabled={!effect.enabled}
-                    dock
-                    masterRingFill={getMasterRingFill(desc)}
-                    masterRingFromDeg={desc.ring.fromDeg}
-                    dockFields={renderDockWheelFields(desc, t(desc.labelKey))}
-                    onLiveChange={(hue, amount) => {
-                      emitLiveBatch({
-                        [desc.hueKey]: hue,
-                        [desc.amountKey]: amount,
-                      })
-                    }}
-                    onCommit={(hue, amount) => {
-                      emitCommitBatch({
-                        [desc.hueKey]: hue,
-                        [desc.amountKey]: amount,
-                      })
-                    }}
-                    onReset={() => {
-                      // Reset the whole wheel: color push and its master level.
-                      emitCommitBatch({
-                        [desc.hueKey]: definition.params[desc.hueKey]?.default ?? 0,
-                        [desc.amountKey]: definition.params[desc.amountKey]?.default ?? 0,
-                        [desc.levelKey]: (definition.params[desc.levelKey]?.default as number) ?? 0,
-                      })
-                    }}
-                  />
-                ))}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                {[...DOCK_TOP_PARAMS, ...DOCK_BOTTOM_PARAMS].map(renderDockNumberControl)}
               </div>
-            </div>
-            <div
-              className="grid shrink-0 items-center gap-x-3 border-t border-border/70 px-4 py-1.5"
-              style={{
-                gridTemplateColumns: `repeat(${DOCK_BOTTOM_PARAMS.length}, minmax(0, 1fr))`,
-              }}
-            >
-              {DOCK_BOTTOM_PARAMS.map(renderDockNumberControl)}
             </div>
           </div>
         ) : (

@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AnimatableProperty, KeyframeRef } from '@/types/keyframe'
 import { handleGraphPaneKeyDown, resolveGraphDisplayProperty } from './dopesheet-graph-display'
 
-const REFS: KeyframeRef[] = [{ itemId: 'item', property: 'x' as AnimatableProperty, keyframeId: 'k1' }]
+const REFS: KeyframeRef[] = [
+  { itemId: 'item', property: 'x' as AnimatableProperty, keyframeId: 'k1' },
+]
 
 function pressKey(
   key: string,
@@ -41,9 +43,9 @@ function pressKey(
 
 describe('resolveGraphDisplayProperty', () => {
   it('prefers the selected property while it has a curve', () => {
-    expect(
-      resolveGraphDisplayProperty(new Set(['x', 'y']), ['y'], 'x' as AnimatableProperty),
-    ).toBe('y')
+    expect(resolveGraphDisplayProperty(new Set(['x', 'y']), ['y'], 'x' as AnimatableProperty)).toBe(
+      'y',
+    )
   })
 
   it('falls back to the first visible property with a curve', () => {
@@ -51,9 +53,7 @@ describe('resolveGraphDisplayProperty', () => {
   })
 
   it('keeps a selected property that has no curve rather than showing nothing', () => {
-    expect(
-      resolveGraphDisplayProperty(new Set(['x']), ['y'], 'x' as AnimatableProperty),
-    ).toBe('x')
+    expect(resolveGraphDisplayProperty(new Set(['x']), ['y'], 'x' as AnimatableProperty)).toBe('x')
   })
 
   it('draws nothing without a visible property', () => {

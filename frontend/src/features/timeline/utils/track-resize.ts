@@ -193,7 +193,10 @@ export function getTrackSectionLayout({
     getSectionDividerBounds(viewportHeight, tracks, trackTitleBarHeight)
   // the video tracks, with their clip labels, are in view by default; the sound tracks below take the rest
   const defaultSectionDividerPosition = hasTrackSections
-    ? Math.min(maximumSectionDividerPosition, Math.max(availablePaneHeight / 2, videoSectionHeight + trackTitleBarHeight))
+    ? Math.min(
+        maximumSectionDividerPosition,
+        Math.max(availablePaneHeight / 2, videoSectionHeight + trackTitleBarHeight),
+      )
     : videoSectionHeight > 0
       ? availablePaneHeight
       : 0

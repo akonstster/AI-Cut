@@ -16,6 +16,8 @@ import {
   Replace,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { HOTKEY_OPTIONS } from '@/config/hotkeys'
+import { useHotkeys } from 'react-hotkeys-hook'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,9 +55,9 @@ import {
 } from '../utils/source-io'
 import { useMediaLibraryStore, getMediaType } from '@/features/preview/deps/media-library'
 import { useItemsStore } from '@/features/preview/deps/timeline-store'
-import { useSettingsStore } from '@/features/preview/deps/settings'
+import { useSettingsStore, useResolvedHotkeys } from '@/features/preview/deps/settings'
 import { useEditorStore } from '@/shared/state/editor'
-import { useSourcePlayerStore } from '@/shared/state/source-player'
+import { useSourcePlayerStore, isEventInsideSourceMonitor } from '@/shared/state/source-player'
 import { getNextShuttleRate } from '@/shared/state/playback/shuttle'
 import { useSelectionStore } from '@/shared/state/selection'
 import { EDITOR_LAYOUT_CSS_VALUES, getEditorLayout } from '@/config/editor-layout'
@@ -439,30 +441,63 @@ function SourceMonitorInner({
     }
   }, [interactive, setHoveredPanel, setPlayerMethods])
 
-  // Handle I/O shortcuts locally on this element (not global useHotkeys)
+  // In and out points belong to the panel with the keyboard: while this monitor holds focus its
+  // I/O mark the source, and the timeline's identical keys stand down (see
+  // shared/state/source-player/focus). Clicking anywhere in the monitor makes it that panel.
   const wrapperRef = useRef<HTMLDivElement>(null)
   const hadFocusRef = useRef(false)
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!interactive) return
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      const { currentSourceFrame, setInPoint, setOutPoint, clearInOutPoints } =
-        useSourcePlayerStore.getState()
-      if (e.key === 'i' || e.key === 'I') {
-        e.preventDefault()
-        e.stopPropagation()
-        setInPoint(currentSourceFrame)
-      } else if (e.key === 'o' || e.key === 'O') {
-        e.preventDefault()
-        e.stopPropagation()
-        setOutPoint(getExclusiveSourceOutPoint(currentSourceFrame, durationInFrames))
-      } else if (e.altKey && (e.key === 'x' || e.key === 'X')) {
-        e.preventDefault()
-        e.stopPropagation()
-        clearInOutPoints()
-      }
+  const hotkeys = useResolvedHotkeys()
+
+  const markSourceIn = useCallback(() => {
+    useSourcePlayerStore.getState().setInPoint(useSourcePlayerStore.getState().currentSourceFrame)
+  }, [])
+
+  const markSourceOut = useCallback(() => {
+    const { currentSourceFrame, setOutPoint } = useSourcePlayerStore.getState()
+    setOutPoint(getExclusiveSourceOutPoint(currentSourceFrame, durationInFrames))
+  }, [durationInFrames])
+
+  const clearSourceInOut = useCallback(() => {
+    useSourcePlayerStore.getState().clearInOutPoints()
+  }, [])
+
+  const sourceHotkeyOptions = useMemo(
+    () => ({
+      ...HOTKEY_OPTIONS,
+      enabled: interactive,
+      ignoreEventWhen: (event: KeyboardEvent) => !isEventInsideSourceMonitor(event.target),
+    }),
+    [interactive],
+  )
+
+  useHotkeys(
+    hotkeys.MARK_IN,
+    (event) => {
+      event.preventDefault()
+      markSourceIn()
     },
-    [durationInFrames, interactive],
+    sourceHotkeyOptions,
+    [markSourceIn],
+  )
+
+  useHotkeys(
+    hotkeys.MARK_OUT,
+    (event) => {
+      event.preventDefault()
+      markSourceOut()
+    },
+    sourceHotkeyOptions,
+    [markSourceOut],
+  )
+
+  useHotkeys(
+    hotkeys.CLEAR_IN_OUT,
+    (event) => {
+      event.preventDefault()
+      clearSourceInOut()
+    },
+    sourceHotkeyOptions,
+    [clearSourceInOut],
   )
 
   const handleMouseEnter = useCallback(() => {
@@ -489,10 +524,13 @@ function SourceMonitorInner({
     <div
       ref={wrapperRef}
       tabIndex={-1}
+      data-source-monitor=""
       className="flex-1 flex flex-col min-w-0 outline-none"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onKeyDown={handleKeyDown}
+      onPointerDownCapture={() => {
+        if (interactive) wrapperRef.current?.focus()
+      }}
     >
       {variant === 'panel' && (
         <div
@@ -1107,50 +1145,6 @@ function SourcePlaybackControls({
     [tracks],
   )
 
-  useEffect(() => {
-    if (!interactive || !activeTrackId || !activeTrack || activeTrack.locked) {
-      return
-    }
-
-    const currentState = useEditorStore.getState()
-    const hasVideoDestination = isPatchDestinationTrack(
-      tracks.find((track) => track.id === currentState.sourcePatchVideoTrackId) ?? null,
-      'video',
-    )
-    const hasAudioDestination = isPatchDestinationTrack(
-      tracks.find((track) => track.id === currentState.sourcePatchAudioTrackId) ?? null,
-      'audio',
-    )
-    const activeTrackKind = getTrackKind(activeTrack)
-    if (activeTrackKind === 'audio') {
-      if (!hasAudioDestination) {
-        setSourcePatchAudioTrackId(activeTrackId)
-      }
-      return
-    }
-
-    if (activeTrackKind === 'video') {
-      if (!hasVideoDestination) {
-        setSourcePatchVideoTrackId(activeTrackId)
-      }
-      return
-    }
-
-    if (mediaType === 'audio' && !hasAudioDestination) {
-      setSourcePatchAudioTrackId(activeTrackId)
-    } else if (mediaType !== 'audio' && !hasVideoDestination) {
-      setSourcePatchVideoTrackId(activeTrackId)
-    }
-  }, [
-    activeTrack,
-    activeTrackId,
-    interactive,
-    mediaType,
-    setSourcePatchAudioTrackId,
-    setSourcePatchVideoTrackId,
-    tracks,
-  ])
-
   const patchTargetPreview = useMemo(() => {
     const resolvedTargets = resolveSourceEditTrackTargets({
       tracks,
@@ -1202,9 +1196,11 @@ function SourcePlaybackControls({
   ])
 
   const videoDestinationLabel =
-    selectedVideoTrack?.name ?? patchTargetPreview.videoTargetName ?? 'Auto'
+    selectedVideoTrack?.name ??
+    (patchTargetPreview.videoTargetName ? `Auto · ${patchTargetPreview.videoTargetName}` : 'Auto')
   const audioDestinationLabel =
-    selectedAudioTrack?.name ?? patchTargetPreview.audioTargetName ?? 'Auto'
+    selectedAudioTrack?.name ??
+    (patchTargetPreview.audioTargetName ? `Auto · ${patchTargetPreview.audioTargetName}` : 'Auto')
 
   const videoPatchTooltip = patchTargetPreview.videoTargetName
     ? `Video Source Patch On -> ${patchTargetPreview.videoTargetName}`

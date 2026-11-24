@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
-import { makeTimelineTrack, makeTimelineVideoItem } from '../../test-helpers'
+import { makeTimelineAudioItem, makeTimelineTrack, makeTimelineVideoItem } from '../../test-helpers'
 import { useItemsStore } from '../items-store'
 import { placeItemsWithoutTimelineOverlap } from './item-placement'
 
@@ -12,6 +12,7 @@ describe('placeItemsWithoutTimelineOverlap', () => {
       .setTracks([
         makeTimelineTrack({ id: 'track-v1', name: 'V1', kind: 'video', order: 0 }),
         makeTimelineTrack({ id: 'track-v2', name: 'V2', kind: 'video', order: 1 }),
+        makeTimelineTrack({ id: 'track-a1', name: 'A1', kind: 'audio', order: 2 }),
       ])
     useItemsStore.getState().setItems([])
   })
@@ -84,5 +85,27 @@ describe('placeItemsWithoutTimelineOverlap', () => {
     ])
 
     expect(placed[0]?.from).toBe(0)
+  })
+
+  it('moves a linked pair as one unit so adding it never tears the sound from the picture', () => {
+    // The audio track is busy right where the pair wants to land; the video track is free.
+    useItemsStore
+      .getState()
+      .setItems([makeTimelineAudioItem({ id: 'music', from: 0, durationInFrames: 200 })])
+
+    const placed = placeItemsWithoutTimelineOverlap([
+      makeTimelineVideoItem({ id: 'video-1', from: 50, linkedGroupId: 'group-1' }),
+      makeTimelineAudioItem({
+        id: 'audio-1',
+        from: 50,
+        linkedGroupId: 'group-1',
+        trackId: 'track-a1',
+      }),
+    ])
+    const byId = new Map(placed.map((item) => [item.id, item]))
+
+    expect(byId.get('audio-1')?.from).toBe(byId.get('video-1')?.from)
+    // Pushed past the occupying music as a pair, not one half at a time.
+    expect(byId.get('video-1')?.from).toBe(200)
   })
 })

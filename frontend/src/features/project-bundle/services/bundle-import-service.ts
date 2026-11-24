@@ -233,7 +233,8 @@ export async function importProjectBundle(
     await associateMediaWithProject(newProjectId, newMediaId)
   }
   if (bundleProject.generationData) {
-    const { restoreProjectGeneration } = await import('@/features/generate/services/project-generation-transfer')
+    const { restoreProjectGeneration } =
+      await import('@/features/generate/services/project-generation-transfer')
     await restoreProjectGeneration(newProjectId, bundleProject.generationData, mediaIdMap)
   }
 

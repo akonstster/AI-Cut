@@ -6,7 +6,13 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/shared/ui/cn'
 import { generateApi, type Field, type MediaKind, type MediaRef } from '../services/generate-api'
 import { getMediaDragData, mediaLibraryService, useMediaLibraryStore } from '../deps/editor'
@@ -28,7 +34,8 @@ function kindOfMime(mime: string): MediaKind | null {
 export function MediaThumb({ reference, full = false }: { reference: MediaRef; full?: boolean }) {
   const [url, setUrl] = useState<string | null>(null)
   const mediaItems = useMediaLibraryStore((state) => state.mediaItems)
-  const mediaId = typeof reference === 'object' && 'media' in reference ? reference.media : undefined
+  const mediaId =
+    typeof reference === 'object' && 'media' in reference ? reference.media : undefined
   const job = typeof reference === 'object' && 'job' in reference ? reference.job : undefined
   const index = typeof reference === 'object' && 'job' in reference ? reference.index : undefined
   useEffect(() => {
@@ -36,16 +43,20 @@ export function MediaThumb({ reference, full = false }: { reference: MediaRef; f
     let ownedUrl: string | null = null
     setUrl(null)
     if (mediaId) {
-      const lookup = full ? mediaLibraryService.getMediaBlobUrl(mediaId) : mediaLibraryService.getThumbnailBlobUrl(mediaId)
-      void lookup.then((found) => {
-        if (full && found) {
-          if (cancelled) URL.revokeObjectURL(found)
-          else ownedUrl = found
-        }
-        if (!cancelled) setUrl(found)
-      }).catch(() => {
-        if (!cancelled) setUrl(null)
-      })
+      const lookup = full
+        ? mediaLibraryService.getMediaBlobUrl(mediaId)
+        : mediaLibraryService.getThumbnailBlobUrl(mediaId)
+      void lookup
+        .then((found) => {
+          if (full && found) {
+            if (cancelled) URL.revokeObjectURL(found)
+            else ownedUrl = found
+          }
+          if (!cancelled) setUrl(found)
+        })
+        .catch(() => {
+          if (!cancelled) setUrl(null)
+        })
     } else if (job && index !== undefined) {
       setUrl(generateApi.fileUrl(job, index))
     }
@@ -63,7 +74,12 @@ export function MediaThumb({ reference, full = false }: { reference: MediaRef; f
           ? reference
           : `#${reference.index + 1}`
   return url ? (
-    <img src={url} alt={name} className={full ? "h-full w-full object-contain" : "h-full w-full object-cover"} onError={() => setUrl(null)} />
+    <img
+      src={url}
+      alt={name}
+      className={full ? 'h-full w-full object-contain' : 'h-full w-full object-cover'}
+      onError={() => setUrl(null)}
+    />
   ) : (
     <span className="line-clamp-3 break-all p-1 text-[9px] text-muted-foreground">{name}</span>
   )
@@ -125,7 +141,10 @@ function MediaSlot({
         : data.type === 'media-items'
           ? (data.items ?? []).map((item) => ({ mediaId: item.mediaId, mediaType: item.mediaType }))
           : []
-    const fitting = items.filter((item): item is { mediaId: string; mediaType: string } => !!item.mediaId && item.mediaType === field.media)
+    const fitting = items.filter(
+      (item): item is { mediaId: string; mediaType: string } =>
+        !!item.mediaId && item.mediaType === field.media,
+    )
     if (fitting.length < items.length) {
       setError(t('generate.form.wrongKind', { kind: t(`generate.media.${field.media}`) }))
     }
@@ -234,27 +253,42 @@ export function ModelFieldLabel({ field }: { field: Field }) {
     last_frame: t('generate.fieldHelp.lastFrame'),
     reference: t('generate.fieldHelp.reference'),
   }
-  const hint = field.description?.trim() || roleHints[field.role ?? ''] || t('generate.fieldHelp.unspecified')
+  const hint =
+    field.description?.trim() || roleHints[field.role ?? ''] || t('generate.fieldHelp.unspecified')
   return (
     <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
       <span>{field.label}</span>
       {field.required && <span className="text-destructive">*</span>}
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className="nodrag shrink-0 rounded-full p-0.5 hover:text-foreground"
-            aria-label={t('generate.fieldHelp.about', { field: field.label })}>
+          <button
+            type="button"
+            className="nodrag shrink-0 rounded-full p-0.5 hover:text-foreground"
+            aria-label={t('generate.fieldHelp.about', { field: field.label })}
+          >
             <Info className="h-3.5 w-3.5" aria-hidden />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-1.5 p-2 text-xs" align="start">
           <p className="whitespace-pre-wrap break-words">{hint}</p>
-          {field.type === 'media' && <p>{t('generate.fieldHelp.fileCount', { min: field.min, max: field.max })}</p>}
-          {(field.type === 'number' || field.type === 'integer') && field.min != null && <p>{t('generate.fieldHelp.minimum', { value: field.min })}</p>}
-          {(field.type === 'number' || field.type === 'integer') && field.max != null && <p>{t('generate.fieldHelp.maximum', { value: field.max })}</p>}
+          {field.type === 'media' && (
+            <p>{t('generate.fieldHelp.fileCount', { min: field.min, max: field.max })}</p>
+          )}
+          {(field.type === 'number' || field.type === 'integer') && field.min != null && (
+            <p>{t('generate.fieldHelp.minimum', { value: field.min })}</p>
+          )}
+          {(field.type === 'number' || field.type === 'integer') && field.max != null && (
+            <p>{t('generate.fieldHelp.maximum', { value: field.max })}</p>
+          )}
           {field.default != null && typeof field.default !== 'object' && (
-            <p>{t('generate.fieldHelp.defaultValue', {
-              value: typeof field.default === 'boolean' ? t(field.default ? 'generate.fieldHelp.on' : 'generate.fieldHelp.off') : String(field.default),
-            })}</p>
+            <p>
+              {t('generate.fieldHelp.defaultValue', {
+                value:
+                  typeof field.default === 'boolean'
+                    ? t(field.default ? 'generate.fieldHelp.on' : 'generate.fieldHelp.off')
+                    : String(field.default),
+              })}
+            </p>
           )}
         </PopoverContent>
       </Popover>
@@ -279,7 +313,10 @@ export function FieldControl({ field, value, onChange }: FieldControlProps) {
             onChange={(event) => onChange(event.target.value)}
             placeholder={field.description ?? ''}
             data-testid={`generate-field-${field.key}`}
-            className={cn('resize-y bg-secondary/30 text-xs', field.role === 'prompt' ? 'min-h-24' : 'min-h-14')}
+            className={cn(
+              'resize-y bg-secondary/30 text-xs',
+              field.role === 'prompt' ? 'min-h-24' : 'min-h-14',
+            )}
           />
         </div>
       )
@@ -308,7 +345,9 @@ export function FieldControl({ field, value, onChange }: FieldControlProps) {
             min={field.min ?? undefined}
             max={field.max ?? undefined}
             step={field.type === 'integer' ? 1 : 'any'}
-            placeholder={field.default !== undefined && field.default !== null ? String(field.default) : ''}
+            placeholder={
+              field.default !== undefined && field.default !== null ? String(field.default) : ''
+            }
             onChange={(event) => {
               const text = event.target.value
               if (text === '') return onChange(undefined)
@@ -323,7 +362,11 @@ export function FieldControl({ field, value, onChange }: FieldControlProps) {
       return (
         <div className="flex items-center justify-between gap-2 py-0.5">
           {label}
-          <Switch checked={effective === true} onCheckedChange={(checked) => onChange(checked)} aria-label={field.label} />
+          <Switch
+            checked={effective === true}
+            onCheckedChange={(checked) => onChange(checked)}
+            aria-label={field.label}
+          />
         </div>
       )
     case 'select':
@@ -356,7 +399,11 @@ export function FieldControl({ field, value, onChange }: FieldControlProps) {
             value={optionIndex(field.options, effective)}
             onValueChange={(index) => onChange(field.options[Number(index)]?.value)}
           >
-            <SelectTrigger aria-label={field.label} className="h-7 text-xs" data-testid={`generate-field-${field.key}`}>
+            <SelectTrigger
+              aria-label={field.label}
+              className="h-7 text-xs"
+              data-testid={`generate-field-${field.key}`}
+            >
               <SelectValue placeholder={t('generate.form.default')} />
             </SelectTrigger>
             <SelectContent className="max-h-72">

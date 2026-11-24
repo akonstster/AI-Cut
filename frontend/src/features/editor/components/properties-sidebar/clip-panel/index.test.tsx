@@ -68,6 +68,14 @@ vi.mock('./shape-section', () => ({
   ShapeSection: () => <div>Shape Body</div>,
 }))
 
+vi.mock('./subtitle-section', () => ({
+  SubtitleSection: ({ items }: { items: TimelineItem[] }) => (
+    <div data-testid="subtitle-body" data-item-ids={items.map((item) => item.id).join(',')}>
+      Subtitle Body
+    </div>
+  ),
+}))
+
 vi.mock('../../animate-workspace/animation-preset-library', () => ({
   AnimationPresetLibrary: ({
     embedded,
@@ -321,6 +329,59 @@ describe('ClipPanel inspector tabs', () => {
     expect(useEditorStore.getState().clipInspectorTab).toBe('audio')
   })
 
+  it('shows the caption editor on the Audio tab for an audio clip with captions', async () => {
+    const audio = {
+      ...AUDIO_ITEM,
+      transcriptCaptions: {
+        type: 'transcript',
+        mediaId: 'media-audio-1',
+        enabled: true,
+        updatedAt: 1,
+        cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hi' }],
+      },
+    } as AudioItem
+    resetStores([audio], [audio.id])
+
+    render(<ClipPanel />)
+
+    expect(screen.getByTestId('audio-body')).toBeInTheDocument()
+    expect(await screen.findByTestId('subtitle-body')).toHaveAttribute('data-item-ids', audio.id)
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Audio'])
+  })
+
+  it('offers the subtitle editor again after captions were removed', async () => {
+    const audio = { ...AUDIO_ITEM, autoCaptionedAt: 1 } as AudioItem
+    resetStores([audio], [audio.id])
+
+    render(<ClipPanel />)
+
+    expect(await screen.findByTestId('subtitle-body')).toHaveAttribute('data-item-ids', audio.id)
+  })
+
+  it('shows only the caption editor for a subtitle segment', async () => {
+    const subtitle = {
+      id: 'subtitle-1',
+      type: 'subtitle',
+      trackId: 'track-1',
+      from: 0,
+      durationInFrames: 60,
+      label: 'Transcript',
+      source: { type: 'transcript', mediaId: 'media-1', clipId: 'clip-video-1' },
+      cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hi' }],
+    } as unknown as TimelineItem
+    resetStores([subtitle], [subtitle.id])
+
+    render(<ClipPanel />)
+
+    expect(await screen.findByTestId('subtitle-body')).toHaveAttribute(
+      'data-item-ids',
+      'subtitle-1',
+    )
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryByText('Layout Body')).not.toBeInTheDocument()
+    expect(screen.queryByText('Video Body')).not.toBeInTheDocument()
+  })
+
   it('shows visual media controls for a compound-only selection', () => {
     resetStores([COMPOSITION_ITEM], [COMPOSITION_ITEM.id])
 
@@ -334,10 +395,7 @@ describe('ClipPanel inspector tabs', () => {
 
     render(<ClipPanel />)
 
-    expect(screen.getByRole('tab', { name: 'Properties' })).toHaveAttribute(
-      'data-state',
-      'active',
-    )
+    expect(screen.getByRole('tab', { name: 'Properties' })).toHaveAttribute('data-state', 'active')
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Properties',
       'Audio',

@@ -6,6 +6,8 @@ import {
   AlignmentToolbar,
   TimecodeDisplay,
   PreviewZoomControls,
+  PreviewFullscreenButton,
+  PreviewScopesToggle,
   importSourceMonitor,
   importInlineSourcePreview,
   importInlineCompositionPreview,
@@ -555,6 +557,7 @@ export const PreviewArea = memo(function PreviewArea({
         style={hasSidePanels ? { width: `${programPanelPercent}%` } : undefined}
         role="region"
         aria-label="Program monitor"
+        data-preview-monitor
       >
         {hasSidePanels && (
           <div
@@ -711,7 +714,9 @@ export const PreviewArea = memo(function PreviewArea({
                     </div>
                   </div>
 
-                  <div className="ml-auto flex-shrink-0">
+                  <div className="ml-auto flex flex-shrink-0 items-center gap-0.5">
+                    {workspace === 'color' && <PreviewScopesToggle />}
+                    <PreviewFullscreenButton />
                     <PreviewZoomControls />
                   </div>
                 </div>

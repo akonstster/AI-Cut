@@ -1,7 +1,7 @@
 import { readJson, writeJsonAtomic } from '@/infrastructure/storage/workspace-fs/fs-primitives'
 import { projectDir } from '@/infrastructure/storage/workspace-fs/paths'
 import { requireWorkspaceRoot } from '@/infrastructure/storage/workspace-fs/root'
-import { EMPTY_GRAPH, type CanvasGraph } from './canvas-graph'
+import { EMPTY_GRAPH, type CanvasGraph, type CanvasNode } from './canvas-graph'
 
 interface ProjectCanvas {
   graph: CanvasGraph
@@ -22,7 +22,12 @@ export function loadProjectCanvas(projectId: string): Promise<ProjectCanvas> {
   const existing = projects.get(projectId)
   if (existing) return existing
   const pending = readJson<CanvasGraph>(root, [...projectDir(projectId), 'node-canvas.json'])
-    .then((graph) => ({ graph: graph ?? EMPTY_GRAPH, root, listeners: new Set<() => void>(), writes: Promise.resolve() }))
+    .then((graph) => ({
+      graph: graph ?? EMPTY_GRAPH,
+      root,
+      listeners: new Set<() => void>(),
+      writes: Promise.resolve(),
+    }))
     .catch((error: unknown) => {
       projects.delete(projectId)
       throw error
@@ -45,11 +50,47 @@ export function saveProjectCanvas(projectId: string, canvas: ProjectCanvas): Pro
   return written
 }
 
-export async function addShotWorkflow(projectId: string, shotId: string, videoModel?: import('../stores/generate-store').ModelRef) {
+/**
+ * Points a generate node at a job started elsewhere — a reviewed run sent from the Generate panel —
+ * so the node shows the job's progress and result exactly as if it had started it itself.
+ */
+export async function assignCanvasJob(
+  projectId: string,
+  nodeId: string,
+  job: string,
+): Promise<void> {
+  const canvas = await loadProjectCanvas(projectId)
+  const previous = canvas.graph
+  const node = previous.nodes.find((each) => each.id === nodeId)
+  if (!node || node.type !== 'generate') return
+  const next: CanvasNode = {
+    ...node,
+    data: { ...node.data, job, outputMedia: undefined, outputText: undefined },
+  }
+  const graph: CanvasGraph = {
+    ...previous,
+    nodes: previous.nodes.map((each) => (each.id === nodeId ? next : each)),
+  }
+  changeProjectCanvas(canvas, graph)
+  try {
+    await saveProjectCanvas(projectId, canvas)
+  } catch (error) {
+    if (canvas.graph === graph) changeProjectCanvas(canvas, previous)
+    throw error
+  }
+}
+
+export async function addShotWorkflow(
+  projectId: string,
+  shotId: string,
+  videoModel?: import('../stores/generate-store').ModelRef,
+) {
   const canvas = await loadProjectCanvas(projectId)
   if (canvas.graph.nodes.some((node) => node.data.shotId === shotId)) return
   const previous = canvas.graph
-  const x = previous.nodes.length ? Math.max(...previous.nodes.map((node) => node.position.x)) + 420 : 0
+  const x = previous.nodes.length
+    ? Math.max(...previous.nodes.map((node) => node.position.x)) + 420
+    : 0
   const prompt = crypto.randomUUID()
   const frame = crypto.randomUUID()
   const clip = crypto.randomUUID()
@@ -57,9 +98,24 @@ export async function addShotWorkflow(projectId: string, shotId: string, videoMo
     nodes: [
       ...previous.nodes,
       { id: prompt, type: 'prompt', position: { x, y: 0 }, data: { text: '', shotId } },
-      { id: frame, type: 'media', position: { x, y: 320 }, data: { ref: null, kind: 'image', name: '', shotId } },
-      { id: crypto.randomUUID(), type: 'media', position: { x, y: 590 }, data: { ref: null, kind: 'video', name: '', shotId } },
-      { id: clip, type: 'generate', position: { x: x + 320, y: 0 }, data: { task: 'video', model: videoModel ?? null, job: null, shotId } },
+      {
+        id: frame,
+        type: 'media',
+        position: { x, y: 320 },
+        data: { ref: null, kind: 'image', name: '', shotId },
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'media',
+        position: { x, y: 590 },
+        data: { ref: null, kind: 'video', name: '', shotId },
+      },
+      {
+        id: clip,
+        type: 'generate',
+        position: { x: x + 320, y: 0 },
+        data: { task: 'video', model: videoModel ?? null, job: null, shotId },
+      },
     ],
     edges: [
       ...previous.edges,

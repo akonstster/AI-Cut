@@ -30,8 +30,14 @@ const page = {
           kind: 'table',
           headers: ['Part', 'Needed'],
           rows: [
-            ['System', 'Windows 10 or 11, 64-bit, with Microsoft Edge WebView2 (the installer adds it when missing)'],
-            ['Graphics card', 'One with WebGPU (any recent NVIDIA, AMD or Intel) for the preview, effects and the fast export'],
+            [
+              'System',
+              'Windows 10 or 11, 64-bit, with Microsoft Edge WebView2 (the installer adds it when missing)',
+            ],
+            [
+              'Graphics card',
+              'One with WebGPU (any recent NVIDIA, AMD or Intel) for the preview, effects and the fast export',
+            ],
             ['Internet', 'Only for generation; editing and export work offline'],
             ['Keys', 'A key of OpenRouter, fal or Runware to generate; one provider is enough'],
           ],

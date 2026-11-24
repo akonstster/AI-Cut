@@ -15,10 +15,7 @@ import {
 type BlockedRanges = Parameters<typeof clampFrameToBlockedRanges>[2]
 
 const blocked = (...ranges: Array<[number, number]>): BlockedRanges =>
-  ranges.map(
-    ([start, end]) =>
-      ({ start, end }) as BlockedRanges[number],
-  )
+  ranges.map(([start, end]) => ({ start, end }) as BlockedRanges[number])
 
 const clip = (durationInFrames: number): TimelineItem =>
   ({ id: 'clip-1', type: 'video', durationInFrames }) as TimelineItem
@@ -103,7 +100,15 @@ describe('buildKeyframePastePlan', () => {
     })
 
     expect(plan.vectorPayloads).toEqual([
-      { property: 'x', vectorProperty: 'position', axis: 'x', frame: 12, value: 42, easing: 'linear', easingConfig: undefined },
+      {
+        property: 'x',
+        vectorProperty: 'position',
+        axis: 'x',
+        frame: 12,
+        value: 42,
+        easing: 'linear',
+        easingConfig: undefined,
+      },
     ])
     expect(plan.scalarPayloads).toEqual([])
   })

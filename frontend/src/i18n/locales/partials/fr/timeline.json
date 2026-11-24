@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "Aucun plan adjacent de ce côté.",
+      "dropOnExisting": "Déposez sur la transition existante pour la remplacer.",
+      "notEnoughFrames": "Il manque des images source pour une transition à ce point de coupe.",
+      "dropToTrim": "Relâchez pour voir de combien il faut raccourcir les plans.",
+      "trimTitle": "Raccourcir les plans pour ajouter la transition ?",
+      "trimDescription": "La transition durera {{duration}}. Les plans suivants sur cette piste avanceront de {{shift}}. Le même intervalle sera supprimé sur les autres pistes dont la synchronisation est verrouillée, ce qui peut raccourcir l’audio ou les sous-titres.",
+      "cancel": "Annuler",
+      "trimAndAdd": "Raccourcir et ajouter la transition",
+      "trimFailed": "Impossible d’ajouter la transition avec ce raccourcissement. Vérifiez le verrouillage des pistes et les transitions voisines."
+    },
     "track": {
       "unableToAddDroppedItem": "Impossible a Ajouter deposes element",
       "unableToAddDroppedMediaItems": "Impossible a Ajouter deposes Media elements",

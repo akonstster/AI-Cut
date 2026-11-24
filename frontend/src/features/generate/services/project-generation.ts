@@ -21,9 +21,11 @@ export async function writeProjectGeneration(id: string, state: ProjectGeneratio
     pending = new Map()
     queues.set(root, pending)
   }
-  const next = (pending.get(id) ?? Promise.resolve()).catch(() => {}).then(async () => {
-    await writeJsonAtomic(root, path(id), state)
-  })
+  const next = (pending.get(id) ?? Promise.resolve())
+    .catch(() => {})
+    .then(async () => {
+      await writeJsonAtomic(root, path(id), state)
+    })
   pending.set(id, next)
   try {
     await next

@@ -13,8 +13,10 @@ import type {
   DopesheetPropertyRowContentProps,
 } from './dopesheet-row-renderers'
 
-export interface UseDopesheetRowPropsOptions
-  extends Omit<DopesheetPropertyRowContentProps, 'row' | 'options'> {
+export interface UseDopesheetRowPropsOptions extends Omit<
+  DopesheetPropertyRowContentProps,
+  'row' | 'options'
+> {
   expandedGroups: DopesheetGroupHeaderProps['expandedGroups']
   dimensionSeparationByProperty: DopesheetGroupHeaderProps['dimensionSeparationByProperty']
   setAllGroupsExpanded: DopesheetGroupHeaderProps['setAllGroupsExpanded']

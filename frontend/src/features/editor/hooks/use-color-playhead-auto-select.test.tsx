@@ -133,6 +133,21 @@ describe('useColorPlayheadAutoSelect', () => {
     expect(useSelectionStore.getState().selectedItemIds).toEqual(['b'])
   })
 
+  it('defers selection during playback/shuttle and catches up on pause', () => {
+    seed([makeClip('a', 't1', 0, 90), makeClip('b', 't1', 90, 90)], [makeTrack('t1', 0)])
+    renderHook(() => useColorPlayheadAutoSelect())
+
+    act(() => {
+      usePlaybackStore.setState({ isPlaying: true, currentFrame: 120 })
+    })
+    expect(useSelectionStore.getState().selectedItemIds).toEqual(['a'])
+
+    act(() => {
+      usePlaybackStore.setState({ isPlaying: false })
+    })
+    expect(useSelectionStore.getState().selectedItemIds).toEqual(['b'])
+  })
+
   it('reselects after the selection is cleared', () => {
     seed([makeClip('a', 't1', 0, 90)], [makeTrack('t1', 0)])
     renderHook(() => useColorPlayheadAutoSelect())

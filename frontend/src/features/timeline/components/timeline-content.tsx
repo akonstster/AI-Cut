@@ -1705,6 +1705,45 @@ export const TimelineContent = memo(function TimelineContent({
     [applyZoomWithAnchor],
   )
 
+  /**
+   * Wheel zoom keeps the playhead where it is on screen, the way the zoom slider and the zoom
+   * buttons do. Only when the playhead is scrolled out of view does it fall back to the pointer,
+   * so zooming into a corner of the timeline still works.
+   */
+  const applyZoomWithWheelAnchor = useCallback(
+    (newZoomLevel: number) => {
+      const container = containerRef.current
+      if (!container) return
+
+      const currentZoom = queuedZoomLevelRef.current ?? useZoomStore.getState().level
+      const baseScrollLeft =
+        queuedZoomScrollLeftRef.current ?? pendingScrollRef.current ?? container.scrollLeft
+      const playheadAnchor = getPlayheadZoomAnchor({
+        currentFrame: currentFrameRef.current,
+        currentZoomLevel: currentZoom,
+        fps: useTimelineSettingsStore.getState().fps,
+        maxDurationSeconds: actualDurationRef.current,
+        scrollLeft: baseScrollLeft,
+      })
+      const viewportWidth = viewportDimsRef.current?.width ?? container.clientWidth
+      const playheadVisible =
+        playheadAnchor.anchorScreenX >= 0 && playheadAnchor.anchorScreenX <= viewportWidth
+
+      applyZoomWithAnchor(
+        newZoomLevel,
+        playheadVisible
+          ? playheadAnchor
+          : getCursorZoomAnchor({
+              currentZoomLevel: currentZoom,
+              cursorScreenX: zoomCursorXRef.current,
+              maxDurationSeconds: actualDurationRef.current,
+              scrollLeft: baseScrollLeft,
+            }),
+      )
+    },
+    [applyZoomWithAnchor],
+  )
+
   const handleZoomChange = useCallback(
     (newZoom: number) => {
       applyZoomWithPlayheadAnchor(newZoom)
@@ -1986,7 +2025,7 @@ export const TimelineContent = memo(function TimelineContent({
         zoomCursorXRef.current = event.clientX - containerLeft
 
         const currentZoom = queuedZoomLevelRef.current ?? useZoomStore.getState().level
-        applyZoomWithCursorAnchor(computeWheelZoomStep(currentZoom, event.deltaY))
+        applyZoomWithWheelAnchor(computeWheelZoomStep(currentZoom, event.deltaY))
         return
       }
 
@@ -2038,6 +2077,7 @@ export const TimelineContent = memo(function TimelineContent({
     }
   }, [
     applyZoomWithCursorAnchor,
+    applyZoomWithWheelAnchor,
     cancelPendingHoverPreview,
     getVerticalScrollTarget,
     hasTrackSections,

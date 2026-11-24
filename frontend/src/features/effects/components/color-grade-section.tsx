@@ -7,11 +7,16 @@ import {
   Columns2,
   Copy,
   Eye,
+  EyeOff,
   Layers,
+  LayoutGrid,
+  RotateCcw,
   Save,
+  Trash2,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect } from '@/types/effects'
 import {
@@ -27,10 +32,12 @@ import { useGradeClipboardStore, type GradeClipboardEntry } from '@/shared/state
 import { PropertySection } from '@/shared/ui/property-controls'
 import { cn } from '@/shared/ui/cn'
 import { GpuWheelsPanel, GpuCurvesPanel } from './panels'
+import { EffectsSection } from './effects-section'
 import {
   getGpuEffect,
   getGpuEffectDefaultParams,
   isColorGradeEffectType,
+  type GpuEffectDefinition,
 } from '@/infrastructure/gpu-effects'
 import { useUserPresetsStore } from '../stores/user-presets-store'
 import { getAutoKeyframeOperation } from '@/features/effects/deps/keyframes-contract'
@@ -45,7 +52,12 @@ import { applyGradePresetToEffectStack, hasGradePresetEffects } from '../utils/g
 type GradeEffectType = 'gpu-color-wheels' | 'gpu-curves'
 type EffectParams = Record<string, number | boolean | string>
 
+/** Color page parameter tabs: Resolve-style single-surface dock instead of a stack. */
+export type ColorParamsTab = 'primary' | 'curves' | 'lut'
+
 const GRADE_EFFECT_TYPES: readonly GradeEffectType[] = ['gpu-color-wheels', 'gpu-curves']
+const LUT_EFFECT_TYPES: readonly string[] = ['gpu-lut']
+const COLOR_PARAMS_TAB_IDS: readonly ColorParamsTab[] = ['primary', 'curves', 'lut']
 
 function syntheticGradeId(type: GradeEffectType): string {
   return `__grade:${type}__`
@@ -59,6 +71,15 @@ function findGradeEntry(item: TimelineItem, type: GradeEffectType): ItemEffect |
 
 function isColorGradeEntry(entry: ItemEffect): boolean {
   return entry.effect.type === 'gpu-effect' && isColorGradeEffectType(entry.effect.gpuEffectType)
+}
+
+/** True when every definition param still holds its default value. */
+function isGradeEntryDefault(entry: ItemEffect, definition: GpuEffectDefinition): boolean {
+  if (entry.effect.type !== 'gpu-effect') return true
+  const params = entry.effect.params
+  return Object.entries(definition.params).every(([key, param]) =>
+    Object.is(params[key], param.default),
+  )
 }
 
 function itemHasGrade(item: TimelineItem): boolean {
@@ -121,6 +142,9 @@ interface ColorGradeSectionProps {
   layout?: 'sidebar' | 'dock'
   /** Optional quick action: create an adjustment layer for scene-wide grading */
   onCreateAdjustmentLayer?: () => void
+  /** Active parameter tab in the dock layout, persisted by the Color page. */
+  paramsTab?: ColorParamsTab
+  onParamsTabChange?: (tab: ColorParamsTab) => void
 }
 
 function DockPane({ className, children }: { className?: string; children: ReactNode }) {
@@ -142,6 +166,8 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   items,
   layout = 'sidebar',
   onCreateAdjustmentLayer,
+  paramsTab = 'primary',
+  onParamsTabChange,
 }: ColorGradeSectionProps) {
   const { t } = useTranslation()
   const setEffectsPreviewNew = useGizmoStore((s) => s.setEffectsPreviewNew)
@@ -251,12 +277,7 @@ export const ColorGradeSection = memo(function ColorGradeSection({
       }
       queueMicrotask(() => clearPreview())
     },
-    [
-      clearPreview,
-      currentFrame,
-      keyframesByItemId,
-      visualItems,
-    ],
+    [clearPreview, currentFrame, keyframesByItemId, visualItems],
   )
 
   // Live preview during drags. For items without the grade effect, the
@@ -391,6 +412,8 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   const loadUserPresets = useUserPresetsStore((s) => s.loadPresets)
   const removeUserPreset = useUserPresetsStore((s) => s.removePreset)
   const [presetNameDraft, setPresetNameDraft] = useState<string | null>(null)
+  const [presetPopoverOpen, setPresetPopoverOpen] = useState(false)
+  const [galleryPopoverOpen, setGalleryPopoverOpen] = useState(false)
   const gradeEffects = useMemo(
     () =>
       (displayItem?.effects ?? [])
@@ -490,7 +513,7 @@ export const ColorGradeSection = memo(function ColorGradeSection({
 
   const compareControls = (
     <div
-      className="grid grid-cols-3 gap-1"
+      className={layout === 'dock' ? 'flex flex-col gap-1' : 'grid grid-cols-3 gap-1'}
       role="group"
       aria-label={t('effects.colorPanel.compareMode')}
     >
@@ -535,39 +558,39 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   )
 
   const gradeActions = (
-    <div className="flex flex-wrap gap-1">
+    <div className={layout === 'dock' ? 'flex flex-col gap-1' : 'flex flex-wrap gap-1'}>
       <Button
         variant="outline"
         size="sm"
-        className="h-7 min-w-[5.75rem] flex-1 text-xs"
+        className="h-7 min-w-0 flex-1 overflow-hidden text-xs"
         onClick={handleCopyGrade}
         disabled={!canCopyGrade}
         title={t('timeline.contextMenu.copyGrade')}
       >
-        <Copy className="mr-1 h-3 w-3" />
-        {t('timeline.contextMenu.copyGrade')}
+        <Copy className="mr-1 h-3 w-3 flex-shrink-0" />
+        <span className="truncate">{t('timeline.contextMenu.copyGrade')}</span>
       </Button>
       <Button
         variant="outline"
         size="sm"
-        className="h-7 min-w-[5.75rem] flex-1 text-xs"
+        className="h-7 min-w-0 flex-1 overflow-hidden text-xs"
         onClick={handlePasteGrade}
         disabled={!hasCopiedGrade}
         title={t('timeline.contextMenu.pasteGrade')}
       >
-        <ClipboardPaste className="mr-1 h-3 w-3" />
-        {t('timeline.contextMenu.pasteGrade')}
+        <ClipboardPaste className="mr-1 h-3 w-3 flex-shrink-0" />
+        <span className="truncate">{t('timeline.contextMenu.pasteGrade')}</span>
       </Button>
       {onCreateAdjustmentLayer && (
         <Button
           variant="outline"
           size="sm"
-          className="h-7 min-w-[7.5rem] flex-1 text-xs"
+          className="h-7 min-w-0 flex-1 overflow-hidden text-xs"
           onClick={onCreateAdjustmentLayer}
           title={t('effects.colorPanel.adjustmentLayerTooltip')}
         >
-          <Layers className="mr-1 h-3 w-3" />
-          {t('effects.colorPanel.adjustmentLayer')}
+          <Layers className="mr-1 h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{t('effects.colorPanel.adjustmentLayer')}</span>
         </Button>
       )}
       <Button
@@ -690,18 +713,233 @@ export const ColorGradeSection = memo(function ColorGradeSection({
     />
   )
 
+  const dockTabEntry =
+    paramsTab === 'primary' ? wheelsEntry : paramsTab === 'curves' ? curvesEntry : null
+  const dockTabDefinition =
+    paramsTab === 'primary' ? wheelsDefinition : paramsTab === 'curves' ? curvesDefinition : null
+  const dockTabIsSynthetic = !dockTabEntry || dockTabEntry.id.startsWith('__grade:')
+  const dockTabIsDefault =
+    dockTabIsSynthetic || !dockTabEntry || !dockTabDefinition
+      ? true
+      : isGradeEntryDefault(dockTabEntry, dockTabDefinition)
+  const dockTabEnabled = dockTabEntry?.enabled ?? false
+  const dockResetLabel = t('effects.panel.resetToDefaults')
+  const dockToggleLabel = dockTabEnabled
+    ? t('effects.panel.disableEffect')
+    : t('effects.panel.enableEffect')
+  const dockRemoveLabel = t('effects.panel.removeEffect')
+
   if (layout === 'dock') {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[3px] border border-border/70 bg-background/35">
-        <div className="grid shrink-0 gap-2 border-b border-border/70 p-2 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.75fr)]">
-          {compareControls}
-          {gradeActions}
+        <div className="flex shrink-0 items-center gap-1 border-b border-border/70 pl-1 pr-1.5">
+          <div
+            role="tablist"
+            aria-label={t('effects.colorPanel.title')}
+            className="flex items-center gap-0.5 pt-1"
+          >
+            {COLOR_PARAMS_TAB_IDS.map((tabId) => (
+              <button
+                key={tabId}
+                type="button"
+                role="tab"
+                aria-selected={paramsTab === tabId}
+                data-testid={`color-params-tab-${tabId}`}
+                onClick={() => onParamsTabChange?.(tabId)}
+                className={cn(
+                  'h-6 rounded-t-[3px] px-2.5 text-[11px] leading-none transition-colors',
+                  paramsTab === tabId
+                    ? 'bg-background text-foreground shadow-[inset_0_-2px_0_0_currentColor]'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t(`effects.colorPanel.tabs.${tabId}`)}
+              </button>
+            ))}
+          </div>
+          {/* Effect actions for the active tab sit in the tab row — the panel
+              header that used to occupy a full row above the wheels is gone. */}
+          <div className="ml-auto flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-6 w-6', dockTabIsDefault && 'opacity-30')}
+              onClick={() => dockTabEntry && handleReset(dockTabEntry.id)}
+              disabled={dockTabIsSynthetic || dockTabIsDefault}
+              title={dockResetLabel}
+              aria-label={dockResetLabel}
+            >
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => dockTabEntry && handleToggle(dockTabEntry.id)}
+              disabled={dockTabIsSynthetic}
+              title={dockToggleLabel}
+              aria-label={dockToggleLabel}
+            >
+              {dockTabEnabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => dockTabEntry && handleRemove(dockTabEntry.id)}
+              disabled={dockTabIsSynthetic}
+              title={dockRemoveLabel}
+              aria-label={dockRemoveLabel}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
-        {presetNameInput}
-        {gradeGallery}
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.5fr)_minmax(0,0.5fr)]">
-          <DockPane className="border-r border-border/70">{wheelsPanel}</DockPane>
-          <DockPane>{curvesPanel}</DockPane>
+        <div className="flex min-h-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            {paramsTab === 'primary' && <DockPane>{wheelsPanel}</DockPane>}
+            {paramsTab === 'curves' && <DockPane>{curvesPanel}</DockPane>}
+            {paramsTab === 'lut' && (
+              <DockPane>
+                <EffectsSection
+                  items={visualItems}
+                  onlyGpuEffectTypes={LUT_EFFECT_TYPES}
+                  layout="dock"
+                />
+              </DockPane>
+            )}
+          </div>
+          {/* Icon rail: compare modes, grade actions and presets in 36px instead
+              of a text column that squeezed the preset name field. */}
+          <aside
+            className="flex w-9 shrink-0 flex-col items-center gap-0.5 border-l border-border/70 py-1"
+            aria-label={t('effects.colorPanel.compareMode')}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7',
+                colorGradeComparisonMode === 'off' && 'bg-primary/25 text-primary',
+              )}
+              onClick={() => setColorGradeComparisonMode('off')}
+              title={t('effects.colorPanel.compareAfterTooltip')}
+              aria-label={t('effects.colorPanel.compareAfterTooltip')}
+              aria-pressed={colorGradeComparisonMode === 'off'}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7',
+                colorGradeComparisonMode === 'before' && 'bg-primary/25 text-primary',
+              )}
+              onClick={() => setColorGradeComparisonMode('before')}
+              title={t('effects.colorPanel.compareBeforeTooltip')}
+              aria-label={t('effects.colorPanel.compareBeforeTooltip')}
+              aria-pressed={colorGradeComparisonMode === 'before'}
+            >
+              <CircleOff className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-7',
+                colorGradeComparisonMode === 'split' && 'bg-primary/25 text-primary',
+              )}
+              onClick={() => setColorGradeComparisonMode('split')}
+              disabled={!canCompareGrade}
+              title={splitCompareTitle}
+              aria-label={splitCompareTitle}
+              aria-pressed={colorGradeComparisonMode === 'split'}
+            >
+              <Columns2 className="h-3.5 w-3.5" />
+            </Button>
+
+            <span className="my-0.5 h-px w-5 bg-border/70" />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleCopyGrade}
+              disabled={!canCopyGrade}
+              title={t('timeline.contextMenu.copyGrade')}
+              aria-label={t('timeline.contextMenu.copyGrade')}
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handlePasteGrade}
+              disabled={!hasCopiedGrade}
+              title={t('timeline.contextMenu.pasteGrade')}
+              aria-label={t('timeline.contextMenu.pasteGrade')}
+            >
+              <ClipboardPaste className="h-3.5 w-3.5" />
+            </Button>
+            {onCreateAdjustmentLayer && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={onCreateAdjustmentLayer}
+                title={t('effects.colorPanel.adjustmentLayerTooltip')}
+                aria-label={t('effects.colorPanel.adjustmentLayer')}
+              >
+                <Layers className="h-3.5 w-3.5" />
+              </Button>
+            )}
+
+            <span className="my-0.5 h-px w-5 bg-border/70" />
+
+            <Popover
+              open={presetPopoverOpen}
+              onOpenChange={(open) => {
+                setPresetPopoverOpen(open)
+                if (!open) setPresetNameDraft(null)
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setPresetNameDraft('')}
+                  disabled={gradeEffects.length === 0}
+                  title={savePresetLabel}
+                  aria-label={savePresetLabel}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="left" align="start" className="w-64 p-2">
+                {presetNameInput}
+              </PopoverContent>
+            </Popover>
+            <Popover open={galleryPopoverOpen} onOpenChange={setGalleryPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={gradePresets.length === 0}
+                  title={t('effects.colorPanel.gallery')}
+                  aria-label={t('effects.colorPanel.gallery')}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="left" align="end" className="w-72 p-2">
+                {gradeGallery}
+              </PopoverContent>
+            </Popover>
+          </aside>
         </div>
       </div>
     )

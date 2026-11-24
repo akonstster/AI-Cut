@@ -71,7 +71,9 @@
       "removeFilesFromFolder": "Remove files from the linked folder. This cannot be undone.",
       "removeFilesFromNamedFolder": "Remove files from the linked folder \"{{folder}}\". This cannot be undone.",
       "openProject": "Open project",
-      "actions": "Project actions"
+      "actions": "Project actions",
+      "openProjectHint": "Open this project in the editor",
+      "actionsHint": "Rename, duplicate or delete this project"
     },
     "form": {
       "createTitle": "Create New Project",
@@ -109,6 +111,12 @@
       "descending": "Descending",
       "clearFilters": "Clear Filters",
       "clearSelection": "Clear",
+      "clearSearch": "Clear search",
+      "clearFiltersHint": "Show all projects again",
+      "clearSelectionHint": "Deselect the highlighted projects — nothing is deleted",
+      "deleteSelectedHint": "Move the selected projects to the trash",
+      "newProjectHint": "Create a new project",
+      "importProjectHint": "Import a project bundle (.zip)",
       "selectedCount_one": "{{count}} selected",
       "selectedCount_other": "{{count}} selected",
       "deleteN_one": "Delete {{count}}",
@@ -499,6 +507,7 @@
           "zoomTo100": "Zoom to 100%",
           "toggleSnap": "Toggle snap",
           "toggleCanvasSnap": "Toggle canvas (gizmo) snap",
+          "togglePreviewFullscreen": "Toggle preview fullscreen",
           "editWorkspace": "Switch to Edit workspace",
           "colorWorkspace": "Switch to Color workspace",
           "copy": "Copy selected items or keyframes",

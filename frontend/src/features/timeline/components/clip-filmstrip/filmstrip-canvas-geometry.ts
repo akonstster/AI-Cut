@@ -46,10 +46,7 @@ export interface FilmstripCanvasTilesOptions {
 export const MAX_VISIBLE_FILMSTRIP_TILES = 64
 
 export function getFilmstripTileStride(startTile: number, endTile: number): number {
-  return Math.max(
-    1,
-    Math.ceil(Math.max(0, endTile - startTile) / MAX_VISIBLE_FILMSTRIP_TILES),
-  )
+  return Math.max(1, Math.ceil(Math.max(0, endTile - startTile) / MAX_VISIBLE_FILMSTRIP_TILES))
 }
 
 export function computeFilmstripCanvasGeometry(

@@ -10,21 +10,25 @@ const page = {
   related: ['keyboard-shortcuts', 'workspaces'],
   sections: [
     {
-      title: 'The four tabs',
+      title: 'Settings sections',
       blocks: [
         {
           kind: 'table',
           headers: ['Tab', 'What you set'],
           rows: [
             [
+              'Providers and agent',
+              'Provider keys, spending, the MCP server port, and "review generation parameters first" — fills the Generate panel instead of sending a run immediately.',
+            ],
+            [
               'General',
-              'Auto-save on/off and interval (5–30 min); undo history depth (10–200 steps); interface sounds (on/off, volume, sound theme).',
+              'Auto-save on/off and interval (5–30 min); undo history depth (10–200 steps); interface sounds (on/off, volume, sound theme); open the last project on start; tape-style audio skimming.',
             ],
             [
               'Timeline',
               'Snap by default; show waveforms and filmstrips; extract filmstrips on import.',
             ],
-            ['AI', 'Caption sample interval (seconds or frames); default caption style.'],
+            ['AI', 'Local models, preparation, removal, analysis and caption settings.'],
             [
               'Storage',
               'Generate missing proxies; clear project cache; regenerate thumbnails; delete proxies; manage Local AI.',

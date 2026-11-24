@@ -1,6 +1,7 @@
 {
   "media": {
     "card": {
+      "largePreview": "Крупный предпросмотр",
       "previewUnavailable": "Не удалось открыть файл для просмотра.",
       "aiCaptionsCount": "Количество AI-субтитров",
       "analyzeWithAI": "Анализировать с помощью AI",

@@ -101,10 +101,7 @@ interface UseKeyframePropertyValuesParams {
 }
 
 /** Whether the clip already carries keyframes for any of these properties. */
-function hasKeyframesForProperties(
-  itemId: string,
-  properties: AnimatableProperty[],
-): boolean {
+function hasKeyframesForProperties(itemId: string, properties: AnimatableProperty[]): boolean {
   const keyframeState = useKeyframesStore.getState().keyframesByItemId[itemId]
   return properties.some(
     (property) =>

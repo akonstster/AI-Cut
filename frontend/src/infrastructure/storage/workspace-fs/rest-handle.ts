@@ -36,8 +36,17 @@ async function fail(response: Response): Promise<never> {
   throw new DOMException(message, name)
 }
 
-async function call(method: string, route: string, params: Record<string, string>, body?: BodyInit): Promise<Response> {
-  const response = await fetch(`${API}/${route}?${query(params)}`, { method, body, cache: 'no-store' })
+async function call(
+  method: string,
+  route: string,
+  params: Record<string, string>,
+  body?: BodyInit,
+): Promise<Response> {
+  const response = await fetch(`${API}/${route}?${query(params)}`, {
+    method,
+    body,
+    cache: 'no-store',
+  })
   if (!response.ok) await fail(response)
   return response
 }
@@ -57,7 +66,11 @@ function restFileUrl(path: string): string {
   return `${API}/read?${query({ path })}`
 }
 
-type WriteChunk = string | BufferSource | Blob | { type?: string; data?: unknown; position?: number; size?: number }
+type WriteChunk =
+  | string
+  | BufferSource
+  | Blob
+  | { type?: string; data?: unknown; position?: number; size?: number }
 
 class RestWritable {
   private parts: BlobPart[] = []
@@ -67,10 +80,19 @@ class RestWritable {
 
   async write(chunk: WriteChunk): Promise<void> {
     if (this.closed) throw new DOMException('The stream is closed', 'InvalidStateError')
-    if (chunk && typeof chunk === 'object' && !(chunk instanceof Blob) && !ArrayBuffer.isView(chunk) && !(chunk instanceof ArrayBuffer)) {
+    if (
+      chunk &&
+      typeof chunk === 'object' &&
+      !(chunk instanceof Blob) &&
+      !ArrayBuffer.isView(chunk) &&
+      !(chunk instanceof ArrayBuffer)
+    ) {
       const command = chunk as { type?: string; data?: unknown; position?: number }
       if (command.type !== 'write' || command.position !== undefined) {
-        throw new DOMException(`Writable command ${command.type ?? 'unknown'} is not supported here`, 'NotSupportedError')
+        throw new DOMException(
+          `Writable command ${command.type ?? 'unknown'} is not supported here`,
+          'NotSupportedError',
+        )
       }
       await this.write(command.data as WriteChunk)
       return
@@ -135,7 +157,8 @@ class RestFileHandle extends RestHandle {
   }
 
   async move(target: RestDirectoryHandle | string, newName?: string): Promise<void> {
-    const parent = typeof target === 'string' ? this.path.split('/').slice(0, -1).join('/') : target.path
+    const parent =
+      typeof target === 'string' ? this.path.split('/').slice(0, -1).join('/') : target.path
     const name = typeof target === 'string' ? target : (newName ?? this.name)
     const to = join(parent, name)
     await call('POST', 'move', { from: this.path, to })
@@ -151,13 +174,17 @@ class RestFileHandle extends RestHandle {
 class RestDirectoryHandle extends RestHandle {
   readonly kind = 'directory' as const
 
-  async getDirectoryHandle(name: string, options: { create?: boolean } = {}): Promise<RestDirectoryHandle> {
+  async getDirectoryHandle(
+    name: string,
+    options: { create?: boolean } = {},
+  ): Promise<RestDirectoryHandle> {
     const path = join(this.path, name)
     if (options.create) {
       await call('POST', 'mkdir', { path })
     } else {
       const found = await stat(path)
-      if (found.kind !== 'directory') throw new DOMException(`${path} is a file`, 'TypeMismatchError')
+      if (found.kind !== 'directory')
+        throw new DOMException(`${path} is a file`, 'TypeMismatchError')
     }
     return new RestDirectoryHandle(path, name)
   }
@@ -174,7 +201,10 @@ class RestDirectoryHandle extends RestHandle {
   }
 
   async removeEntry(name: string, options: { recursive?: boolean } = {}): Promise<void> {
-    await call('DELETE', 'remove', { path: join(this.path, name), recursive: String(Boolean(options.recursive)) })
+    await call('DELETE', 'remove', {
+      path: join(this.path, name),
+      recursive: String(Boolean(options.recursive)),
+    })
   }
 
   async resolve(possibleDescendant: RestHandle): Promise<string[] | null> {

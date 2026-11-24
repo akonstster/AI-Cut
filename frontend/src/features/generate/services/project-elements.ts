@@ -53,22 +53,32 @@ export async function loadProjectElements(projectId: string): Promise<ProjectEle
   const write = async (elements: PromptElement[]) => {
     await writeJsonAtomic(root, path, elements)
   }
-  const pending = readJson<PromptElement[]>(root, path).then(async (saved) => {
-    const elements = saved ?? await recoverLegacyElements(projectId)
-    if (!saved && elements.length) {
-      await write(elements)
-      useGenerateStore.getState().forgetLegacyElements(elements)
-    }
-    return { elements, writes: Promise.resolve(), listeners: new Set<(elements: PromptElement[]) => void>(), write }
-  }).catch((error: unknown) => {
-    projects.delete(projectId)
-    throw error
-  })
+  const pending = readJson<PromptElement[]>(root, path)
+    .then(async (saved) => {
+      const elements = saved ?? (await recoverLegacyElements(projectId))
+      if (!saved && elements.length) {
+        await write(elements)
+        useGenerateStore.getState().forgetLegacyElements(elements)
+      }
+      return {
+        elements,
+        writes: Promise.resolve(),
+        listeners: new Set<(elements: PromptElement[]) => void>(),
+        write,
+      }
+    })
+    .catch((error: unknown) => {
+      projects.delete(projectId)
+      throw error
+    })
   projects.set(projectId, pending)
   return pending
 }
 
-async function changeElements(projectId: string, update: (elements: PromptElement[]) => PromptElement[]) {
+async function changeElements(
+  projectId: string,
+  update: (elements: PromptElement[]) => PromptElement[],
+) {
   const project = await loadProjectElements(projectId)
   const write = project.writes.then(async () => {
     const elements = update(project.elements)
@@ -80,15 +90,24 @@ async function changeElements(projectId: string, update: (elements: PromptElemen
   await write
 }
 
-export function saveProjectElement(projectId: string, element: PromptElement, previousName?: string) {
+export function saveProjectElement(
+  projectId: string,
+  element: PromptElement,
+  previousName?: string,
+) {
   return changeElements(projectId, (elements) => [
-    ...elements.filter((each) => each.name.toLowerCase() !== element.name.toLowerCase() && each.name !== previousName),
+    ...elements.filter(
+      (each) =>
+        each.name.toLowerCase() !== element.name.toLowerCase() && each.name !== previousName,
+    ),
     element,
   ])
 }
 
 export function removeProjectElement(projectId: string, name: string) {
-  return changeElements(projectId, (elements) => elements.filter((each) => each.name.toLowerCase() !== name.toLowerCase()))
+  return changeElements(projectId, (elements) =>
+    elements.filter((each) => each.name.toLowerCase() !== name.toLowerCase()),
+  )
 }
 
 export function replaceProjectElements(projectId: string, elements: PromptElement[]) {

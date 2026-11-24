@@ -22,7 +22,9 @@ export async function exportFcpxml(): Promise<void> {
   const workspace = info?.workspace ?? ''
   if (!workspace) throw new Error(i18n.t('export.fcpxml.noWorkspace'))
   const media: Record<string, FcpxmlMedia> = {}
-  for (const mediaId of new Set(items.flatMap((item) => ('mediaId' in item && item.mediaId ? [item.mediaId] : [])))) {
+  for (const mediaId of new Set(
+    items.flatMap((item) => ('mediaId' in item && item.mediaId ? [item.mediaId] : [])),
+  )) {
     const metadata = getMediaMetadataById(mediaId)
     if (!metadata) continue
     const segments = await mediaSourcePath(mediaId)
@@ -49,7 +51,9 @@ export async function exportFcpxml(): Promise<void> {
     const saved = await saveToDisk(blob, name, { dialog: true })
     if (saved.cancelled || !saved.path) return
     const path = saved.path
-    toast.success(i18n.t('desktop.saved', { path }), { action: { label: i18n.t('desktop.reveal'), onClick: () => void revealOnDisk(path) } })
+    toast.success(i18n.t('desktop.saved', { path }), {
+      action: { label: i18n.t('desktop.reveal'), onClick: () => void revealOnDisk(path) },
+    })
   } else {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -60,9 +64,14 @@ export async function exportFcpxml(): Promise<void> {
   }
   if (left.length > 0) {
     const reasons = (['kind', 'file', 'speed'] as const)
-      .map((reason) => ({ reason, labels: left.filter((each) => each.reason === reason).map((each) => each.label) }))
+      .map((reason) => ({
+        reason,
+        labels: left.filter((each) => each.reason === reason).map((each) => each.label),
+      }))
       .filter((group) => group.labels.length > 0)
-      .map((group) => i18n.t(`export.fcpxml.left.${group.reason}`, { items: group.labels.join(', ') }))
+      .map((group) =>
+        i18n.t(`export.fcpxml.left.${group.reason}`, { items: group.labels.join(', ') }),
+      )
     toast.warning(reasons.join('\n'))
   }
 }

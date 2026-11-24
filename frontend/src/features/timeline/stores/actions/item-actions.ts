@@ -35,6 +35,7 @@ import {
   canLinkSelection,
   expandSelectionWithLinkedItems,
   getLinkedItemIds,
+  getLinkedSyncRestoreUpdates,
   getSynchronizedLinkedItems,
 } from '../../utils/linked-items'
 import { isTrackSyncLockEnabled } from '../../utils/track-sync-lock'
@@ -106,18 +107,18 @@ function isInvalidTransformParentUpdate(
   if (!child || !canParticipateInTransformHierarchy(child)) return true
   return Boolean(
     context.parentItemId &&
-      (wouldCreateTransformParentCycle(
-          childItemId,
-          context.parentItemId,
-          context.getItem,
-          context.getKeyframes,
-        ) ||
-        hasRedundantTransformParentLink(
-          childItemId,
-          context.parentItemId,
-          context.getItem,
-          context.getKeyframes,
-        )),
+    (wouldCreateTransformParentCycle(
+      childItemId,
+      context.parentItemId,
+      context.getItem,
+      context.getKeyframes,
+    ) ||
+      hasRedundantTransformParentLink(
+        childItemId,
+        context.parentItemId,
+        context.getItem,
+        context.getKeyframes,
+      )),
   )
 }
 
@@ -913,18 +914,35 @@ export function commitPreparedReverseItems(
 }
 
 export function removeItems(ids: string[]): void {
-  const expandedIds = expandIdsWithLinkedItems(
-    useItemsStore.getState().items,
-    ids,
-    isLinkedSelectionEnabled(),
-  )
+  const itemsBeforeRemoval = useItemsStore.getState().items
+  const expandedIds = expandIdsWithLinkedItems(itemsBeforeRemoval, ids, isLinkedSelectionEnabled())
   if (expandedIds.length === 0) return
 
   execute(
     'REMOVE_ITEMS',
     () => {
+      // Deleting captions is a decision: remember it on the source clip so auto-captioning does
+      // not generate the same subtitles again the next time the project opens.
+      const removedIds = new Set(expandedIds)
+      const captionSourceIds = new Set<string>()
+      for (const item of itemsBeforeRemoval) {
+        if (!removedIds.has(item.id)) continue
+        if (item.type === 'subtitle' && 'clipId' in item.source && item.source.clipId) {
+          captionSourceIds.add(item.source.clipId)
+        } else if (item.transcriptCaptions) {
+          captionSourceIds.add(item.id)
+        }
+      }
+
       // Remove items
       useItemsStore.getState()._removeItems(expandedIds)
+
+      const store = useItemsStore.getState()
+      for (const clipId of captionSourceIds) {
+        if (store.itemById[clipId]) {
+          store._updateItem(clipId, { autoCaptionedAt: Date.now() })
+        }
+      }
 
       // Cascade: Remove transitions referencing deleted items
       useTransitionsStore.getState()._removeTransitionsForItems(expandedIds)
@@ -1254,6 +1272,23 @@ export function moveItems(updates: Array<{ id: string; from: number; trackId?: s
     },
     { count: updates.length },
   )
+}
+
+/**
+ * Puts a drifted linked pair back in sync: the sound moves onto its picture (one undoable step).
+ * Offered by the red "out of sync" badge's context menu.
+ */
+export function restoreLinkedSync(itemIds: string[]): void {
+  const items = useItemsStore.getState().items
+  const fps = useTimelineSettingsStore.getState().fps || 30
+  const updates = new Map<string, { id: string; from: number }>()
+  for (const id of itemIds) {
+    for (const update of getLinkedSyncRestoreUpdates(items, id, fps)) {
+      updates.set(update.id, update)
+    }
+  }
+  if (updates.size === 0) return
+  moveItems([...updates.values()])
 }
 
 export function moveItemsWithTrackChanges(

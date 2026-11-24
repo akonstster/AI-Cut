@@ -3,6 +3,12 @@
     "tabLabel": "Generate",
     "archivedHistory": "Imported generation history ({{count}})",
     "serverError": "The AI-Cut server did not answer: {{reason}}",
+    "review": {
+      "held": "Generation is waiting for review — check the model, prompt and references, then press Generate.",
+      "heldCanvas": "Generation is waiting for review — check the model, prompt and references, then press Generate; the result goes back to the canvas node.",
+      "heldStoryboard": "Generation is waiting for review — check the model, prompt and references, then press Generate; the result goes back to the shot.",
+      "notReturned": "The model or task changed, so the result stays in the history instead of going back."
+    },
     "tasks": {
       "image": "Image",
       "image_edit": "Edit image",
@@ -115,6 +121,11 @@
       "unlike": "Unlike"
     },
     "importFailed": "The result arrived but was not added to the library: {{reason}}",
+    "result": {
+      "openLarge": "Click to open large",
+      "openLargeAudio": "Double-click to open large",
+      "unavailable": "This result could not be opened."
+    },
     "improve": {
       "button": "Improve prompt",
       "hint": "Rewrite the prompt for this model with an OpenRouter LLM (a fraction of a cent)",
@@ -163,7 +174,7 @@
       "frame": "Frame",
       "frameAgain": "Frame again",
       "clip": "Clip",
-      "clipNeedsFrame": "This model starts a clip on a frame: make the frame first",
+      "clipNeedsFrame": "This model requires a first frame. Select one in the shot.",
       "frameDone": "frame made",
       "clipDone": "clip on the timeline",
       "frameFailed": "The frame failed: {{reason}}",
@@ -311,6 +322,7 @@
       "badJson": "The text is not JSON: {{reason}}"
     },
     "elements": {
+      "referenceCount": "This shot needs {{count}} reference images. The model allows {{limit}}. Reduce the references for {{names}} or choose another model.",
       "noReferenceSlot": "This model cannot accept images from {{names}}. To use an image as the opening frame, connect it as the first frame and remove the @mention.",
       "blocked": "Reference images for {{names}} do not fit. Remove some references or choose another model.",
       "visualHint": "Save images of a character, object or location and use @name in the prompt.",

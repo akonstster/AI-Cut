@@ -86,8 +86,8 @@ const page = {
         {
           kind: 'list',
           items: [
-            'Open **Storage** settings to manage Local AI.',
-            'Use **Local AI Model Cache** to inspect or clear downloaded models — useful if a download is corrupt.',
+            'Open **Settings → AI** to view local models, their purpose and preparation status.',
+            'Prepare downloads and initializes a model. Remove files deletes downloaded files. CLIP supports visual search, Multilingual E5 searches descriptions and BGE Reranker refines the results.',
             'Use **Unload Local Models** to release runtimes and free memory.',
             'Long jobs can be cancelled if you no longer need the result.',
           ],

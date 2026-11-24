@@ -9,7 +9,13 @@
 import { createLogger } from '@/shared/logging/logger'
 import { i18n } from '@/i18n'
 import { generateApi, type Job } from './generate-api'
-import { mediaLibraryService, saveTimeline, useItemsStore, useMediaLibraryStore, useProjectStore } from '../deps/editor'
+import {
+  mediaLibraryService,
+  saveTimeline,
+  useItemsStore,
+  useMediaLibraryStore,
+  useProjectStore,
+} from '../deps/editor'
 import { useGenerateStore } from '../stores/generate-store'
 import { placeMediaAt, placeMediaAtPlayhead } from './timeline-actions'
 
@@ -23,7 +29,9 @@ function needsImport(job: Job, projectId: string | null): boolean {
     !!projectId &&
     job.project_id === projectId &&
     job.imported.length === 0 &&
-    job.outputs.some((output) => output.kind === 'image' || output.kind === 'video' || output.kind === 'audio')
+    job.outputs.some(
+      (output) => output.kind === 'image' || output.kind === 'video' || output.kind === 'audio',
+    )
   )
 }
 
@@ -45,7 +53,10 @@ async function importJob(job: Job, projectId: string): Promise<void> {
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
     const blob = await response.blob()
     const extension = output.file.split('.').pop() ?? 'bin'
-    const base = (job.model_name || job.model).replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40)
+    const base = (job.model_name || job.model)
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40)
     const name = `${base}-${job.id.slice(-6)}-${output.index + 1}.${extension}`
     const file = new File([blob], name, { type: output.mime })
     const media =
@@ -91,7 +102,9 @@ export function importFinished(jobs: Job[]): void {
         if (useProjectStore.getState().currentProject?.id !== projectId) return
         useGenerateStore.getState().upsertJob({
           ...job,
-          error: i18n.t('generate.importFailed', { reason: error instanceof Error ? error.message : String(error) }),
+          error: i18n.t('generate.importFailed', {
+            reason: error instanceof Error ? error.message : String(error),
+          }),
         })
       })
       .finally(() => inFlight.delete(job.id))

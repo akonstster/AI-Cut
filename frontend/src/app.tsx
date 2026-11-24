@@ -8,6 +8,7 @@ import { router } from '@/app/router'
 import { AgentBridgeHost } from '@/features/agent-bridge/components/agent-bridge-host'
 import { FirstRunDialog } from '@/features/first-run/first-run-dialog'
 import { GenerateSyncHost } from '@/features/generate/components/generate-sync-host'
+import { isBareAltPress } from '@/shared/ui/bare-alt'
 
 const LazyToaster = lazy(async () => {
   const { Toaster } = await import('@/components/ui/sonner')
@@ -45,13 +46,23 @@ export function App() {
       }
     }
 
+    // A bare Alt press is the desktop window's menu key; swallow it so the editor keeps the
+    // keyboard (Alt combinations still reach the shortcuts).
+    const swallowBareAlt = (e: KeyboardEvent) => {
+      if (isBareAltPress(e)) e.preventDefault()
+    }
+
     // Add listeners at capture phase to intercept before browser handles them
     document.addEventListener('wheel', preventBrowserZoom, wheelListenerOptions)
     document.addEventListener('keydown', preventKeyboardZoom, keyListenerOptions)
+    document.addEventListener('keydown', swallowBareAlt, keyListenerOptions)
+    document.addEventListener('keyup', swallowBareAlt, keyListenerOptions)
 
     return () => {
       document.removeEventListener('wheel', preventBrowserZoom, wheelListenerOptions)
       document.removeEventListener('keydown', preventKeyboardZoom, keyListenerOptions)
+      document.removeEventListener('keydown', swallowBareAlt, keyListenerOptions)
+      document.removeEventListener('keyup', swallowBareAlt, keyListenerOptions)
     }
   }, [])
 

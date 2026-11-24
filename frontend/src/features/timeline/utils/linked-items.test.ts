@@ -14,6 +14,8 @@ import {
   getLinkedAndAttachedItemIds,
   getLinkedItemIds,
   getLinkedSyncOffsetFrames,
+  getLinkedSyncRestoreUpdates,
+  getSelectionIdsForItem,
   getUniqueLinkedItemAnchorIds,
   hasLinkedItems,
 } from './linked-items'
@@ -101,6 +103,58 @@ describe('linked items', () => {
 
     expect(getAttachedCaptionItemIds(items, 'video-1')).toEqual(['caption-1'])
     expect(expandItemIdsWithAttachedCaptions(items, ['video-1'])).toEqual(['video-1', 'caption-1'])
+  })
+
+  it('attaches a subtitle segment to the clip it was generated from', () => {
+    const items = [
+      makeItem({ id: 'video-1', type: 'video' }),
+      makeItem({
+        id: 'subtitle-1',
+        type: 'subtitle',
+        label: 'Transcript',
+        source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-1' },
+        cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hi' }],
+      } as unknown as TimelineItem),
+    ]
+
+    expect(getAttachedCaptionItemIds(items, 'video-1')).toEqual(['subtitle-1'])
+    expect(expandItemIdsWithAttachedCaptions(items, ['video-1'])).toEqual(['video-1', 'subtitle-1'])
+  })
+
+  it('selects a subtitle segment alone even when it shares a group with the picture', () => {
+    const items = [
+      makeItem({ id: 'video-1', linkedGroupId: 'group-1', type: 'video' }),
+      makeItem({
+        id: 'subtitle-1',
+        type: 'subtitle',
+        linkedGroupId: 'group-1',
+        label: 'Transcript',
+        source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-1' },
+        cues: [],
+      } as unknown as TimelineItem),
+    ]
+
+    expect(getSelectionIdsForItem(items, 'subtitle-1', true)).toEqual(['subtitle-1'])
+    expect(getSelectionIdsForItem(items, 'video-1', true)).toEqual(['video-1', 'subtitle-1'])
+    expect(getSelectionIdsForItem(items, 'subtitle-1', false)).toEqual(['subtitle-1'])
+  })
+
+  it('moves a linked subtitle together with its picture', () => {
+    const items = [
+      makeItem({ id: 'video-1', linkedGroupId: 'group-1', type: 'video' }),
+      makeItem({
+        id: 'subtitle-1',
+        type: 'subtitle',
+        linkedGroupId: 'group-1',
+        label: 'Transcript',
+        source: { type: 'transcript', mediaId: 'media-1', clipId: 'video-1' },
+        cues: [{ id: 'c1', startSeconds: 0, endSeconds: 1, text: 'Hi' }],
+      } as unknown as TimelineItem),
+    ]
+
+    expect(new Set(expandSelectionWithLinkedItems(items, ['subtitle-1']))).toEqual(
+      new Set(['subtitle-1', 'video-1']),
+    )
   })
 
   it('includes attached captions when expanding a linked clip pair', () => {
@@ -560,6 +614,134 @@ describe('linked items', () => {
     ]
 
     expect(getLinkedSyncOffsetFrames(items, 'video-1', 30)).toBe(-10)
+  })
+
+  it('never warns on captions or text that share a clip group', () => {
+    const items = [
+      makeItem({
+        id: 'video-1',
+        linkedGroupId: 'group-1',
+        type: 'video',
+        from: 0,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'audio-1',
+        linkedGroupId: 'group-1',
+        type: 'audio',
+        from: 0,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'caption-1',
+        linkedGroupId: 'group-1',
+        type: 'text',
+        textRole: 'caption',
+        from: 120,
+        mediaId: undefined,
+      }),
+    ]
+
+    expect(getLinkedSyncOffsetFrames(items, 'caption-1', 30)).toBeNull()
+    expect(getLinkedSyncRestoreUpdates(items, 'caption-1', 30)).toEqual([])
+  })
+
+  it('puts a drifted pair back in sync by moving the sound onto the picture', () => {
+    const items = [
+      makeItem({
+        id: 'video-1',
+        linkedGroupId: 'group-1',
+        type: 'video',
+        from: 349,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'audio-1',
+        linkedGroupId: 'group-1',
+        type: 'audio',
+        from: 334,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+    ]
+
+    // The badge on the audio reads -00:15; the repair moves the audio onto the video.
+    expect(getLinkedSyncOffsetFrames(items, 'audio-1', 30)).toBe(-15)
+    expect(getLinkedSyncRestoreUpdates(items, 'audio-1', 30)).toEqual([
+      { id: 'audio-1', from: 349 },
+    ])
+    // From the picture the same repair is offered, and it always moves the sound, never the picture.
+    expect(getLinkedSyncRestoreUpdates(items, 'video-1', 30)).toEqual([
+      { id: 'audio-1', from: 349 },
+    ])
+  })
+
+  it('moves a late sound back onto its picture as well', () => {
+    const items = [
+      makeItem({
+        id: 'video-1',
+        linkedGroupId: 'group-1',
+        type: 'video',
+        from: 100,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'audio-1',
+        linkedGroupId: 'group-1',
+        type: 'audio',
+        from: 130,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+    ]
+
+    expect(getLinkedSyncRestoreUpdates(items, 'video-1', 30)).toEqual([
+      { id: 'audio-1', from: 100 },
+    ])
+  })
+
+  it('offers no repair when the pair is already in sync', () => {
+    const items = [
+      makeItem({ id: 'video-1', linkedGroupId: 'group-1', type: 'video', from: 40 }),
+      makeItem({ id: 'audio-1', linkedGroupId: 'group-1', type: 'audio', from: 40 }),
+    ]
+
+    expect(getLinkedSyncRestoreUpdates(items, 'video-1', 30)).toEqual([])
+  })
+
+  it('repairs only the companion the badge is about in a group with extra copies', () => {
+    const items = [
+      makeItem({
+        id: 'video-1',
+        linkedGroupId: 'group-1',
+        type: 'video',
+        from: 0,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'audio-1',
+        linkedGroupId: 'group-1',
+        type: 'audio',
+        from: 10,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+      makeItem({
+        id: 'audio-2',
+        linkedGroupId: 'group-1',
+        type: 'audio',
+        from: 500,
+        sourceStart: 0,
+        sourceFps: 30,
+      }),
+    ]
+
+    expect(getLinkedSyncRestoreUpdates(items, 'video-1', 30)).toEqual([{ id: 'audio-1', from: 0 }])
   })
 
   it('builds move preview updates only for linked clips that actually move', () => {

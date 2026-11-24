@@ -8,6 +8,12 @@ export { PlaybackControls } from '@/features/preview/components/playback-control
 export { AlignmentToolbar } from '@/features/preview/components/alignment-hud'
 export { TimecodeDisplay } from '@/features/preview/components/timecode-display'
 export { PreviewZoomControls } from '@/features/preview/components/preview-zoom-controls'
+export { PreviewFullscreenButton } from '@/features/preview/components/preview-fullscreen-button'
+export { PreviewScopesToggle } from '@/features/preview/components/preview-scopes-toggle'
+export {
+  isPreviewFullscreen,
+  togglePreviewFullscreen,
+} from '@/features/preview/utils/preview-fullscreen'
 
 export const importSourceMonitor = () => import('@/features/preview/components/source-monitor')
 export const importInlineSourcePreview = () =>

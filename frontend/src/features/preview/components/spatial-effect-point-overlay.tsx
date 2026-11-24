@@ -216,15 +216,7 @@ const SpatialEffectPointOverlay = memo(function SpatialEffectPointOverlay({
       }
       clearPreviewForItems([item.id])
     },
-    [
-      clearPreviewForItems,
-      currentEffects,
-      effect,
-      item,
-      itemKeyframes,
-      xParam,
-      yParam,
-    ],
+    [clearPreviewForItems, currentEffects, effect, item, itemKeyframes, xParam, yParam],
   )
 
   useEffect(() => {

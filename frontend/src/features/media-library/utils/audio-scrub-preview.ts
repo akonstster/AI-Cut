@@ -3,6 +3,8 @@ interface AudioScrubPreviewRequest {
   mediaUrl: string
   timeSeconds: number
   gain?: number
+  /** Overrides the fixed grain length; skimming passes an adaptive value. */
+  grainDurationSeconds?: number
 }
 
 interface ActiveGrain {
@@ -21,6 +23,7 @@ interface AudioScrubPreviewOptions {
 }
 
 const DEFAULT_GRAIN_DURATION_SECONDS = 0.08
+const MIN_GRAIN_DURATION_SECONDS = 0.012
 const DEFAULT_FADE_SECONDS = 0.008
 const DEFAULT_GAIN = 0.8
 const DEFAULT_MAX_CACHED_BUFFER_BYTES = 64 * 1024 * 1024
@@ -105,29 +108,45 @@ export function createAudioScrubPreview(options: AudioScrubPreviewOptions = {}) 
     return bufferPromise
   }
 
-  const stop = () => {
-    const grain = activeGrain
-    activeGrain = null
-    if (!grain) return
-
+  /** Ramp a grain down instead of cutting it, then release it. */
+  const fadeOutGrain = (grain: ActiveGrain) => {
+    const ctx = context
+    if (!ctx) {
+      try {
+        grain.source.stop()
+      } catch {
+        // Best-effort cleanup.
+      }
+      return
+    }
+    const now = ctx.currentTime
     try {
-      grain.source.stop()
+      grain.gainNode.gain.cancelScheduledValues(now)
+      grain.gainNode.gain.setValueAtTime(grain.gainNode.gain.value, now)
+      grain.gainNode.gain.linearRampToValueAtTime(0, now + fadeSeconds)
     } catch {
-      // Source may have already stopped; cleanup is best-effort.
+      // Parameter may already be detached.
     }
     try {
-      grain.source.disconnect()
-    } catch {
-      // Best-effort cleanup.
-    }
-    try {
-      grain.gainNode.disconnect()
+      grain.source.stop(now + fadeSeconds)
     } catch {
       // Best-effort cleanup.
     }
   }
 
-  const scrub = async ({ mediaId, mediaUrl, timeSeconds, gain = 1 }: AudioScrubPreviewRequest) => {
+  const stop = () => {
+    const grain = activeGrain
+    activeGrain = null
+    if (grain) fadeOutGrain(grain)
+  }
+
+  const scrub = async ({
+    mediaId,
+    mediaUrl,
+    timeSeconds,
+    gain = 1,
+    grainDurationSeconds: requestGrainSeconds,
+  }: AudioScrubPreviewRequest) => {
     if (!mediaUrl) return
 
     const ctx = getContext()
@@ -136,10 +155,15 @@ export function createAudioScrubPreview(options: AudioScrubPreviewOptions = {}) 
     }
 
     const buffer = await loadBuffer(mediaId, mediaUrl)
+    // Overlap with the outgoing grain (fade out) rather than hard-stopping it, so a
+    // fast scrub does not click on every step.
     stop()
 
     const duration = Math.max(0, buffer.duration)
-    const grainDuration = Math.min(grainDurationSeconds, Math.max(0, duration))
+    const grainDuration = Math.min(
+      Math.max(MIN_GRAIN_DURATION_SECONDS, requestGrainSeconds ?? grainDurationSeconds),
+      Math.max(0, duration),
+    )
     if (grainDuration <= 0) return
 
     const offset = Math.max(0, Math.min(timeSeconds, Math.max(0, duration - grainDuration)))

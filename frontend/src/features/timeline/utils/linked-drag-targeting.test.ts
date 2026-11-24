@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import type { TimelineTrack } from '@/types/timeline'
 import {
   resolveCreateNewDragTrackTargets,
+  resolveGroupDragTrackAssignments,
   resolveLinkedDragTrackTargets,
 } from './linked-drag-targeting'
 
@@ -85,6 +86,48 @@ describe('resolveLinkedDragTrackTargets', () => {
       kind: 'audio',
       name: 'A2',
     })
+  })
+
+  // Dragging the picture up one video lane has nothing to do with the sound: when
+  // the sound's own lane is free, it stays there instead of being pushed down to
+  // match the picture's lane number.
+  it('keeps the companion on its own audio lane when that lane is free', () => {
+    const result = resolveLinkedDragTrackTargets({
+      tracks: [
+        makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 }),
+        makeTrack({ id: 'v2', name: 'V2', kind: 'video', order: 1 }),
+        makeTrack({ id: 'a1', name: 'A1', kind: 'audio', order: 2 }),
+        makeTrack({ id: 'a2', name: 'A2', kind: 'audio', order: 3 }),
+      ],
+      hoveredTrackId: 'v1',
+      zone: 'video',
+      preferredTrackHeight: 72,
+      initialVideoTrackId: 'v2',
+      initialAudioTrackId: 'a2',
+    })
+
+    expect(result?.videoTrackId).toBe('v1')
+    expect(result?.audioTrackId).toBe('a2')
+    expect(result?.tracks.map((track) => track.id)).toEqual(['v1', 'v2', 'a1', 'a2'])
+  })
+
+  it('falls back to matching lanes when the companion lane is locked', () => {
+    const result = resolveLinkedDragTrackTargets({
+      tracks: [
+        makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 }),
+        makeTrack({ id: 'v2', name: 'V2', kind: 'video', order: 1 }),
+        makeTrack({ id: 'a1', name: 'A1', kind: 'audio', order: 2 }),
+        makeTrack({ id: 'a2', name: 'A2', kind: 'audio', order: 3, locked: true }),
+      ],
+      hoveredTrackId: 'v1',
+      zone: 'video',
+      preferredTrackHeight: 72,
+      initialVideoTrackId: 'v2',
+      initialAudioTrackId: 'a2',
+    })
+
+    expect(result?.videoTrackId).toBe('v1')
+    expect(result?.audioTrackId).toBe('a1')
   })
 
   it('creates a fresh top video lane and bottom audio lane for new-track drop zones', () => {
@@ -181,6 +224,91 @@ describe('resolveCreateNewDragTrackTargets', () => {
       ],
       draggedItems: [{ id: 'video-1', initialTrackId: 'v1', type: 'video' }],
       zone: 'audio',
+      preferredTrackHeight: 72,
+    })
+
+    expect(result).toBeNull()
+  })
+})
+
+describe('resolveGroupDragTrackAssignments', () => {
+  const tracks = () => [
+    makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 }),
+    makeTrack({ id: 'v2', name: 'V2', kind: 'video', order: 1 }),
+    makeTrack({ id: 'v3', name: 'V3', kind: 'video', order: 2 }),
+    makeTrack({ id: 'a1', name: 'A1', kind: 'audio', order: 3 }),
+    makeTrack({ id: 'a2', name: 'A2', kind: 'audio', order: 4 }),
+  ]
+
+  it('moves only the picture when a pair with subtitles changes video lane', () => {
+    const result = resolveGroupDragTrackAssignments({
+      tracks: tracks(),
+      items: [
+        { id: 'video', initialTrackId: 'v3', kind: 'video', staysOnOwnLane: false },
+        { id: 'audio', initialTrackId: 'a2', kind: 'audio', staysOnOwnLane: false },
+        { id: 'subtitle', initialTrackId: 'v1', kind: 'video', staysOnOwnLane: true },
+      ],
+      anchorItemId: 'video',
+      targetTrackId: 'v2',
+      createNew: false,
+      preferredTrackHeight: 72,
+    })
+
+    expect(result?.trackAssignments.get('video')).toBe('v2')
+    // The sound keeps its own lane and the subtitles stay on theirs.
+    expect(result?.trackAssignments.get('audio')).toBe('a2')
+    expect(result?.trackAssignments.get('subtitle')).toBe('v1')
+    expect(result?.tracks.map((track) => track.id)).toEqual(['v1', 'v2', 'v3', 'a1', 'a2'])
+  })
+
+  it('moves only the sound when the audio half is the anchor', () => {
+    const result = resolveGroupDragTrackAssignments({
+      tracks: tracks(),
+      items: [
+        { id: 'video', initialTrackId: 'v2', kind: 'video', staysOnOwnLane: false },
+        { id: 'audio', initialTrackId: 'a2', kind: 'audio', staysOnOwnLane: false },
+        { id: 'subtitle', initialTrackId: 'v1', kind: 'video', staysOnOwnLane: true },
+      ],
+      anchorItemId: 'audio',
+      targetTrackId: 'a1',
+      createNew: false,
+      preferredTrackHeight: 72,
+    })
+
+    expect(result?.trackAssignments.get('audio')).toBe('a1')
+    expect(result?.trackAssignments.get('video')).toBe('v2')
+    expect(result?.trackAssignments.get('subtitle')).toBe('v1')
+  })
+
+  it('keeps a stack of same-kind pictures together when the group moves', () => {
+    const result = resolveGroupDragTrackAssignments({
+      tracks: tracks(),
+      items: [
+        { id: 'top', initialTrackId: 'v3', kind: 'video', staysOnOwnLane: false },
+        { id: 'bottom', initialTrackId: 'v2', kind: 'video', staysOnOwnLane: false },
+        { id: 'audio', initialTrackId: 'a1', kind: 'audio', staysOnOwnLane: false },
+      ],
+      anchorItemId: 'top',
+      targetTrackId: 'v2',
+      createNew: false,
+      preferredTrackHeight: 72,
+    })
+
+    expect(result?.trackAssignments.get('top')).toBe('v2')
+    expect(result?.trackAssignments.get('bottom')).toBe('v1')
+    expect(result?.trackAssignments.get('audio')).toBe('a1')
+  })
+
+  it('refuses when every lane of a kind is taken by the same drag', () => {
+    const result = resolveGroupDragTrackAssignments({
+      tracks: [makeTrack({ id: 'v1', name: 'V1', kind: 'video', order: 0 })],
+      items: [
+        { id: 'one', initialTrackId: 'v1', kind: 'video', staysOnOwnLane: false },
+        { id: 'two', initialTrackId: 'v1', kind: 'video', staysOnOwnLane: false },
+      ],
+      anchorItemId: 'one',
+      targetTrackId: 'v1',
+      createNew: false,
       preferredTrackHeight: 72,
     })
 

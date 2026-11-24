@@ -82,7 +82,9 @@ const page = {
         {
           kind: 'list',
           items: [
-            'Switch to the **Color** workspace (`Alt+2`) and select a clip; the wheels and curves are ready even before a grade exists.',
+            'Switch to the **Color** workspace (`Alt+2`) and select a clip; the wheels are ready even before a grade exists.',
+            'The dock under the viewer has three tabs — **Primary** (wheels), **Curves**, and **LUT** — and remembers the one you used last.',
+            'The clip filmstrip is a resizable column left of the viewer (drag its right edge); compare, copy/paste and preset actions sit in an icon rail beside the parameters, and **Keyframes** at the left of the dock header opens the keyframe editor.',
             '**Color Wheels** adjust Shadows, Midtones, Highlights, and Offset, with white-balance pickers and auto balance.',
             '**Curves** edit the Master, Red, Green, and Blue channels; click a curve to add a point and double-click a point to remove it.',
             'Compare with **Before**, **After**, and **Split**, and copy a look between clips with **Copy Grade** and **Paste Grade**.',
@@ -111,7 +113,7 @@ const page = {
         {
           kind: 'note',
           tone: 'tip',
-          text: 'Toggle the scopes with **Show Color Scopes**. Waveform and Histogram also offer RGB, single-channel, and luma (Y) views.',
+          text: 'Toggle the scopes with the scopes button beside the zoom control (or **Show Color Scopes**); the choice is remembered per workspace. The scope type, RGB/R/G/B/Y channels, GPU status and close button share one compact header. Waveform and Histogram also offer RGB, single-channel, and luma (Y) views.',
         },
       ],
     },

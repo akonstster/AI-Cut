@@ -34,9 +34,11 @@ const storageMocks = vi.hoisted(() => ({
 }))
 
 const workspace = vi.hoisted(() => ({ root: {}, files: new Map<string, unknown>() }))
-vi.mock('@/infrastructure/storage/workspace-fs/root', () => ({ requireWorkspaceRoot: () => workspace.root }))
+vi.mock('@/infrastructure/storage/workspace-fs/root', () => ({
+  requireWorkspaceRoot: () => workspace.root,
+}))
 vi.mock('@/infrastructure/storage/workspace-fs/fs-primitives', async (original) => ({
-  ...await original<typeof import('@/infrastructure/storage/workspace-fs/fs-primitives')>(),
+  ...(await original<typeof import('@/infrastructure/storage/workspace-fs/fs-primitives')>()),
   readJson: async (_root: unknown, path: string[]) => workspace.files.get(path.join('/')) ?? null,
   writeJsonAtomic: async (_root: unknown, path: string[], value: unknown) => {
     workspace.files.set(path.join('/'), value)
@@ -197,8 +199,14 @@ describe('bundle animation presets round-trip', () => {
   it('exports then imports a project with its animation presets intact', async () => {
     storageMocks.readAnimationPresets.mockResolvedValue(makePresets())
     workspace.files.set('projects/project-a/generation.json', {
-      task: 'image', modelByTask: {}, valuesByModel: {}, repeat: 1, placeOnTimeline: false,
-      storyboard: { script: 'A story for this project', shots: [] }, storyboardModels: {}, motionClips: [],
+      task: 'image',
+      modelByTask: {},
+      valuesByModel: {},
+      repeat: 1,
+      placeOnTimeline: false,
+      storyboard: { script: 'A story for this project', shots: [] },
+      storyboardModels: {},
+      motionClips: [],
     })
 
     const file = await exportToFile()

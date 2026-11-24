@@ -55,9 +55,7 @@ export const useSlideEditPreviewStore = createEditPreviewStore<
       set((state) => (state.slideDelta === slideDelta ? state : { slideDelta })),
     setSlideRange: (minDelta, maxDelta) =>
       set((state) =>
-        state.minDelta === minDelta && state.maxDelta === maxDelta
-          ? state
-          : { minDelta, maxDelta },
+        state.minDelta === minDelta && state.maxDelta === maxDelta ? state : { minDelta, maxDelta },
       ),
   }),
 })

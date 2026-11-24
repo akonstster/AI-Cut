@@ -194,13 +194,7 @@ const PowerWindowOverlay = memo(function PowerWindowOverlay({
       }
       clearPreviewForItems([item.id])
     },
-    [
-      clearPreviewForItems,
-      currentEffects,
-      effect,
-      item,
-      itemKeyframes,
-    ],
+    [clearPreviewForItems, currentEffects, effect, item, itemKeyframes],
   )
 
   const handlePointerDown = useCallback(

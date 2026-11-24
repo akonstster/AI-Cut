@@ -25,6 +25,7 @@ import { useItemsStore } from '../../stores/items-store'
 import {
   insertFreezeFrame,
   linkItems,
+  restoreLinkedSync,
   reverseItems,
   splitItemAtFrames,
   unlinkItems,
@@ -40,8 +41,12 @@ import {
 } from '../../stores/timeline-item-overlay-store'
 import { useSilenceRemovalDialogStore } from '../../stores/silence-removal-dialog-store'
 import { useFillerRemovalDialogStore } from '../../stores/filler-removal-dialog-store'
-import { canJoinMultipleItems } from '../../utils/clip-utils'
-import { canLinkSelection, hasLinkedItems } from '../../utils/linked-items'
+import { getJoinableSelection } from '../../utils/clip-utils'
+import {
+  canLinkSelection,
+  getLinkedSyncRestoreUpdates,
+  hasLinkedItems,
+} from '../../utils/linked-items'
 import {
   getSceneVerificationModelLabel,
   importSceneDetection,
@@ -68,6 +73,7 @@ interface SelectionCapabilities {
   canJoin: boolean
   canLink: boolean
   canUnlink: boolean
+  canRestoreSync: boolean
 }
 
 let cachedSelectionIds: string[] | null = null
@@ -76,6 +82,7 @@ let cachedSelectionCapabilities: SelectionCapabilities = {
   canJoin: false,
   canLink: false,
   canUnlink: false,
+  canRestoreSync: false,
 }
 
 /**
@@ -93,17 +100,17 @@ function getSelectionCapabilities(): SelectionCapabilities {
     return cachedSelectionCapabilities
   }
 
-  const selectedItems = selectedItemIds
-    .map((id) => itemsState.itemById[id])
-    .filter((candidate): candidate is TimelineItemType => candidate !== undefined)
-
   cachedSelectionIds = selectedItemIds
   cachedSelectionItems = items
+  const fps = useTimelineSettingsStore.getState().fps || 30
   cachedSelectionCapabilities = {
-    canJoin: selectedItems.length >= 2 && canJoinMultipleItems(selectedItems),
+    canJoin: getJoinableSelection(items, selectedItemIds) !== null,
     canLink: selectedItemIds.length >= 2 && canLinkSelection(items, selectedItemIds),
     canUnlink:
       selectedItemIds.length > 0 && selectedItemIds.some((id) => hasLinkedItems(items, id)),
+    canRestoreSync:
+      selectedItemIds.length > 0 &&
+      selectedItemIds.some((id) => getLinkedSyncRestoreUpdates(items, id, fps).length > 0),
   }
 
   return cachedSelectionCapabilities
@@ -130,16 +137,13 @@ export function useTimelineItemActions({
 
   const getCanUnlinkSelected = useCallback(() => getSelectionCapabilities().canUnlink, [])
 
+  const getCanRestoreSync = useCallback(() => getSelectionCapabilities().canRestoreSync, [])
+
   const handleJoinSelected = useCallback(() => {
     const selectedItemIds = useSelectionStore.getState().selectedItemIds
-    if (selectedItemIds.length >= 2) {
-      const itemById = useItemsStore.getState().itemById
-      const selectedItems = selectedItemIds
-        .map((id) => itemById[id])
-        .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== undefined)
-      if (canJoinMultipleItems(selectedItems)) {
-        joinItems(selectedItemIds)
-      }
+    const joinable = getJoinableSelection(useItemsStore.getState().items, selectedItemIds)
+    if (joinable) {
+      joinItems(joinable.map((item) => item.id))
     }
   }, [])
 
@@ -178,6 +182,11 @@ export function useTimelineItemActions({
     const selectedItemIds = useSelectionStore.getState().selectedItemIds
     unlinkItems(selectedItemIds)
   }, [])
+
+  const handleRestoreSync = useCallback(() => {
+    const selectedItemIds = useSelectionStore.getState().selectedItemIds
+    restoreLinkedSync(selectedItemIds.length > 0 ? selectedItemIds : [item.id])
+  }, [item.id])
 
   const handleReverseSelected = useCallback(() => {
     const selectedItemIds = useSelectionStore.getState().selectedItemIds
@@ -261,14 +270,14 @@ export function useTimelineItemActions({
             store.setTranscriptStatus(mediaId, 'ready')
             store.clearTranscriptProgress(mediaId)
           }
-          const result = await mediaTranscriptionService.enableTranscriptCaptions(mediaId, {
+          const result = await mediaTranscriptionService.insertTranscriptAsCaptions(mediaId, {
             clipIds: [clipId],
             replaceExisting,
           })
 
           const modelLabel = getMediaTranscriptionModelLabel(model)
           const successMessage = replaceExisting
-            ? result.updatedClipCount > 0
+            ? result.insertedItemCount > 0
               ? result.removedItemCount > 0
                 ? i18n.t('timeline.captions.updatedWithModel', { model: modelLabel })
                 : i18n.t('timeline.captions.refreshedWithModel', { model: modelLabel })
@@ -592,6 +601,7 @@ export function useTimelineItemActions({
     getCanJoinSelected,
     getCanLinkSelected,
     getCanUnlinkSelected,
+    getCanRestoreSync,
     hasSpeakableText,
     isSceneDetectionActive,
     isRemovingFillers,
@@ -603,6 +613,7 @@ export function useTimelineItemActions({
     handleRippleDelete,
     handleLinkSelected,
     handleUnlinkSelected,
+    handleRestoreSync,
     handleReverseSelected,
     handleClearAllKeyframes,
     handleClearPropertyKeyframes,

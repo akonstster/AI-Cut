@@ -248,10 +248,22 @@ export interface DopesheetPropertyRowContentProps {
   handleRowToggleKeyframe: (property: AnimatableProperty, currentKeyframes: Keyframe[]) => void
   handleRowValueChange: (property: AnimatableProperty, value: string) => void
   handleRowValueCommit: (property: AnimatableProperty, options?: { allowCreate?: boolean }) => void
-  handleValueScrubEnd: (event: ReactPointerEvent<HTMLInputElement>, property: AnimatableProperty) => void
-  handleValueScrubCancel: (event: ReactPointerEvent<HTMLInputElement>, property: AnimatableProperty) => void
-  handleValueScrubMove: (event: ReactPointerEvent<HTMLInputElement>, property: AnimatableProperty) => void
-  handleValueScrubStart: (event: ReactPointerEvent<HTMLInputElement>, property: AnimatableProperty) => void
+  handleValueScrubEnd: (
+    event: ReactPointerEvent<HTMLInputElement>,
+    property: AnimatableProperty,
+  ) => void
+  handleValueScrubCancel: (
+    event: ReactPointerEvent<HTMLInputElement>,
+    property: AnimatableProperty,
+  ) => void
+  handleValueScrubMove: (
+    event: ReactPointerEvent<HTMLInputElement>,
+    property: AnimatableProperty,
+  ) => void
+  handleValueScrubStart: (
+    event: ReactPointerEvent<HTMLInputElement>,
+    property: AnimatableProperty,
+  ) => void
   isPropertyLocked: (property: AnimatableProperty) => boolean
   isCurrentFrameBlocked: boolean
   onAddKeyframe?: (property: AnimatableProperty, frame: number) => void
@@ -260,7 +272,11 @@ export interface DopesheetPropertyRowContentProps {
   onDragCancel?: () => void
   onDragEnd?: () => void
   onDragStart?: () => void
-  onPropertyValueCommit?: (property: AnimatableProperty, value: number, options?: { allowCreate?: boolean }) => void
+  onPropertyValueCommit?: (
+    property: AnimatableProperty,
+    value: number,
+    options?: { allowCreate?: boolean },
+  ) => void
   onPropertyValuePreview?: (property: AnimatableProperty, value: number) => void
   resolvedPropertyLinks: readonly DirectPropertyLink[]
   resolvedPropertyLinkSourceLabels: Partial<Record<DirectLinkableProperty, string>>
@@ -268,9 +284,19 @@ export interface DopesheetPropertyRowContentProps {
   propertyExpressions: readonly PropertyExpression[]
   propertyLabels: Partial<Record<AnimatableProperty, string>>
   preExpressionPropertyValues: Partial<Record<AnimatableProperty, number>>
-  resolveExpressionReference?: (itemId: string, property: DirectLinkableProperty) => ExpressionValue | null
-  onSetPropertyExpression?: (property: DirectLinkableProperty, source: string, enabled: boolean) => void
-  openPropertyExpressionEditor: (property: DirectLinkableProperty, expression?: PropertyExpression) => void
+  resolveExpressionReference?: (
+    itemId: string,
+    property: DirectLinkableProperty,
+  ) => ExpressionValue | null
+  onSetPropertyExpression?: (
+    property: DirectLinkableProperty,
+    source: string,
+    enabled: boolean,
+  ) => void
+  openPropertyExpressionEditor: (
+    property: DirectLinkableProperty,
+    expression?: PropertyExpression,
+  ) => void
   onResetPropertiesToDefault?: (properties: AnimatableProperty[]) => void
   propertyValues: Partial<Record<AnimatableProperty, number>>
   presentation: 'editor' | 'classic' | 'lanes'
@@ -426,20 +452,20 @@ export const DopesheetPropertyRowContent = memo(function DopesheetPropertyRowCon
       onClick={!rowLocked ? () => activateProperty(row.property) : undefined}
     >
       <div className="flex items-center gap-px self-stretch">
-          <PropertyRowCurveButton
-            property={row.property}
-            rowLabel={rowLabel}
-            singleCurveMode={singleCurveMode ?? false}
-            showGraphPane={showGraphPane}
-            selectedCurveVisibleExternally={selectedCurveVisibleExternally}
-            selectedProperty={selectedProperty}
-            graphProperties={graphVisibleProperties}
-            visible={!classic}
-            onCurveVisibilityChange={onCurveVisibilityChange}
-            showSinglePropertyCurve={showSinglePropertyCurve}
-            togglePropertyCurve={togglePropertyCurve}
-            t={t}
-          />
+        <PropertyRowCurveButton
+          property={row.property}
+          rowLabel={rowLabel}
+          singleCurveMode={singleCurveMode ?? false}
+          showGraphPane={showGraphPane}
+          selectedCurveVisibleExternally={selectedCurveVisibleExternally}
+          selectedProperty={selectedProperty}
+          graphProperties={graphVisibleProperties}
+          visible={!classic}
+          onCurveVisibilityChange={onCurveVisibilityChange}
+          showSinglePropertyCurve={showSinglePropertyCurve}
+          togglePropertyCurve={togglePropertyCurve}
+          t={t}
+        />
         <PropertyRowLockButton
           rowLocked={rowLocked}
           property={row.property}
@@ -459,24 +485,24 @@ export const DopesheetPropertyRowContent = memo(function DopesheetPropertyRowCon
           onToggleAutoKey={handleRowAutoKeyToggle}
           t={t}
         />
-          <PropertyRowLinkButton
-            linkableProperty={linkableProperty}
-            rowLabel={rowLabel}
-            visible={!classic}
-            hasPropertyLink={!!propertyLink}
-            sourceLabels={resolvedPropertyLinkSourceLabels}
-            linkSource={propertyLink}
-            onBeginLink={beginPropertyLink}
-            onRemoveLink={removePropertyLink}
-            t={t}
-          />
+        <PropertyRowLinkButton
+          linkableProperty={linkableProperty}
+          rowLabel={rowLabel}
+          visible={!classic}
+          hasPropertyLink={!!propertyLink}
+          sourceLabels={resolvedPropertyLinkSourceLabels}
+          linkSource={propertyLink}
+          onBeginLink={beginPropertyLink}
+          onRemoveLink={removePropertyLink}
+          t={t}
+        />
         <PropertyRowExpressionButton
           linkableProperty={linkableProperty}
           rowLabel={rowLabel}
           visible={!classic}
           canEdit={!!onSetPropertyExpression}
-            expressionError={expressionError}
-            disabled={disabled}
+          expressionError={expressionError}
+          disabled={disabled}
           rowLocked={rowLocked}
           propertyExpression={propertyExpression}
           onOpenExpression={openPropertyExpressionEditor}

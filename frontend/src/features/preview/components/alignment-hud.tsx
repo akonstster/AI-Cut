@@ -222,11 +222,7 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
         updateItemsTransformMap(baseUpdates, { operation: 'move' })
       }
     },
-    [
-      selectedVisualItems,
-      visualTransformsMap,
-      projectSize,
-    ],
+    [selectedVisualItems, visualTransformsMap, projectSize],
   )
 
   if (itemCount < 1) return null
@@ -287,10 +283,5 @@ export const AlignmentToolbar = memo(function AlignmentToolbar({
   projectSize,
 }: AlignmentToolbarProps) {
   const itemsSnapshot = useItemsStore((state) => state.items)
-  return (
-    <DeferredAlignmentToolbar
-      itemsSnapshot={itemsSnapshot}
-      projectSize={projectSize}
-    />
-  )
+  return <DeferredAlignmentToolbar itemsSnapshot={itemsSnapshot} projectSize={projectSize} />
 })

@@ -202,19 +202,38 @@ describe('createTimelineMediaElementAudioSkimPreview', () => {
     vi.useFakeTimers()
   })
 
-  it('seeks and briefly plays a media element at the requested skim time', async () => {
+  /** A media element whose `paused` follows play()/pause(), like the real thing. */
+  function makeElement(duration = 12) {
     const video = document.createElement('video')
-    const play = vi.fn(async () => {})
-    const pause = vi.fn()
-    const load = vi.fn()
-    Object.defineProperty(video, 'duration', { configurable: true, value: 12 })
+    let paused = true
+    let currentTime = 0
+    const play = vi.fn(async () => {
+      paused = false
+    })
+    const pause = vi.fn(() => {
+      paused = true
+    })
+    Object.defineProperty(video, 'duration', { configurable: true, value: duration })
     Object.defineProperty(video, 'readyState', {
       configurable: true,
       value: HTMLMediaElement.HAVE_METADATA,
     })
     Object.defineProperty(video, 'play', { configurable: true, value: play })
     Object.defineProperty(video, 'pause', { configurable: true, value: pause })
-    Object.defineProperty(video, 'load', { configurable: true, value: load })
+    Object.defineProperty(video, 'load', { configurable: true, value: vi.fn() })
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => paused })
+    Object.defineProperty(video, 'currentTime', {
+      configurable: true,
+      get: () => currentTime,
+      set: (value: number) => {
+        currentTime = value
+      },
+    })
+    return { video, play, pause }
+  }
+
+  it('seeks and briefly plays a media element at the requested skim time', async () => {
+    const { video, play, pause } = makeElement()
 
     const preview = createTimelineMediaElementAudioSkimPreview({
       createVideoElement: () => video,
@@ -233,7 +252,48 @@ describe('createTimelineMediaElementAudioSkimPreview', () => {
     expect(video.currentTime).toBe(4)
     expect(play).toHaveBeenCalledTimes(1)
 
-    vi.advanceTimersByTime(80)
+    vi.advanceTimersByTime(140)
     expect(pause).toHaveBeenCalled()
+  })
+
+  // A quick pass used to become pause → seek → play on every frame, which is heard
+  // as the sound dropping out as soon as the pointer outruns one grain.
+  it('keeps the element playing while the pointer outruns the grain window', async () => {
+    const { video, play, pause } = makeElement()
+
+    const preview = createTimelineMediaElementAudioSkimPreview({
+      createVideoElement: () => video,
+      grainDurationSeconds: 0.05,
+    })
+
+    await preview.scrub({ mediaKind: 'video', mediaUrl: 'blob:clip', timeSeconds: 4 })
+    // The first step loads the source (a pause is part of that), then the element
+    // stays playing for the rest of the pass.
+    pause.mockClear()
+    play.mockClear()
+
+    await vi.advanceTimersByTimeAsync(20)
+    await preview.scrub({ mediaKind: 'video', mediaUrl: 'blob:clip', timeSeconds: 4.3 })
+    await vi.advanceTimersByTimeAsync(20)
+    await preview.scrub({ mediaKind: 'video', mediaUrl: 'blob:clip', timeSeconds: 4.9 })
+
+    expect(pause).not.toHaveBeenCalled()
+    expect(play).not.toHaveBeenCalled()
+    expect(video.currentTime).toBe(4.9)
+  })
+
+  it('stays silent once the pointer has been still', async () => {
+    const { video, pause } = makeElement()
+
+    const preview = createTimelineMediaElementAudioSkimPreview({
+      createVideoElement: () => video,
+      grainDurationSeconds: 0.05,
+    })
+
+    await preview.scrub({ mediaKind: 'video', mediaUrl: 'blob:clip', timeSeconds: 2 })
+    pause.mockClear()
+
+    vi.advanceTimersByTime(140)
+    expect(pause).toHaveBeenCalledTimes(1)
   })
 })

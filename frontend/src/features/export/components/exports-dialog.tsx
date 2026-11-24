@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isDesktop, revealOnDisk, saveToDisk } from '@/infrastructure/desktop'
+import { isDesktop, openOnDisk, revealOnDisk } from '@/infrastructure/desktop'
+import { workspaceAbsolutePath } from '@/infrastructure/desktop/media-path'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,16 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Download, FileVideo, FolderOpen, Loader2, Music, RefreshCw, Trash2 } from 'lucide-react'
+import {
+  Download,
+  FileVideo,
+  FolderOpen,
+  Loader2,
+  Music,
+  Play,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { createLogger } from '@/shared/logging/logger'
 import {
@@ -43,7 +53,13 @@ function isAudioFile(name: string): boolean {
 function ExportFileRow({ entry, onChanged }: { entry: ExportFileEntry; onChanged: () => void }) {
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
+  const [desktopApp, setDesktopApp] = useState(false)
 
+  useEffect(() => {
+    void isDesktop().then(setDesktopApp)
+  }, [])
+
+  /** Browser build only: the desktop window opens the file where it already lies. */
   const handleDownload = async () => {
     setBusy(true)
     try {
@@ -51,16 +67,6 @@ function ExportFileRow({ entry, onChanged }: { entry: ExportFileEntry; onChanged
       if (!blob) {
         toast.error(t('export.renderQueue.missingFile'))
         onChanged()
-        return
-      }
-      if (await isDesktop()) {
-        const saved = await saveToDisk(blob, entry.name, { dialog: true })
-        if (saved.path) {
-          const path = saved.path
-          toast.success(t('desktop.saved', { path }), {
-            action: { label: t('desktop.reveal'), onClick: () => void revealOnDisk(path) },
-          })
-        }
         return
       }
       const url = URL.createObjectURL(blob)
@@ -74,6 +80,28 @@ function ExportFileRow({ entry, onChanged }: { entry: ExportFileEntry; onChanged
     } catch (err) {
       log.error('Failed to download export', err)
       toast.error(t('export.renderQueue.downloadFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Shows the file in the file manager, or plays it with the system's default program. */
+  const handleOpen = async (mode: 'folder' | 'file') => {
+    setBusy(true)
+    try {
+      const absolute = await workspaceAbsolutePath(entry.path)
+      if (!absolute) {
+        toast.error(t('export.renderQueue.pathUnknown'))
+        return
+      }
+      await (mode === 'folder' ? revealOnDisk(absolute) : openOnDisk(absolute))
+    } catch (err) {
+      log.error('Failed to open export', err)
+      toast.error(
+        t('export.renderQueue.openFailed', {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
+      )
     } finally {
       setBusy(false)
     }
@@ -105,17 +133,44 @@ function ExportFileRow({ entry, onChanged }: { entry: ExportFileEntry; onChanged
         </div>
       </div>
       <div className="flex flex-shrink-0 items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          disabled={busy}
-          onClick={handleDownload}
-          aria-label={t('export.renderQueue.download')}
-          data-tooltip={t('export.renderQueue.download')}
-        >
-          <Download className="h-4 w-4" />
-        </Button>
+        {desktopApp ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              disabled={busy}
+              onClick={() => void handleOpen('folder')}
+              aria-label={t('export.renderQueue.openFolder')}
+              data-tooltip={t('export.renderQueue.openFolder')}
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              disabled={busy}
+              onClick={() => void handleOpen('file')}
+              aria-label={t('export.renderQueue.openFile')}
+              data-tooltip={t('export.renderQueue.openFile')}
+            >
+              <Play className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={busy}
+            onClick={handleDownload}
+            aria-label={t('export.renderQueue.download')}
+            data-tooltip={t('export.renderQueue.download')}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -207,7 +262,7 @@ function ExportsList({ projectId }: { projectId: string }) {
 /**
  * Dedicated dialog for the render queue and the saved export files. The Queue
  * tab shows this session's jobs; the Exports tab browses the project's
- * `projects/<id>/exports/` folder and lets you download / delete them.
+ * `projects/<id>/exports/` folder and opens or deletes them.
  */
 export function ExportsDialog({ open, onClose, projectId }: ExportsDialogProps) {
   const { t } = useTranslation()

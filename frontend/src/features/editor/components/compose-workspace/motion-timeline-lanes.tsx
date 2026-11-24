@@ -1,6 +1,10 @@
 import { LAYER_COLUMN_WIDTH } from './motion-timeline-primitives'
 import type { MotionTimeViewport } from './motion-time-viewport-controller'
-import { beginTextMotionEdit, commitTextMotionEdit, updateTextMotionLive } from '@/features/editor/deps/timeline-store'
+import {
+  beginTextMotionEdit,
+  commitTextMotionEdit,
+  updateTextMotionLive,
+} from '@/features/editor/deps/timeline-store'
 import { useEditorStore } from '@/shared/state/editor'
 import { useSelectionStore } from '@/shared/state/selection'
 import type { TextMotionTimelineBand } from '@/shared/timeline/text-motion-timeline'

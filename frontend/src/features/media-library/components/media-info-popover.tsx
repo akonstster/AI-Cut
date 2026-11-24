@@ -221,13 +221,18 @@ export function MediaInfoPopover({
           {mediaType === 'audio' && <FileAudio className="w-3.5 h-3.5 text-green-500" />}
           {mediaType === 'image' && <ImageIcon className="w-3.5 h-3.5 text-blue-500" />}
           {mediaType === 'lottie' && <FileJson className="w-3.5 h-3.5 text-purple-500" />}
-          <button type="button" className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-medium hover:text-primary"
-            title={t('media.card.copyName')} aria-label={`${t('media.card.copyName')}: ${media.fileName}`}
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-medium hover:text-primary"
+            title={t('media.card.copyName')}
+            aria-label={`${t('media.card.copyName')}: ${media.fileName}`}
             onClick={() => {
-              void navigator.clipboard.writeText(media.fileName)
+              void navigator.clipboard
+                .writeText(media.fileName)
                 .then(() => toast.success(t('media.card.nameCopied', { name: media.fileName })))
                 .catch((error: unknown) => toast.error(String(error)))
-            }}>
+            }}
+          >
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{media.fileName}</span>
             <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </button>

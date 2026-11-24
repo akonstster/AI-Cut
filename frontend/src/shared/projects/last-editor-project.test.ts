@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   getEditorProjectIdFromPathname,
   getEditorProjectReloadPathWithCacheBust,
+  getLastEditorProjectId,
   rememberLastEditorProjectId,
+  resolveAutoOpenProjectId,
 } from './last-editor-project'
 
 describe('last editor project routing', () => {
@@ -42,5 +44,32 @@ describe('last editor project routing', () => {
     window.history.replaceState({}, '', '/projects?__freecut_updated=1780200314697')
 
     expect(getEditorProjectReloadPathWithCacheBust()).toBe('/projects?__freecut_updated=456')
+  })
+})
+
+describe('opening the last project on start', () => {
+  afterEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('remembers the project that was opened last', () => {
+    rememberLastEditorProjectId('project-9')
+
+    expect(getLastEditorProjectId()).toBe('project-9')
+  })
+
+  it('opens only an enabled project that still exists', () => {
+    expect(
+      resolveAutoOpenProjectId({ enabled: false, lastProjectId: 'p1', projectIds: ['p1'] }),
+    ).toBeUndefined()
+    expect(
+      resolveAutoOpenProjectId({ enabled: true, lastProjectId: undefined, projectIds: ['p1'] }),
+    ).toBeUndefined()
+    expect(
+      resolveAutoOpenProjectId({ enabled: true, lastProjectId: 'gone', projectIds: ['p1'] }),
+    ).toBeUndefined()
+    expect(
+      resolveAutoOpenProjectId({ enabled: true, lastProjectId: 'p1', projectIds: ['p1', 'p2'] }),
+    ).toBe('p1')
   })
 })

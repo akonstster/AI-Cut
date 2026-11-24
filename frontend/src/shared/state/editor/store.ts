@@ -73,6 +73,9 @@ function loadEditorWorkspaceLayout(workspace: EditorWorkspaceId): EditorWorkspac
 function getEditorWorkspaceLayoutSnapshot(state: EditorState): EditorWorkspaceLayout {
   return {
     colorScopesOpen: state.colorScopesOpen,
+    colorParamsTab: state.colorParamsTab,
+    colorFilmstripWidth: state.colorFilmstripWidth,
+    colorFilmTileSize: state.colorFilmTileSize,
     clipInspectorTab: state.clipInspectorTab,
     activeTab: state.activeTab,
     propertiesFullColumn: state.propertiesFullColumn,
@@ -147,6 +150,9 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   sourcePatchAudioTrackId: null,
   linkedSelectionEnabled: true,
   colorScopesOpen: initialWorkspaceLayout.colorScopesOpen,
+  colorParamsTab: initialWorkspaceLayout.colorParamsTab,
+  colorFilmstripWidth: initialWorkspaceLayout.colorFilmstripWidth,
+  colorFilmTileSize: initialWorkspaceLayout.colorFilmTileSize,
   mixerFloating: (() => {
     try {
       return localStorage.getItem('editor:mixerFloating') === 'true'
@@ -348,6 +354,27 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
       const nextState = { ...state, colorScopesOpen }
       saveEditorWorkspaceLayout(state.workspace, getEditorWorkspaceLayoutSnapshot(nextState))
       return { colorScopesOpen }
+    }),
+  setColorParamsTab: (tab) =>
+    set((state) => {
+      if (state.colorParamsTab === tab) return state
+      const nextState = { ...state, colorParamsTab: tab }
+      saveEditorWorkspaceLayout(state.workspace, getEditorWorkspaceLayoutSnapshot(nextState))
+      return { colorParamsTab: tab }
+    }),
+  setColorFilmstripWidth: (width) =>
+    set((state) => {
+      if (state.colorFilmstripWidth === width) return state
+      const nextState = { ...state, colorFilmstripWidth: width }
+      saveEditorWorkspaceLayout(state.workspace, getEditorWorkspaceLayoutSnapshot(nextState))
+      return { colorFilmstripWidth: width }
+    }),
+  setColorFilmTileSize: (size) =>
+    set((state) => {
+      if (state.colorFilmTileSize === size) return state
+      const nextState = { ...state, colorFilmTileSize: size }
+      saveEditorWorkspaceLayout(state.workspace, getEditorWorkspaceLayoutSnapshot(nextState))
+      return { colorFilmTileSize: size }
     }),
   setMixerFloating: (floating) => {
     try {

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -8,6 +9,7 @@ import {
   ChevronUp,
   Clock,
   FolderCheck,
+  FolderOpen,
   Loader2,
   Pause,
   Play,
@@ -15,7 +17,10 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { framesToSeconds } from '@/shared/utils/time-utils'
+import { isDesktop, openOnDisk, revealOnDisk } from '@/infrastructure/desktop'
+import { workspaceAbsolutePath } from '@/infrastructure/desktop/media-path'
 import { formatBytes } from '../deps/renderer'
 import {
   useRenderQueueStore,
@@ -60,6 +65,34 @@ function JobRow({ job }: { job: RenderJob }) {
   const removeJob = useRenderQueueStore((s) => s.removeJob)
   const retryJob = useRenderQueueStore((s) => s.retryJob)
   const moveJob = useRenderQueueStore((s) => s.moveJob)
+  const [desktopApp, setDesktopApp] = useState(false)
+
+  useEffect(() => {
+    void isDesktop().then(setDesktopApp)
+  }, [])
+
+  /**
+   * Shows a finished job's file in the file manager, or plays it with the system's default
+   * program. The queue writes into the workspace, so the window opens it where it lies.
+   */
+  const openSaved = (mode: 'folder' | 'file') => {
+    void (async () => {
+      try {
+        const absolute = job.savedPath ? await workspaceAbsolutePath(job.savedPath) : null
+        if (!absolute) {
+          toast.error(t('export.renderQueue.pathUnknown'))
+          return
+        }
+        await (mode === 'folder' ? revealOnDisk(absolute) : openOnDisk(absolute))
+      } catch (error) {
+        toast.error(
+          t('export.renderQueue.openFailed', {
+            reason: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      }
+    })()
+  }
 
   const fps = job.snapshot.fps
   const formatBits =
@@ -141,6 +174,31 @@ function JobRow({ job }: { job: RenderJob }) {
                 data-tooltip={t('export.renderQueue.moveDown')}
               >
                 <ChevronDown className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+
+          {job.status === 'completed' && job.savedPath && desktopApp && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => openSaved('folder')}
+                aria-label={t('export.renderQueue.openFolder')}
+                data-tooltip={t('export.renderQueue.openFolder')}
+              >
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => openSaved('file')}
+                aria-label={t('export.renderQueue.openFile')}
+                data-tooltip={t('export.renderQueue.openFile')}
+              >
+                <Play className="h-4 w-4" />
               </Button>
             </>
           )}

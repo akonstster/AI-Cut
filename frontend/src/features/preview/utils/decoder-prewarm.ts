@@ -22,6 +22,18 @@ import {
 } from '@/infrastructure/browser/object-url-registry'
 import { blobUrlManager } from '@/infrastructure/browser/blob-url-manager'
 import { updateMedia } from '@/infrastructure/storage'
+import { useMediaLibraryStore } from '../deps/media-library-contract'
+
+/** Media whose keyframe index was already persisted this session. */
+const persistedKeyframeMediaIds = new Set<string>()
+
+function sameTimestamps(a: readonly number[] | undefined, b: readonly number[]): boolean {
+  if (!a || a.length !== b.length) return false
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return false
+  }
+  return true
+}
 import {
   getKeyframeTimestamps,
   registerKeyframeIndex,
@@ -229,10 +241,18 @@ function handleWorkerMessage(event: MessageEvent): void {
     // Register in main-thread registry for the export/edit overlay path.
     registerKeyframeIndex(msg.src, msg.keyframeTimestamps)
     keyframesSentForSrc.add(msg.src)
-    // Persist to IndexedDB so future sessions don't need re-extraction
+    // Persist once per media and only when the stored index differs. Workers
+    // re-extract after blob-URL churn or extractor eviction; rewriting the same
+    // metadata.json on every hover pass flooded the workspace file API.
     const mediaId = blobUrlManager.getMediaIdByUrl(msg.src)
-    if (mediaId) {
-      void updateMedia(mediaId, { keyframeTimestamps: msg.keyframeTimestamps })
+    if (mediaId && !persistedKeyframeMediaIds.has(mediaId)) {
+      persistedKeyframeMediaIds.add(mediaId)
+      const stored = useMediaLibraryStore.getState().mediaById[mediaId]?.keyframeTimestamps
+      if (!sameTimestamps(stored, msg.keyframeTimestamps)) {
+        void updateMedia(mediaId, { keyframeTimestamps: msg.keyframeTimestamps }).catch(() => {
+          persistedKeyframeMediaIds.delete(mediaId)
+        })
+      }
     }
     return
   }

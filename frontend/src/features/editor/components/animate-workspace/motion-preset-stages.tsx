@@ -37,48 +37,45 @@ export const MotionPresetStages = memo(function MotionPresetStages({
 }: MotionPresetStagesProps) {
   return (
     <>
-          {MOTION_PRESET_CATEGORIES.map((category) => {
-            const textSlot = TEXT_SLOT_BY_MOTION_CATEGORY[category]
-            const layerPresets = presetsByCategory[category]
-            const showTextScope = selectedTextItems.length > 0 && textSlot
-            if (layerPresets.length === 0 && !showTextScope) return null
-            return (
-              <StageSection
-                key={category}
-                title={t(`editor.motionPresets.categories.${category}`)}
-              >
-                {layerPresets.length > 0 ? (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {t('editor.animateStages.scopeLayer')}
-                    </span>
-                    <MotionPresetSection
-                      category={category}
-                      presets={layerPresets}
-                      reasonFor={reasonFor}
-                      onApply={onApply}
-                      showHeading={false}
-                      t={t}
-                    />
-                  </div>
-                ) : null}
-                {showTextScope ? (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {t('editor.animateStages.scopeText')}
-                    </span>
-                    <TextMotionSlotRows
-                      items={selectedTextItems}
-                      query={query}
-                      slots={[textSlot]}
-                      showSlotHeading={false}
-                      showEmptyState={false}
-                    />
-                  </div>
-                ) : null}
-              </StageSection>
-            )
-          })}
+      {MOTION_PRESET_CATEGORIES.map((category) => {
+        const textSlot = TEXT_SLOT_BY_MOTION_CATEGORY[category]
+        const layerPresets = presetsByCategory[category]
+        const showTextScope = selectedTextItems.length > 0 && textSlot
+        if (layerPresets.length === 0 && !showTextScope) return null
+        return (
+          <StageSection key={category} title={t(`editor.motionPresets.categories.${category}`)}>
+            {layerPresets.length > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {t('editor.animateStages.scopeLayer')}
+                </span>
+                <MotionPresetSection
+                  category={category}
+                  presets={layerPresets}
+                  reasonFor={reasonFor}
+                  onApply={onApply}
+                  showHeading={false}
+                  t={t}
+                />
+              </div>
+            ) : null}
+            {showTextScope ? (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {t('editor.animateStages.scopeText')}
+                </span>
+                <TextMotionSlotRows
+                  items={selectedTextItems}
+                  query={query}
+                  slots={[textSlot]}
+                  showSlotHeading={false}
+                  showEmptyState={false}
+                />
+              </div>
+            ) : null}
+          </StageSection>
+        )
+      })}
     </>
   )
 })

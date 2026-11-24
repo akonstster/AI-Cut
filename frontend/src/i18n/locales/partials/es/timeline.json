@@ -1,5 +1,16 @@
 {
   "timeline": {
+    "transitionDrop": {
+      "noAdjacentClip": "No hay ningún clip contiguo en este lado.",
+      "dropOnExisting": "Suelta sobre la transición existente para sustituirla.",
+      "notEnoughFrames": "Faltan fotogramas en los clips de origen para aplicar una transición en este corte.",
+      "dropToTrim": "Suelta para revisar el recorte necesario para la transición.",
+      "trimTitle": "¿Recortar los clips para añadir la transición?",
+      "trimDescription": "La transición durará {{duration}}. Los clips posteriores de esta pista se adelantarán {{shift}}. Se eliminará el mismo intervalo en las demás pistas con bloqueo de sincronización, lo que puede recortar el audio o los subtítulos.",
+      "cancel": "Cancelar",
+      "trimAndAdd": "Recortar y añadir transición",
+      "trimFailed": "No se pudo añadir la transición con este recorte. Comprueba los bloqueos de pista y las transiciones cercanas."
+    },
     "track": {
       "unableToAddDroppedItem": "No se pudo a Agregar soltados elemento",
       "unableToAddDroppedMediaItems": "No se pudo a Agregar soltados Medios elementos",

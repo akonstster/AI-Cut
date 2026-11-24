@@ -9,11 +9,22 @@
       "message": "Экспорт отменен. Файл не сохранен."
     },
     "complete": {
-      "audioSuccess": "Аудио готово к скачиванию.",
+      "audioSuccess": "Аудио готово.",
       "download": "Скачать",
       "fileSizeLabel": "Размер",
+      "folderFallback": "Запомненная папка недоступна — файл сохранён в папку по умолчанию.",
+      "openFile": "Открыть",
+      "openFolder": "Открыть папку",
+      "savedTo": "Файл сохранён в",
       "timeTakenLabel": "Время",
-      "videoSuccess": "Видео готово к скачиванию."
+      "videoSuccess": "Видео готово."
+    },
+    "destination": {
+      "choose": "Выбрать…",
+      "defaultFolder": "Документы (по умолчанию)",
+      "fileName": "Имя файла",
+      "folder": "Папка для сохранения",
+      "pickFailed": "Не удалось открыть выбор папки: {{reason}}"
     },
     "dialog": {
       "descCancelled": "Экспорт был отменен до завершения.",

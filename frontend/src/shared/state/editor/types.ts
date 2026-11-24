@@ -1,5 +1,6 @@
 import type {
   EditorClipInspectorTab,
+  EditorColorParamsTab,
   EditorSidebarTab,
   EditorWorkspaceId,
 } from '@/config/editor-workspaces'
@@ -33,6 +34,12 @@ export interface EditorState {
   sourcePatchAudioTrackId: string | null
   linkedSelectionEnabled: boolean
   colorScopesOpen: boolean
+  /** Active Color page parameter tab (persisted per workspace layout). */
+  colorParamsTab: EditorColorParamsTab
+  /** Width of the Color page clip filmstrip column, in px. */
+  colorFilmstripWidth: number
+  /** Minimum thumbnail width in the Color filmstrip grid, in px. */
+  colorFilmTileSize: number
   mixerFloating: boolean
   propertiesFullColumn: boolean
   mediaFullColumn: boolean
@@ -78,6 +85,9 @@ export interface EditorActions {
   toggleLinkedSelectionEnabled: () => void
   setColorScopesOpen: (open: boolean) => void
   toggleColorScopesOpen: () => void
+  setColorParamsTab: (tab: EditorColorParamsTab) => void
+  setColorFilmstripWidth: (width: number) => void
+  setColorFilmTileSize: (size: number) => void
   setMixerFloating: (floating: boolean) => void
   toggleMixerFloating: () => void
   togglePropertiesFullColumn: () => void

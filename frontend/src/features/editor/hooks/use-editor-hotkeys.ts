@@ -4,6 +4,7 @@ import { useResolvedHotkeys } from '@/features/editor/deps/settings'
 import { useEditorStore } from '@/shared/state/editor'
 
 import { useSceneBrowserStore } from '@/features/editor/deps/scene-browser'
+import { togglePreviewFullscreen } from '@/features/editor/deps/preview'
 
 interface EditorHotkeyCallbacks {
   onSave?: () => void
@@ -64,7 +65,7 @@ export function useEditorHotkeys(callbacks: EditorHotkeyCallbacks = {}) {
     [],
   )
 
-  // Workspace switching: Alt+1 (Edit), Alt+2 (Color), Alt+3 (Motion).
+  // Workspace switching: Alt+1 (Edit), Alt+2 (Color), Alt+3 (Motion), Alt+4 (Canvas).
   // WORKSPACE_ANIMATE retains its persisted command id for shortcut migration.
   useHotkeys(
     hotkeys.WORKSPACE_EDIT,
@@ -91,6 +92,27 @@ export function useEditorHotkeys(callbacks: EditorHotkeyCallbacks = {}) {
     (event) => {
       event.preventDefault()
       useEditorStore.getState().setWorkspace('motion')
+    },
+    HOTKEY_OPTIONS,
+    [],
+  )
+
+  useHotkeys(
+    hotkeys.WORKSPACE_CANVAS,
+    (event) => {
+      event.preventDefault()
+      useEditorStore.getState().setWorkspace('canvas')
+    },
+    HOTKEY_OPTIONS,
+    [],
+  )
+
+  // Preview fullscreen: Cmd/Ctrl+` — the full-screen key editors use for the program monitor.
+  useHotkeys(
+    hotkeys.TOGGLE_PREVIEW_FULLSCREEN,
+    (event) => {
+      event.preventDefault()
+      void togglePreviewFullscreen()
     },
     HOTKEY_OPTIONS,
     [],

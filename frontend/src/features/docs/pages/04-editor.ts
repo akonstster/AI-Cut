@@ -5,7 +5,7 @@ const page = {
   slug: 'editor',
   title: 'Editor Layout and Navigation',
   description:
-    'The toolbar, media sidebar, preview monitor, timeline, properties, and the Edit, Color, and Motion workspaces.',
+    'The toolbar, media sidebar, preview monitor, timeline, properties, and the Edit, Color, Motion, and Canvas workspaces.',
   category: 'Start',
   related: ['concepts', 'timeline', 'keyboard-shortcuts'],
   sections: [
@@ -52,9 +52,10 @@ const page = {
           items: [
             'The **Edit** workspace (`Alt+1`) is the default cutting layout for arranging, trimming, text, shapes, effects, transitions, and preview.',
             'The **Color** workspace (`Alt+2`) focuses on grading, with color wheels, curves, and scopes for the selected clip.',
-            'The **Motion** workspace combines layered compositions, keyframes, graphs, presets, and procedural animation — see [Motion Workspace](motion).',
+            'The **Motion** workspace (`Alt+3`) combines layered compositions, keyframes, graphs, presets, and procedural animation — see [Motion Workspace](motion).',
+            'The **Canvas** workspace (`Alt+4`) opens the node canvas where generative [workflows](production) are wired and run.',
             'Select a visual clip in Edit and open **Animation** in Properties for common presets, applied-animation status, text motion, and **Create Motion Clip**.',
-            'Switch workspaces from the center toolbar tabs, or use `Alt+1`, `Alt+2`, and `Alt+3`.',
+            'Switch workspaces from the center toolbar tabs, or use `Alt+1`, `Alt+2`, `Alt+3`, and `Alt+4`.',
           ],
         },
       ],

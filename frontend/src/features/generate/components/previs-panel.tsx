@@ -30,10 +30,14 @@ export function PrevisPanel() {
   const projectId = useProjectStore((state) => state.currentProject?.id ?? null)
   const metadata = useProjectStore((state) => state.currentProject?.metadata)
   const binding = useGenerateStore((state) => state.blockingShot)
-  const shot = useGenerateStore((state) => binding && binding.projectId === projectId
-    ? state.storyboards[binding.projectId]?.shots.find((each) => each.id === binding.shotId)
-    : undefined)
-  const looseBlocking = useGenerateStore((state) => projectId ? state.blockings[projectId] : undefined)
+  const shot = useGenerateStore((state) =>
+    binding && binding.projectId === projectId
+      ? state.storyboards[binding.projectId]?.shots.find((each) => each.id === binding.shotId)
+      : undefined,
+  )
+  const looseBlocking = useGenerateStore((state) =>
+    projectId ? state.blockings[projectId] : undefined,
+  )
   const blocking = shot ? shot.previs : looseBlocking
   const description = blocking?.description ?? shot?.prompt ?? ''
   const [json, setJson] = useState('')
@@ -99,14 +103,18 @@ export function PrevisPanel() {
 
   const keep = (next: PrevisScene | null, words = description) => {
     const store = useGenerateStore.getState()
-    if (shot) store.updateShot(projectId, shot.id, { previs: { scene: next ?? undefined, description: words } })
+    if (shot)
+      store.updateShot(projectId, shot.id, {
+        previs: { scene: next ?? undefined, description: words },
+      })
     else store.setBlocking(projectId, { description: words, scene: next })
   }
   const keepMedia = (kind: 'frame' | 'video', media: string) => {
     if (!shot) return
     const store = useGenerateStore.getState()
     const current = store.storyboards[projectId]?.shots.find((each) => each.id === shot.id)
-    if (current?.previs?.scene === scene) store.updateShot(projectId, shot.id, { previs: { ...current?.previs, [kind]: media } })
+    if (current?.previs?.scene === scene)
+      store.updateShot(projectId, shot.id, { previs: { ...current?.previs, [kind]: media } })
   }
 
   const run = async (kind: NonNullable<typeof busy>, work: () => Promise<string | void>) => {
@@ -153,7 +161,8 @@ export function PrevisPanel() {
 
   const takeFrame = (use: Omit<PendingUse, 'ref'>) =>
     run('frame', async () => {
-      if (!renderer.current) throw new Error(t("generate.previs.noView", { defaultValue: "3D preview is unavailable" }))
+      if (!renderer.current)
+        throw new Error(t('generate.previs.noView', { defaultValue: '3D preview is unavailable' }))
       setPlaying(false)
       const media = await importPrevisFrame(renderer.current, time, name('frame'))
       keepMedia('frame', media)
@@ -164,7 +173,8 @@ export function PrevisPanel() {
 
   const makeVideo = () =>
     run('video', async () => {
-      if (!renderer.current) throw new Error(t("generate.previs.noView", { defaultValue: "3D preview is unavailable" }))
+      if (!renderer.current)
+        throw new Error(t('generate.previs.noView', { defaultValue: '3D preview is unavailable' }))
       setPlaying(false)
       setShare(0)
       const media = await importPrevisVideo(renderer.current, name('video'), setShare)
@@ -174,10 +184,18 @@ export function PrevisPanel() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto" data-testid="previs-panel">
-      {shot && <Button size="sm" variant="ghost" onClick={() => {
-        useGenerateStore.setState({ blockingShot: undefined })
-        useEditorStore.getState().setActiveTab('storyboard')
-      }}>{shot.label || t('generate.storyboard.shotName')} ← {t('generate.storyboard.shots')}</Button>}
+      {shot && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            useGenerateStore.setState({ blockingShot: undefined })
+            useEditorStore.getState().setActiveTab('storyboard')
+          }}
+        >
+          {shot.label || t('generate.storyboard.shotName')} ← {t('generate.storyboard.shots')}
+        </Button>
+      )}
       <div className="space-y-3 p-3">
         <p className="text-[11px] text-muted-foreground">{t('generate.previs.hint')}</p>
         <div className="space-y-1">
@@ -190,7 +208,8 @@ export function PrevisPanel() {
             onChange={(event) => {
               const store = useGenerateStore.getState()
               const description = event.target.value
-              if (shot) store.updateShot(projectId, shot.id, { previs: { ...shot.previs, description } })
+              if (shot)
+                store.updateShot(projectId, shot.id, { previs: { ...shot.previs, description } })
               else store.setBlocking(projectId, { scene, description })
             }}
             placeholder={t('generate.previs.placeholder')}

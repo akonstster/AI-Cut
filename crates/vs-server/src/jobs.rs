@@ -291,6 +291,15 @@ impl Jobs {
         // provider's, so they are sent; schema defaults of fal and Runware are the provider's own.
         // A required field left at its default must still be sent.
         for field in &form.fields {
+            if form.provider == Provider::Openrouter {
+                let has_size = request.values.contains_key("size");
+                if (has_size && matches!(field.key.as_str(), "aspect_ratio" | "resolution"))
+                    || (field.key == "size"
+                        && (request.values.contains_key("aspect_ratio") || request.values.contains_key("resolution")))
+                {
+                    continue;
+                }
+            }
             let ours = form.provider == Provider::Openrouter || field.required;
             if let (true, Some(default)) = (ours, &field.default) {
                 request.values.entry(field.key.clone()).or_insert_with(|| default.clone());

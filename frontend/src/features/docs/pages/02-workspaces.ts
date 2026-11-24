@@ -47,7 +47,7 @@ const page = {
           kind: 'list',
           items: [
             'Missing Media means AI-Cut cannot currently read one or more linked source files.',
-                        'Use **Locate** or **Locate Folder** when a file or its folder was moved.',
+            'Use **Locate** or **Locate Folder** when a file or its folder was moved.',
             'Use **Browse Another Folder** to point AI-Cut at a new copy of the media.',
           ],
         },

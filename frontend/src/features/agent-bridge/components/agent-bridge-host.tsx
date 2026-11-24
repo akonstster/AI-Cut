@@ -16,7 +16,9 @@ function reportLanguage(language: string): void {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language }),
-    }).catch((error: unknown) => console.error('[ERROR] the window language did not reach AI-Cut:', error))
+    }).catch((error: unknown) =>
+      console.error('[ERROR] the window language did not reach AI-Cut:', error),
+    )
   })
 }
 
@@ -36,7 +38,12 @@ export function AgentBridgeHost({ showProject }: { showProject: ShowProject }) {
     startBridge()
     const show = (event: Event) => {
       const { command } = (event as CustomEvent<{ command: string }>).detail
-      toast(t('agent.action', { action: t(`agent.commands.${command}`, { defaultValue: command.replace(/_/g, ' ') }) }), { duration: 2500 })
+      toast(
+        t('agent.action', {
+          action: t(`agent.commands.${command}`, { defaultValue: command.replace(/_/g, ' ') }),
+        }),
+        { duration: 2500 },
+      )
     }
     window.addEventListener(AGENT_ACTION, show)
     return () => window.removeEventListener(AGENT_ACTION, show)

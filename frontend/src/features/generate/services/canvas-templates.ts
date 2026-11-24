@@ -206,9 +206,13 @@ export function workflowFile(graph: CanvasGraph, name: string): string {
     if (node.type === 'media')
       return { ...node, data: { ref: null, kind: node.data.kind, name: '' } }
     if (node.type === 'generate') {
-      const settings = node.data.settings && Object.fromEntries(
-        Object.entries(node.data.settings).filter(([, value]) => !Array.isArray(value) && (typeof value !== 'object' || value === null)),
-      )
+      const settings =
+        node.data.settings &&
+        Object.fromEntries(
+          Object.entries(node.data.settings).filter(
+            ([, value]) => !Array.isArray(value) && (typeof value !== 'object' || value === null),
+          ),
+        )
       return { ...node, data: { ...node.data, settings, job: null } }
     }
     return node
@@ -275,7 +279,8 @@ export function readWorkflowFile(
   if (file.version !== 1) bad(`version ${String(file.version)} is not known`)
   if (!Array.isArray(file.graph?.nodes) || !Array.isArray(file.graph?.edges))
     bad('it has no nodes and edges')
-  if (file.graph.nodes.length > 200 || file.graph.edges.length > 2000) bad('it exceeds workflow size limits')
+  if (file.graph.nodes.length > 200 || file.graph.edges.length > 2000)
+    bad('it exceeds workflow size limits')
   const ids = new Map<string, string>()
   const nodes = (file.graph.nodes as Array<Record<string, unknown>>).map(
     (raw, index): CanvasNode => {
@@ -331,10 +336,14 @@ export function readWorkflowFile(
       const source = ids.get(String(raw.source))
       const target = ids.get(String(raw.target))
       if (!source || !target) bad(`edge ${index + 1} joins nodes the file does not have`)
-      if (!isCanvasHandle(raw.targetHandle))
-        bad(`edge ${index + 1} goes into an unknown slot`)
+      if (!isCanvasHandle(raw.targetHandle)) bad(`edge ${index + 1} goes into an unknown slot`)
       const origin = nodesById.get(source)
-      if (!origin || source === target || nodesById.get(target)?.type !== 'generate' || !connects(origin, raw.targetHandle))
+      if (
+        !origin ||
+        source === target ||
+        nodesById.get(target)?.type !== 'generate' ||
+        !connects(origin, raw.targetHandle)
+      )
         bad(`edge ${index + 1} connects incompatible nodes`)
       return { id: newId(), source, target, targetHandle: raw.targetHandle }
     },

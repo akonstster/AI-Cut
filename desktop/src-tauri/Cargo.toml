@@ -1,6 +1,6 @@
 [package]
 name = "aicut-desktop"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2021"
 description = "AI-Cut desktop application with a built-in local editor server and MCP endpoint"
 authors = ["Andrey Konstantinov"]

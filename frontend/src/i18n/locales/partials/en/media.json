@@ -1,6 +1,7 @@
 {
   "media": {
     "card": {
+      "largePreview": "Large preview",
       "previewUnavailable": "Couldn’t open this file for preview.",
       "aiCaptionsCount": "AI Captions Count",
       "analyzeWithAI": "Analyze with AI",

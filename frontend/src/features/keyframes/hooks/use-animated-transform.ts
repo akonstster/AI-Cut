@@ -1,10 +1,7 @@
 import { useMemo } from 'react'
 import type { TimelineItem } from '@/types/timeline'
 import type { ResolvedTransform } from '@/types/transform'
-import {
-  useItemsStore,
-  useKeyframesStore,
-} from '@/features/keyframes/deps/timeline'
+import { useItemsStore, useKeyframesStore } from '@/features/keyframes/deps/timeline'
 import { useResolvedPlaybackFrame } from '@/shared/state/playback/use-resolved-playback-frame'
 import {
   resolveTransform,

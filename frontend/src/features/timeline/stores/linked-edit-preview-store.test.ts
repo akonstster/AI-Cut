@@ -33,7 +33,10 @@ describe('useLinkedEditPreviewStore', () => {
 
   it('writes when the update set itself changes', () => {
     const store = useLinkedEditPreviewStore
-    store.getState().setUpdates([{ id: 'a', from: 10 }, { id: 'b', from: 20 }])
+    store.getState().setUpdates([
+      { id: 'a', from: 10 },
+      { id: 'b', from: 20 },
+    ])
 
     store.getState().setUpdates([{ id: 'a', from: 10 }])
 

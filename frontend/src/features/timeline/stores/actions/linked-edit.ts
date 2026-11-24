@@ -2,7 +2,7 @@ import type { TimelineItem } from '@/types/timeline'
 import {
   buildSynchronizedLinkedMoveUpdates,
   expandItemIdsWithAttachedCaptions,
-  expandSelectionWithLinkedItems,
+  getLinkedItemIds,
   getLinkedItems,
   getMatchingSynchronizedLinkedCounterpart,
   getSynchronizedLinkedCounterpartPair,
@@ -19,11 +19,24 @@ export function expandIdsWithLinkedItems(
   ids: string[],
   linkedSelectionEnabled: boolean,
 ): string[] {
+  const anchors = Array.from(new Set(ids))
   if (!linkedSelectionEnabled) {
-    return expandItemIdsWithAttachedCaptions(items, Array.from(new Set(ids)))
+    return expandItemIdsWithAttachedCaptions(items, anchors)
   }
 
-  return expandItemIdsWithAttachedCaptions(items, expandSelectionWithLinkedItems(items, ids))
+  // This expansion feeds deletion and removal. A subtitle anchors only itself there: deleting
+  // captions must never delete the picture it describes. Movement expands the group instead
+  // (see expandSelectionWithLinkedItems), so a linked pair still travels together.
+  const expanded = new Set<string>(anchors)
+  for (const id of anchors) {
+    const item = items.find((candidate) => candidate.id === id)
+    if (item?.type === 'subtitle') continue
+    for (const linkedId of getLinkedItemIds(items, id)) {
+      expanded.add(linkedId)
+    }
+  }
+
+  return expandItemIdsWithAttachedCaptions(items, Array.from(expanded))
 }
 
 export function getLinkedItemsForEdit(

@@ -5,6 +5,7 @@ import { TimelineContent } from './timeline-content'
 import { TimelineNavigator } from './timeline-navigator'
 import { TrackHeader } from './track-header'
 import { TransitionDragTooltip } from './transition-drag-tooltip'
+import { TransitionTrimDialog } from './transition-trim-dialog'
 import { FirstTrackRowFrame, TrackRowFrame, TrackSectionDivider } from './track-row-frame'
 import { useTimelineTracks } from '../hooks/use-timeline-tracks'
 import { useItemsStore } from '../stores/items-store'
@@ -1094,6 +1095,7 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
         onClose={() => setKeyframePanelOpen(false)}
       />
       <TransitionDragTooltip />
+      <TransitionTrimDialog />
     </div>
   )
 })

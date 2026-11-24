@@ -422,12 +422,7 @@ export function VideoSection({ items }: VideoSectionProps) {
 
       commitPreviewClear()
     },
-    [
-      commitPreviewClear,
-      currentFrame,
-      keyframesByItemId,
-      cropItems,
-    ],
+    [commitPreviewClear, currentFrame, keyframesByItemId, cropItems],
   )
 
   const previewCropSoftness = useCallback(
@@ -474,12 +469,7 @@ export function VideoSection({ items }: VideoSectionProps) {
 
       commitPreviewClear()
     },
-    [
-      commitPreviewClear,
-      currentFrame,
-      keyframesByItemId,
-      cropItems,
-    ],
+    [commitPreviewClear, currentFrame, keyframesByItemId, cropItems],
   )
 
   const resetCropEdge = useCallback(

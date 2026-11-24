@@ -79,10 +79,7 @@ import {
   hasVisibleMotionResults,
   isMotionClipSelection,
 } from './motion-library-status'
-import {
-  collectKeyframeApplications,
-  summarizeManualKeyframes,
-} from './motion-clip-summary'
+import { collectKeyframeApplications, summarizeManualKeyframes } from './motion-clip-summary'
 import { MotionPresetStages } from './motion-preset-stages'
 import { SavedAnimationList } from './saved-animation-list'
 import type { ModifierEditSettings } from './continuous-motion-row'

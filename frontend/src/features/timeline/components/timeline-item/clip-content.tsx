@@ -1,12 +1,4 @@
-import {
-  Suspense,
-  lazy,
-  memo,
-  useCallback,
-  useDeferredValue,
-  useMemo,
-  type ReactNode,
-} from 'react'
+import { Suspense, lazy, memo, useCallback, useDeferredValue, useMemo, type ReactNode } from 'react'
 import { Link2 } from 'lucide-react'
 import { perfMarkRender } from '@/shared/logging/perf-marks'
 import type { TimelineItem } from '@/types/timeline'
@@ -20,6 +12,11 @@ import { useZoomStore } from '../../stores/zoom-store'
 import { getDemotionAwarePixelsPerSecond } from '../../utils/timeline-dom-density'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { getTextItemPlainText } from '@/shared/utils/text-item-spans'
+import { timelineCaptionCues } from '@/shared/timeline/caption-cues'
+import {
+  isDuplicateTranscriptCaptionClip,
+  hasTranscriptCaptionSegmentInPair,
+} from '@/shared/timeline/caption-ownership'
 import {
   getCompositionVisualSegments,
   summarizeCompositionClipContent,
@@ -950,29 +947,108 @@ const WidthGatedMediaClipContent = memo(function WidthGatedMediaClipContent(
   perfMarkRender('ClipContent')
 
   return (
+    <>
+      <div
+        className="absolute inset-0 flex flex-col"
+        data-media-clip-content
+        hidden={!hasVisibleClipContent}
+        style={!hasVisibleClipContent ? { display: 'none' } : undefined}
+      >
+        <MediaClipLabel
+          label={item.label}
+          isLinked={isLinked}
+          linkedSyncOffsetLabel={linkedSyncOffsetLabel}
+          showLinkIcon={showLinkIcon}
+          showLabel={showLabel}
+          showSyncOffset={showSyncOffset}
+        />
+        {showVisualDetail && item.type === 'video' && (
+          <VideoClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'video' }} />
+        )}
+        {showVisualDetail && item.type === 'audio' && (
+          <AudioClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'audio' }} />
+        )}
+        {showVisualDetail && item.type === 'image' && (
+          <ImageClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'image' }} />
+        )}
+      </div>
+      {/* Captions are a separate lane: the level-of-detail gate above hides labels and
+          filmstrips, but the subtitles must stay visible on the clip. */}
+      <CaptionCueStrip item={item} fps={fps} />
+    </>
+  )
+})
+
+function CaptionCueStrip({ item, fps }: { item: TimelineItem; fps: number }) {
+  if (item.isReversed) return null
+  if (item.type === 'subtitle') {
+    if (item.cues.length === 0) return null
+  } else {
+    const captions = item.transcriptCaptions
+    if (
+      !captions ||
+      captions.type !== 'transcript' ||
+      !captions.enabled ||
+      captions.cues.length === 0
+    ) {
+      return null
+    }
+  }
+  return <CaptionCueRows item={item} fps={fps} />
+}
+
+const CaptionCueRows = memo(function CaptionCueRows({
+  item,
+  fps,
+}: {
+  item: TimelineItem
+  fps: number
+}) {
+  // Only clips that really carry captions reach this component, so a zoomed-out track
+  // keeps its per-clip store subscription count unchanged. The strip belongs to the clip that
+  // owns the captions: not to the audio half of a pair, and not to a clip whose transcript
+  // already lives on its own subtitle track.
+  const drawnElsewhere = useItemsStore(
+    useCallback(
+      (state) =>
+        isDuplicateTranscriptCaptionClip(state.items, item) ||
+        hasTranscriptCaptionSegmentInPair(state.items, item),
+      [item],
+    ),
+  )
+  const cues = useMemo(
+    () =>
+      item.type === 'subtitle'
+        ? item.cues.map((cue) => ({
+            text: cue.text,
+            from: item.from + cue.startSeconds * fps,
+            to: item.from + cue.endSeconds * fps,
+          }))
+        : timelineCaptionCues(item, fps),
+    [item, fps],
+  )
+  if (drawnElsewhere || cues.length === 0) return null
+  return (
     <div
-      className="absolute inset-0 flex flex-col"
-      data-media-clip-content
-      hidden={!hasVisibleClipContent}
-      style={!hasVisibleClipContent ? { display: 'none' } : undefined}
+      className="absolute bottom-0 left-0 right-0 h-5 overflow-hidden bg-violet-600/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+      data-caption-cues
     >
-      <MediaClipLabel
-        label={item.label}
-        isLinked={isLinked}
-        linkedSyncOffsetLabel={linkedSyncOffsetLabel}
-        showLinkIcon={showLinkIcon}
-        showLabel={showLabel}
-        showSyncOffset={showSyncOffset}
-      />
-      {showVisualDetail && item.type === 'video' && (
-        <VideoClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'video' }} />
-      )}
-      {showVisualDetail && item.type === 'audio' && (
-        <AudioClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'audio' }} />
-      )}
-      {showVisualDetail && item.type === 'image' && (
-        <ImageClipVisualContent {...props} item={item as MediaTimelineItem & { type: 'image' }} />
-      )}
+      {cues.map((cue, index) => (
+        <div
+          key={index}
+          title={cue.text}
+          data-caption-cue
+          // Each cue is its own size container: the text only appears once the block is wide
+          // enough to read it, instead of clipping two letters off a zoomed-out cue.
+          className="@container absolute top-0 bottom-0 overflow-hidden whitespace-nowrap border-r border-violet-950/50 px-1 text-[10px] font-medium leading-5 text-white"
+          style={{
+            left: `${((cue.from - item.from) / item.durationInFrames) * 100}%`,
+            width: `${((cue.to - cue.from) / item.durationInFrames) * 100}%`,
+          }}
+        >
+          <span className="hidden @min-[28px]:inline">{cue.text}</span>
+        </div>
+      ))}
     </div>
   )
 })
@@ -983,14 +1059,21 @@ export const ClipContent = memo(function ClipContent(props: ClipContentProps) {
   // this width. Besides reducing layout work, returning before the width-gated
   // media component avoids one live zoom-store subscription per compact clip.
   // Detail is restored only by real-pixel zoom, never by hover or selection.
+  // The caption strip is the exception: it is plain CSS, and losing it would
+  // hide where a clip's subtitles are as soon as the timeline is zoomed out.
   if (props.isCompactWidth === true) {
-    return null
+    return <CaptionCueStrip item={props.item} fps={props.fps} />
   }
   if (hasBasicMediaVisuals(props.item)) {
     return <WidthGatedMediaClipContent {...props} />
   }
   if (props.isDetailEligible === false) {
-    return null
+    return <CaptionCueStrip item={props.item} fps={props.fps} />
   }
-  return <DetailedClipContent {...props} />
+  return (
+    <>
+      <DetailedClipContent {...props} />
+      <CaptionCueStrip item={props.item} fps={props.fps} />
+    </>
+  )
 })

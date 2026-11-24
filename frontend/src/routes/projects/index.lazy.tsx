@@ -35,10 +35,21 @@ import { LegacyMigrationErrors } from '@/features/projects/components/legacy-mig
 import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
+import {
+  getLastEditorProjectId,
+  resolveAutoOpenProjectId,
+} from '@/shared/projects/last-editor-project'
+import { useSettingsStore } from '@/features/projects/deps/settings-contract'
 
 export const Route = createLazyFileRoute('/projects/')({
   component: ProjectsIndex,
 })
+
+/**
+ * The window opens on /projects; auto-opening the last project belongs to that first visit, not
+ * to every return from the editor, so it happens once per launched window.
+ */
+let autoOpenedLastProjectThisLaunch = false
 
 function ProjectsIndex() {
   const navigate = useNavigate()
@@ -91,6 +102,21 @@ function ProjectsIndex() {
   useEffect(() => {
     loadProjects()
   }, [loadProjects])
+
+  // Settings → General → "Open last project on start": once per launched window, and only when
+  // the remembered project is still in the list (it may have been deleted or moved to the trash).
+  const openLastProjectOnStart = useSettingsStore((state) => state.openLastProjectOnStart)
+  useEffect(() => {
+    if (autoOpenedLastProjectThisLaunch || isLoading) return
+    const projectId = resolveAutoOpenProjectId({
+      enabled: openLastProjectOnStart,
+      lastProjectId: getLastEditorProjectId(),
+      projectIds: projects.map((project) => project.id),
+    })
+    if (!projectId) return
+    autoOpenedLastProjectThisLaunch = true
+    void navigate({ to: '/editor/$projectId', params: { projectId }, replace: true })
+  }, [isLoading, navigate, openLastProjectOnStart, projects])
 
   // Handle import file selection
   const handleImportClick = () => {
@@ -252,54 +278,52 @@ function ProjectsIndex() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <AppTopBar className="flex-wrap justify-between py-2 sm:px-6" data-no-marquee>
+          <Link to="/projects">
+            <FreeCutLogo variant="full" size="sm" className="hover:opacity-80 transition-opacity" />
+          </Link>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <LanguageSwitcher size="md" align="end" side="bottom" />
 
-            <Link to="/projects">
-              <FreeCutLogo
-                variant="full"
-                size="sm"
-                className="hover:opacity-80 transition-opacity"
-              />
-            </Link>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <LanguageSwitcher size="md" align="end" side="bottom" />
-
-
-
-              <Button variant="outline" size="sm" className="gap-2" asChild>
-                <Link to="/docs">
-                  <BookOpen className="w-4 h-4" />
-                  Docs
-                </Link>
-              </Button>
-
-
-
-              <WorkspaceIndicator />
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={handleImportClick}
-              >
-                <Upload className="w-4 h-4" />
-                {t('projects.importProject')}
-              </Button>
-              <Link to="/projects/new">
-                <Button size="sm" className="bg-brand gap-2">
-                  <Plus className="w-4 h-4" />
-                  {t('projects.newProject')}
-                </Button>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link to="/docs">
+                <BookOpen className="w-4 h-4" />
+                Docs
               </Link>
-            </div>
+            </Button>
 
-            {/* Hidden file input for import */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+            <WorkspaceIndicator />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleImportClick}
+              data-tooltip={t('projects.list.importProjectHint')}
+              data-tooltip-side="bottom"
+            >
+              <Upload className="w-4 h-4" />
+              {t('projects.importProject')}
+            </Button>
+            <Link to="/projects/new">
+              <Button
+                size="sm"
+                className="bg-brand gap-2"
+                data-tooltip={t('projects.list.newProjectHint')}
+                data-tooltip-side="bottom"
+              >
+                <Plus className="w-4 h-4" />
+                {t('projects.newProject')}
+              </Button>
+            </Link>
+          </div>
+
+          {/* Hidden file input for import */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </AppTopBar>
 
         {/* Error state */}

@@ -37,6 +37,7 @@
     "channel": "Канал",
     "dragHint": "Перетаскивайте точки для настройки кривой (канал {{channel}})",
     "resetChannel": "Сбросить канал",
+    "resetShort": "Сброс",
     "channelMaster": "Мастер",
     "channelRed": "Красный",
     "channelGreen": "Зеленый",
@@ -272,6 +273,11 @@
     "adjustmentLayerTooltip": "Создать корректирующий слой для грейдинга всех клипов под ним",
     "savePreset": "Сохранить",
     "savePresetTooltip": "Сохранить эту цветокоррекцию как пресет",
+    "tabs": {
+      "primary": "Основные",
+      "curves": "Кривые",
+      "lut": "LUT"
+    },
     "presetNamePlaceholder": "Название пресета…"
   },
   "lut": {

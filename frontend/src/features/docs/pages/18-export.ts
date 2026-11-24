@@ -102,14 +102,14 @@ const page = {
       ],
     },
     {
-      title: 'Render and download',
+      title: 'Render and save',
       blocks: [
         {
           kind: 'list',
           items: [
             'Progress moves through preparing, rendering, encoding, and finalizing, and you can **Cancel** at any time.',
             'Worker export runs in the background when available; a main-thread fallback wants the tab focused and quiet.',
-            'When it completes, choose **Download** to save the file, which is also written to the exports folder in your workspace.',
+            'When it completes, **Open folder** shows the file in your file manager and **Open** plays it in the system player — the file is already on disk, so there is nothing to download.',
           ],
         },
         {

@@ -827,10 +827,12 @@ describe('items-store timeline bounds sync', () => {
   })
 
   it('clamps the out-point when the tail clip is deleted', () => {
-    useItemsStore.getState().setItems([
-      makeVideoItem({ id: 'item-1', durationInFrames: 600 }),
-      makeVideoItem({ id: 'item-2', from: 600, durationInFrames: 300 }),
-    ])
+    useItemsStore
+      .getState()
+      .setItems([
+        makeVideoItem({ id: 'item-1', durationInFrames: 600 }),
+        makeVideoItem({ id: 'item-2', from: 600, durationInFrames: 300 }),
+      ])
     useMarkersStore.getState().setInPoint(120)
     useMarkersStore.getState().setOutPoint(900)
 

@@ -94,7 +94,10 @@ export interface EffectSourceMask {
 /**
  * Get GPU effects from an effects array and convert to GpuEffectInstance format.
  */
-export function getGpuEffectInstances(effects: ItemEffect[], timelineTimeSeconds = 0): GpuEffectInstance[] {
+export function getGpuEffectInstances(
+  effects: ItemEffect[],
+  timelineTimeSeconds = 0,
+): GpuEffectInstance[] {
   return effects
     .filter((e) => e.enabled && e.effect.type === 'gpu-effect')
     .map((e) => {

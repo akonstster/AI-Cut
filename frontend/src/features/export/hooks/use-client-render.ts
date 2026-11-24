@@ -42,7 +42,7 @@ import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects
 import { resolveMediaUrls } from '@/features/export/deps/media-library'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { createLogger, createOperationId } from '@/shared/logging/logger'
-import { isDesktop, revealOnDisk, saveToDisk } from '@/infrastructure/desktop'
+import { isDesktop, openOnDisk, revealOnDisk, saveToDisk } from '@/infrastructure/desktop'
 import { toast } from 'sonner'
 import { i18n } from '@/i18n'
 
@@ -57,6 +57,13 @@ function extensionOf(mimeType: string): string {
   return 'mp4'
 }
 
+/** "Clip.mp4" typed into the name field must not become "Clip.mp4.mp4". */
+function withoutExtension(name: string, extension: string): string {
+  const suffix = `.${extension}`
+  if (!name.toLowerCase().endsWith(suffix)) return name
+  const stripped = name.slice(0, -suffix.length).trim()
+  return stripped || name
+}
 
 const log = createLogger('Export')
 
@@ -70,6 +77,12 @@ export type ClientRenderStatus =
   | 'failed'
   | 'cancelled'
 
+/** Where the finished file goes: a folder the person chose and the name to give it. */
+export interface ExportDestination {
+  dir?: string
+  fileName?: string
+}
+
 interface UseClientRenderReturn {
   // State
   isExporting: boolean
@@ -80,14 +93,25 @@ interface UseClientRenderReturn {
   status: ClientRenderStatus
   error: string | null
   result: ClientRenderResult | null
+  /** Where the finished file was written on this computer. */
+  savedPath: string | null
+  /** The remembered folder was unavailable, so the default folder was used instead. */
+  savedFallback: boolean
 
   // Actions
-  startExport: (settings: ExportSettings | ExtendedExportSettings) => Promise<void>
+  startExport: (
+    settings: ExportSettings | ExtendedExportSettings,
+    destination?: ExportDestination,
+  ) => Promise<void>
   cancelExport: () => void
   downloadVideo: () => void
   /** The finished render as a file named after the project, for sharing. */
   resultFile: () => File | null
   resetState: () => void
+  /** Shows the saved file in the file manager. */
+  revealSaved: () => void
+  /** Opens the saved file in the system's default program. */
+  openSaved: () => void
 
   // Utilities
   getSupportedCodecs: (options?: {
@@ -107,6 +131,8 @@ export function useClientRender(): UseClientRenderReturn {
   const [status, setStatus] = useState<ClientRenderStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ClientRenderResult | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
+  const [savedFallback, setSavedFallback] = useState(false)
   const resultRef = useRef<ClientRenderResult | null>(null)
 
   // AbortController for cancellation
@@ -138,11 +164,51 @@ export function useClientRender(): UseClientRenderReturn {
     }
   }, [])
 
+  /** File name for this export: the one chosen in the dialog, else the project name. */
+  const exportBaseName = useCallback((destination?: ExportDestination) => {
+    const project = useProjectStore.getState().currentProject?.name ?? 'AI-Cut'
+    const requested = destination?.fileName?.trim()
+    const raw = requested && requested.length > 0 ? requested : project
+    return raw.replace(/[<>:"/\\|?*]+/g, '_').trim() || 'AI-Cut'
+  }, [])
+
+  /**
+   * Writes the finished render (and its subtitle sidecar) where the person asked, without a
+   * second "Save as" dialog: the destination is chosen before the export starts.
+   */
+  const writeResultToDisk = useCallback(
+    async (finished: ClientRenderResult, destination?: ExportDestination) => {
+      const extension = extensionOf(finished.mimeType)
+      const baseName = withoutExtension(exportBaseName(destination), extension)
+      const saved = await saveToDisk(finished.blob, `${baseName}.${extension}`, {
+        dialog: false,
+        dir: destination?.dir || undefined,
+      })
+      if (saved.cancelled || !saved.path) return null
+      const sidecar = finished.subtitleSidecar
+      if (sidecar) {
+        const sidecarExt = sidecar.filename.split('.').pop() ?? 'srt'
+        await saveToDisk(
+          new Blob([sidecar.content], { type: 'text/plain;charset=utf-8' }),
+          `${baseName}.${sidecarExt}`,
+          { dialog: false, beside: saved.path },
+        )
+      }
+      setSavedPath(saved.path)
+      setSavedFallback(saved.fallback)
+      toast.success(i18n.t('desktop.saved', { path: saved.path }), {
+        action: { label: i18n.t('desktop.reveal'), onClick: () => void revealOnDisk(saved.path!) },
+      })
+      return saved.path
+    },
+    [exportBaseName],
+  )
+
   /**
    * Start client-side export
    */
   const startExport = useCallback(
-    async (settings: ExportSettings | ExtendedExportSettings) => {
+    async (settings: ExportSettings | ExtendedExportSettings, destination?: ExportDestination) => {
       const opId = createOperationId()
       const event = log.startEvent('render', opId)
 
@@ -338,6 +404,19 @@ export function useClientRender(): UseClientRenderReturn {
 
         resultRef.current = finalResult
         setResult(finalResult)
+        setSavedPath(null)
+        setSavedFallback(false)
+        // The window writes the file itself: the destination was chosen before the render, so
+        // there is no second "Save as" step after it finishes.
+        if (await isDesktop()) {
+          await writeResultToDisk(finalResult, destination).catch((error: unknown) => {
+            toast.error(
+              i18n.t('desktop.saveFailed', {
+                reason: error instanceof Error ? error.message : String(error),
+              }),
+            )
+          })
+        }
         setStatus('completed')
         setProgress(100)
 
@@ -364,7 +443,7 @@ export function useClientRender(): UseClientRenderReturn {
         abortControllerRef.current = null
       }
     },
-    [handleProgress],
+    [handleProgress, writeResultToDisk],
   )
 
   /**
@@ -379,84 +458,93 @@ export function useClientRender(): UseClientRenderReturn {
     }
   }, [])
 
-  /**
-   * Download the rendered video/audio
-   */
   const resultFile = useCallback(() => {
     if (!result) return null
-    const project = useProjectStore.getState().currentProject?.name ?? 'videosos'
-    const baseName = project.replace(/[<>:"/\\|?*]+/g, '_').trim() || 'videosos'
-    return new File([result.blob], `${baseName}.${extensionOf(result.mimeType)}`, { type: result.mimeType })
-  }, [result])
+    const extension = extensionOf(result.mimeType)
+    const baseName = withoutExtension(exportBaseName(), extension)
+    return new File([result.blob], `${baseName}.${extension}`, {
+      type: result.mimeType,
+    })
+  }, [exportBaseName, result])
 
+  /** "Save as…": the system dialog, for the browser build and for an explicit re-save. */
   const downloadVideo = useCallback(() => {
     if (!result) return
     void (async () => {
       if (!(await isDesktop())) return downloadInBrowser()
-      const project = useProjectStore.getState().currentProject?.name ?? 'AI-Cut'
       const extension = extensionOf(result.mimeType)
-      const baseName = project.replace(/[<>:"/\\|?*]+/g, '_').trim() || 'AI-Cut'
+      const baseName = withoutExtension(exportBaseName(), extension)
       try {
-        const saved = await saveToDisk(result.blob, `${baseName}.${extension}`, { dialog: true })
+        const saved = await saveToDisk(result.blob, `${baseName}.${extension}`, {
+          dialog: true,
+        })
         if (saved.cancelled || !saved.path) return
         const sidecar = result.subtitleSidecar
         if (sidecar) {
           const sidecarExt = sidecar.filename.split('.').pop() ?? 'srt'
-          await saveToDisk(new Blob([sidecar.content], { type: 'text/plain;charset=utf-8' }), `${baseName}.${sidecarExt}`, {
-            dialog: false,
-            beside: saved.path,
-          })
+          await saveToDisk(
+            new Blob([sidecar.content], { type: 'text/plain;charset=utf-8' }),
+            `${baseName}.${sidecarExt}`,
+            {
+              dialog: false,
+              beside: saved.path,
+            },
+          )
         }
         const path = saved.path
         toast.success(i18n.t('desktop.saved', { path }), {
           action: { label: i18n.t('desktop.reveal'), onClick: () => void revealOnDisk(path) },
         })
       } catch (error) {
-        toast.error(i18n.t('desktop.saveFailed', { reason: error instanceof Error ? error.message : String(error) }))
+        toast.error(
+          i18n.t('desktop.saveFailed', {
+            reason: error instanceof Error ? error.message : String(error),
+          }),
+        )
       }
     })()
 
     function downloadInBrowser() {
-    if (!result) return
-    const url = URL.createObjectURL(result.blob)
-    const a = document.createElement('a')
-    a.href = url
+      if (!result) return
+      const url = URL.createObjectURL(result.blob)
+      const a = document.createElement('a')
+      a.href = url
 
-    // Determine file extension from MIME type
-    let extension = 'mp4'
-    const mime = result.mimeType.toLowerCase()
-    if (mime.includes('webm')) extension = 'webm'
-    else if (mime.includes('matroska')) extension = 'mkv'
-    else if (mime.includes('quicktime') || mime.includes('mov')) extension = 'mov'
-    else if (mime.includes('audio/mpeg') || mime.includes('mp3')) extension = 'mp3'
-    else if (mime.includes('audio/wav') || mime.includes('wave')) extension = 'wav'
-    else if (mime.includes('audio/aac') || mime.includes('adts')) extension = 'aac'
+      // Determine file extension from MIME type
+      let extension = 'mp4'
+      const mime = result.mimeType.toLowerCase()
+      if (mime.includes('webm')) extension = 'webm'
+      else if (mime.includes('matroska')) extension = 'mkv'
+      else if (mime.includes('quicktime') || mime.includes('mov')) extension = 'mov'
+      else if (mime.includes('audio/mpeg') || mime.includes('mp3')) extension = 'mp3'
+      else if (mime.includes('audio/wav') || mime.includes('wave')) extension = 'wav'
+      else if (mime.includes('audio/aac') || mime.includes('adts')) extension = 'aac'
 
-    const baseName = `export-${Date.now()}`
-    a.download = `${baseName}.${extension}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+      const baseName = `export-${Date.now()}`
+      a.download = `${baseName}.${extension}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
 
-    // Revoke during idle — download has already started by then
-    requestIdleCallback(() => URL.revokeObjectURL(url))
+      // Revoke during idle — download has already started by then
+      requestIdleCallback(() => URL.revokeObjectURL(url))
 
-    // Sidecar mode: download the .srt alongside, sharing the video's base name.
-    const sidecar = result.subtitleSidecar
-    if (sidecar) {
-      const sidecarExt = sidecar.filename.split('.').pop() ?? 'srt'
-      const sidecarBlob = new Blob([sidecar.content], { type: 'text/plain;charset=utf-8' })
-      const sidecarUrl = URL.createObjectURL(sidecarBlob)
-      const sidecarLink = document.createElement('a')
-      sidecarLink.href = sidecarUrl
-      sidecarLink.download = `${baseName}.${sidecarExt}`
-      document.body.appendChild(sidecarLink)
-      sidecarLink.click()
-      document.body.removeChild(sidecarLink)
-      requestIdleCallback(() => URL.revokeObjectURL(sidecarUrl))
+      // Sidecar mode: download the .srt alongside, sharing the video's base name.
+      const sidecar = result.subtitleSidecar
+      if (sidecar) {
+        const sidecarExt = sidecar.filename.split('.').pop() ?? 'srt'
+        const sidecarBlob = new Blob([sidecar.content], { type: 'text/plain;charset=utf-8' })
+        const sidecarUrl = URL.createObjectURL(sidecarBlob)
+        const sidecarLink = document.createElement('a')
+        sidecarLink.href = sidecarUrl
+        sidecarLink.download = `${baseName}.${sidecarExt}`
+        document.body.appendChild(sidecarLink)
+        sidecarLink.click()
+        document.body.removeChild(sidecarLink)
+        requestIdleCallback(() => URL.revokeObjectURL(sidecarUrl))
+      }
     }
-    }
-  }, [result])
+  }, [exportBaseName, result])
 
   /**
    * Reset state
@@ -471,11 +559,21 @@ export function useClientRender(): UseClientRenderReturn {
     setTotalFrames(undefined)
     setStatus('idle')
     setError(null)
+    setSavedPath(null)
+    setSavedFallback(false)
     const previousResult = resultRef.current
     resultRef.current = null
     void releaseTemporaryExportOutput(previousResult)
     setResult(null)
   }, [])
+
+  /** Shows the finished file in the file manager, and opens it in the system player. */
+  const revealSaved = useCallback(() => {
+    if (savedPath) void revealOnDisk(savedPath)
+  }, [savedPath])
+  const openSaved = useCallback(() => {
+    if (savedPath) void openOnDisk(savedPath)
+  }, [savedPath])
 
   useEffect(
     () => () => {
@@ -531,11 +629,15 @@ export function useClientRender(): UseClientRenderReturn {
     status,
     error,
     result,
+    savedPath,
+    savedFallback,
     startExport,
     cancelExport,
     downloadVideo,
     resultFile,
     resetState,
+    revealSaved,
+    openSaved,
     getSupportedCodecs: getSupportedCodecsForResolution,
     estimateFileSize: estimateFileSizeForSettings,
   }

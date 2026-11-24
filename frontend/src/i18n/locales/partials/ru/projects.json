@@ -83,7 +83,9 @@
       "removeFilesFromFolder": "Удалить файлы из привязанной папки. Это действие нельзя отменить.",
       "removeFilesFromNamedFolder": "Удалить файлы из привязанной папки \"{{folder}}\". Это действие нельзя отменить.",
       "openProject": "Открыть проект",
-      "actions": "Действия с проектом"
+      "actions": "Действия с проектом",
+      "openProjectHint": "Открыть проект в редакторе",
+      "actionsHint": "Переименовать, дублировать или удалить проект"
     },
     "form": {
       "createTitle": "Создать проект",
@@ -121,6 +123,12 @@
       "descending": "По убыванию",
       "clearFilters": "Сбросить фильтры",
       "clearSelection": "Снять выделение",
+      "clearSearch": "Очистить поиск",
+      "clearFiltersHint": "Снова показать все проекты",
+      "clearSelectionHint": "Снять выделение с проектов — ничего не удаляется",
+      "deleteSelectedHint": "Переместить выбранные проекты в корзину",
+      "newProjectHint": "Создать новый проект",
+      "importProjectHint": "Импортировать проект (.zip)",
       "selectedCount_one": "Выбран {{count}}",
       "selectedCount_few": "Выбрано {{count}}",
       "selectedCount_many": "Выбрано {{count}}",
@@ -543,6 +551,7 @@
           "zoomTo100": "Масштаб 100%",
           "toggleSnap": "Вкл/выкл привязку",
           "toggleCanvasSnap": "Вкл/выкл привязку на холсте (гизмо)",
+          "togglePreviewFullscreen": "Полноэкранный режим превью",
           "editWorkspace": "Переключиться в рабочую область «Монтаж»",
           "colorWorkspace": "Переключиться в рабочую область «Цвет»",
           "copy": "Копировать выбранные элементы или ключевые кадры",

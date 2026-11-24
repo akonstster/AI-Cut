@@ -565,6 +565,8 @@
       "invert": "反転"
     },
     "subtitleSection": {
+      "addCue": "字幕を追加",
+      "newCue": "新しい字幕",
       "title": "字幕",
       "multiSelectHint": "{{segments}}個のセグメントを選択中・合計{{cues}}個の字幕。スタイルはすべてに適用されます。個々の字幕を編集するには1つのセグメントを選択してください。",
       "trackLabel": "トラック{{number}}",

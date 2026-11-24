@@ -274,9 +274,7 @@ describe('VideoContent pooled handoff', () => {
     vi.useFakeTimers()
     playbackState.isPlaying = false
     const pooledElement = createMockVideoElement()
-    pooledElement.getClientRects = vi.fn(
-      () => ({ length: 1 }) as unknown as DOMRectList,
-    )
+    pooledElement.getClientRects = vi.fn(() => ({ length: 1 }) as unknown as DOMRectList)
     acquireForClipMock.mockReturnValue(pooledElement)
 
     const rendered = render(

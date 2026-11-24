@@ -101,6 +101,7 @@ async fn info(State(state): State<AppState>) -> Json<Value> {
         "portable": service::is_portable(),
         "workspace": state.workspace.display().to_string(),
         "data": state.data.display().to_string(),
+        "documents": dirs::document_dir().map(|dir| dir.display().to_string()),
         "os": std::env::consts::OS,
     }))
 }

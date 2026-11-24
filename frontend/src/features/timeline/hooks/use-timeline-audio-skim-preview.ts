@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { audioScrubPreview } from '@/features/timeline/deps/media-library-audio-preview'
 import { importMediaLibraryService } from '@/features/timeline/deps/media-library-service'
 import { useMediaLibraryStore } from '@/features/timeline/deps/media-library-store'
+import { useSettingsStore } from '@/features/timeline/deps/settings'
 import {
   clearAudioSkimMeterLevel,
   publishAudioSkimMeterLevel,
@@ -11,9 +12,12 @@ import {
   getOrDecodeAudioSliceForPlayback,
   resolvePreviewAudioConformUrl,
 } from '../deps/composition-runtime-contract'
+import { resolveSkimSourceOnce, type SkimAudioSource } from '../services/skim-source-cache'
 import { useCompositionsStore } from '../stores/compositions-store'
 import { useItemsStore } from '../stores/items-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
+import { measureSkimSpeed, resolveSkimGrainSeconds } from '../utils/skim-grain-timing'
+import { timelineTapeSkimPreview } from '../utils/timeline-tape-skim'
 import {
   createLatestOnlyAsyncFrameRunner,
   getTimelineAudioBufferPeak,
@@ -36,13 +40,12 @@ export function useTimelineAudioSkimPreview(): void {
       skimPreviewFrameRef.current(frame),
     )
   }
-  const sourceByMediaIdRef = useRef<
-    Map<string, { mediaUrl: string; mediaKind: 'audio' | 'video' }>
-  >(new Map())
+  const lastSpeedSampleRef = useRef<{ frame: number; atMs: number } | null>(null)
 
   const stopAudioSkim = useCallback(() => {
     requestIdRef.current += 1
     pendingFrameRef.current = null
+    lastSpeedSampleRef.current = null
     latestAudioSkimRunnerRef.current?.cancelPending()
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current)
@@ -51,52 +54,41 @@ export function useTimelineAudioSkimPreview(): void {
     audioScrubPreview.stop()
     timelineAudioBufferSkimPreview.stop()
     timelineMediaElementAudioSkimPreview.stop()
+    timelineTapeSkimPreview.stop()
     clearAudioSkimMeterLevel()
   }, [])
 
+  /** Load a conform WAV or a media URL once per media; the shared cache answers the rest. */
   const resolveSkimUrl = useCallback(
-    async (mediaId: string, item: { type: 'audio' | 'video'; src?: string; audioSrc?: string }) => {
-      const media = useMediaLibraryStore.getState().mediaById[mediaId]
-      if (media?.previewAudioConformedAt || media?.previewAudioOpfsPath) {
-        const conformUrl = await resolvePreviewAudioConformUrl(mediaId)
-        if (conformUrl) {
-          const resolved = { mediaUrl: conformUrl, mediaKind: 'audio' as const }
-          sourceByMediaIdRef.current.set(mediaId, resolved)
-          return resolved
+    async (
+      mediaId: string,
+      item: { type: 'audio' | 'video'; src?: string; audioSrc?: string },
+    ): Promise<SkimAudioSource | null> =>
+      resolveSkimSourceOnce(mediaId, async () => {
+        const media = useMediaLibraryStore.getState().mediaById[mediaId]
+        if (media?.previewAudioConformedAt || media?.previewAudioOpfsPath) {
+          const conformUrl = await resolvePreviewAudioConformUrl(mediaId)
+          if (conformUrl) {
+            return { mediaUrl: conformUrl, mediaKind: 'audio' as const }
+          }
         }
-      }
 
-      const cached = sourceByMediaIdRef.current.get(mediaId)
-      if (cached) {
-        return cached
-      }
-
-      const conformUrl = await resolvePreviewAudioConformUrl(mediaId)
-      if (conformUrl) {
-        const resolved = { mediaUrl: conformUrl, mediaKind: 'audio' as const }
-        sourceByMediaIdRef.current.set(mediaId, resolved)
-        return resolved
-      }
-
-      let mediaUrl =
-        item.type === 'audio' ? item.src : item.type === 'video' ? item.audioSrc : undefined
-      if (!mediaUrl) {
-        const { mediaLibraryService } = await importMediaLibraryService()
-        mediaUrl = (await mediaLibraryService.getMediaBlobUrl(mediaId)) ?? undefined
-      }
-      if (!mediaUrl && item.type === 'video') {
-        mediaUrl = item.src
-      }
-      const mediaKind =
-        item.type === 'video' && (!item.audioSrc || mediaUrl === item.src)
-          ? ('video' as const)
-          : ('audio' as const)
-      if (!mediaUrl) return null
-
-      const resolved = { mediaUrl, mediaKind }
-      sourceByMediaIdRef.current.set(mediaId, resolved)
-      return resolved
-    },
+        let mediaUrl =
+          item.type === 'audio' ? item.src : item.type === 'video' ? item.audioSrc : undefined
+        if (!mediaUrl) {
+          const { mediaLibraryService } = await importMediaLibraryService()
+          mediaUrl = (await mediaLibraryService.getMediaBlobUrl(mediaId)) ?? undefined
+        }
+        if (!mediaUrl && item.type === 'video') {
+          mediaUrl = item.src
+        }
+        if (!mediaUrl) return null
+        const mediaKind =
+          item.type === 'video' && (!item.audioSrc || mediaUrl === item.src)
+            ? ('video' as const)
+            : ('audio' as const)
+        return { mediaUrl, mediaKind }
+      }),
     [],
   )
 
@@ -155,15 +147,56 @@ export function useTimelineAudioSkimPreview(): void {
       }
 
       const requestId = ++requestIdRef.current
+      // How fast the playhead travels decides the grain length (smooth while
+      // creeping, crisp while throwing it across the timeline) and the tape speed.
+      const now = performance.now()
+      const speed = measureSkimSpeed(lastSpeedSampleRef.current, { frame, atMs: now }, timelineFps)
+      lastSpeedSampleRef.current = { frame, atMs: now }
+      const grainSeconds = resolveSkimGrainSeconds(speed)
+      const skimSettings = useSettingsStore.getState()
+
       try {
         const resolved = await resolveSkimUrl(mediaId, item)
         if (!resolved || requestId !== requestIdRef.current) return
+
+        if (skimSettings.audioSkimMode === 'tape') {
+          const slice = await getOrDecodeAudioSliceForPlayback(mediaId, resolved.mediaUrl, {
+            targetTimeSeconds: timeSeconds,
+            minReadySeconds: 2,
+            waitTimeoutMs: 0,
+            preRollSeconds: 1.2,
+          })
+          if (slice && requestId === requestIdRef.current) {
+            timelineMediaElementAudioSkimPreview.stop()
+            timelineAudioBufferSkimPreview.stop()
+            audioScrubPreview.stop()
+            await timelineTapeSkimPreview.scrub({
+              buffer: slice.buffer,
+              sliceStartTimeSeconds: slice.startTime,
+              timeSeconds,
+              gain: outputGain,
+              speed,
+            })
+            const peak = getTimelineAudioBufferPeak({
+              buffer: slice.buffer,
+              sliceStartTimeSeconds: slice.startTime,
+              timeSeconds,
+            })
+            publishAudioSkimMeterLevel({
+              left: peak.left * outputGain,
+              right: peak.right * outputGain,
+              trackId: item.trackId,
+            })
+            return
+          }
+        }
 
         await timelineMediaElementAudioSkimPreview.scrub({
           mediaKind: resolved.mediaKind,
           mediaUrl: resolved.mediaUrl,
           timeSeconds,
           gain: outputGain,
+          grainDurationSeconds: grainSeconds,
         })
         publishAudioSkimMeterLevel({
           left: 0.28 * outputGain,
@@ -171,6 +204,7 @@ export function useTimelineAudioSkimPreview(): void {
           trackId: item.trackId,
         })
         timelineAudioBufferSkimPreview.stop()
+        timelineTapeSkimPreview.stop()
         audioScrubPreview.stop()
       } catch {
         try {
@@ -190,6 +224,7 @@ export function useTimelineAudioSkimPreview(): void {
             sliceStartTimeSeconds: slice.startTime,
             timeSeconds,
             gain: outputGain,
+            grainDurationSeconds: grainSeconds,
           })
           const peak = getTimelineAudioBufferPeak({
             buffer: slice.buffer,
@@ -207,11 +242,13 @@ export function useTimelineAudioSkimPreview(): void {
             if (!resolved || requestId !== requestIdRef.current) return
             timelineMediaElementAudioSkimPreview.stop()
             timelineAudioBufferSkimPreview.stop()
+            timelineTapeSkimPreview.stop()
             await audioScrubPreview.scrub({
               mediaId,
               mediaUrl: resolved.mediaUrl,
               timeSeconds,
               gain: outputGain,
+              grainDurationSeconds: grainSeconds,
             })
             publishAudioSkimMeterLevel({
               left: 0.28 * outputGain,
@@ -228,21 +265,18 @@ export function useTimelineAudioSkimPreview(): void {
   )
   skimPreviewFrameRef.current = skimPreviewFrame
 
-  const scheduleAudioSkim = useCallback(
-    (frame: number) => {
-      pendingFrameRef.current = frame
-      if (rafRef.current !== null) return
+  const scheduleAudioSkim = useCallback((frame: number) => {
+    pendingFrameRef.current = frame
+    if (rafRef.current !== null) return
 
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        const nextFrame = pendingFrameRef.current
-        pendingFrameRef.current = null
-        if (nextFrame === null) return
-        latestAudioSkimRunnerRef.current?.schedule(nextFrame)
-      })
-    },
-    [],
-  )
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const nextFrame = pendingFrameRef.current
+      pendingFrameRef.current = null
+      if (nextFrame === null) return
+      latestAudioSkimRunnerRef.current?.schedule(nextFrame)
+    })
+  }, [])
 
   useEffect(() => {
     if (audioSkimmingEnabled) return

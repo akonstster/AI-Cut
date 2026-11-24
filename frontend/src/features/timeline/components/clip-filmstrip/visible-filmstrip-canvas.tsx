@@ -173,10 +173,10 @@ function flushLiveFilmstripCanvasUpdate(): void {
     canvasWindow: LiveFilmstripCanvasWindow
   }> = []
 
-    // Ordinary timeline items use arithmetic from one shared live snapshot.
-    // Only transformed items, compound segments, or malformed legacy markup
-    // fall back to rectangles. Resolve every fallback read before painting any
-    // canvas so the batch never alternates layout reads and writes.
+  // Ordinary timeline items use arithmetic from one shared live snapshot.
+  // Only transformed items, compound segments, or malformed legacy markup
+  // fall back to rectangles. Resolve every fallback read before painting any
+  // canvas so the batch never alternates layout reads and writes.
   for (const registration of liveFilmstripCanvasRegistrations) {
     if (!registration.canvas.isConnected) continue
     let canvasWindow = registration.requiresMeasuredGeometry
@@ -531,15 +531,10 @@ export const VisibleFilmstripCanvas = memo(function VisibleFilmstripCanvas({
     if (liveTimelineViewport) {
       const snapshot = getLiveTimelineSnapshot()
       const timelineItem = canvas.closest<HTMLElement>('[data-timeline-item]')
-      const requiresMeasuredGeometry =
-        canvas.closest('[data-filmstrip-timeline-segment]') !== null
+      const requiresMeasuredGeometry = canvas.closest('[data-filmstrip-timeline-segment]') !== null
       const liveWindow = requiresMeasuredGeometry
         ? null
-        : computeLiveFilmstripCanvasWindowFromItem(
-            timelineItem,
-            snapshot,
-            liveViewportOverscanPx,
-          )
+        : computeLiveFilmstripCanvasWindowFromItem(timelineItem, snapshot, liveViewportOverscanPx)
       const resolvedWindow =
         liveWindow ??
         measureLiveFilmstripCanvasWindow({

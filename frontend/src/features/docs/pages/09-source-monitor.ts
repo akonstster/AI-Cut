@@ -29,10 +29,12 @@ const page = {
         {
           kind: 'steps',
           items: [
+            'Click anywhere in the Source Monitor first: in/out keys act on the panel that has the keyboard, exactly like the viewer you click in Premiere Pro or Resolve.',
             'Move to the first frame you want and press `I` (**Mark In**).',
             'Move to the frame after your last wanted frame and press `O` (**Mark Out**) — the out point is exclusive.',
             'Fine-tune by dragging the in handle, out handle, or the whole range on the strip.',
             'Use **Play In to Out** to review just the range, or `Alt+X` to clear it and use the full source.',
+            'With the timeline focused the same keys mark the sequence in/out points instead, so the two never fight over one press.',
           ],
         },
       ],
@@ -46,7 +48,7 @@ const page = {
             'The **V** toggle turns the video source-patch target on or off; the **A** toggle does the same for audio.',
             'Each toggle has a destination picker: **Auto**, a specific track by name, or **Create on edit** to make a new track.',
             'Video with sound places a linked video and audio pair across the V and A target tracks.',
-            'The active timeline track pre-fills the matching V and A destinations.',
+            '**Auto** follows whichever timeline track is active at the moment of the edit (the picker shows it as `Auto · V1`); picking a track by name pins the edit to that track until you pick another.',
           ],
         },
       ],

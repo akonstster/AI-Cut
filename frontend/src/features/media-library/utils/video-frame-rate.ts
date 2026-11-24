@@ -3,9 +3,7 @@ import type { VideoFrameRateMetrics } from '@/types/storage'
 export const FRAME_RATE_PROBE_PACKET_COUNT = 256
 
 export interface VideoFrameRateTrack {
-  computeFrameRateMetrics(options?: {
-    targetPacketCount?: number
-  }): Promise<VideoFrameRateMetrics>
+  computeFrameRateMetrics(options?: { targetPacketCount?: number }): Promise<VideoFrameRateMetrics>
 }
 
 const POSITIVE_RATE_KEYS = [

@@ -8,7 +8,10 @@ import type { TimelineItem } from '@/types/timeline'
  */
 
 /** Whether the search box or the compatible-only toggle is narrowing the lists. */
-export function hasActiveMotionFilters(deferredSearchQuery: string, compatibleOnly: boolean): boolean {
+export function hasActiveMotionFilters(
+  deferredSearchQuery: string,
+  compatibleOnly: boolean,
+): boolean {
   return deferredSearchQuery.trim().length > 0 || compatibleOnly
 }
 

@@ -43,17 +43,16 @@ const MOTION_INLINE_PROPERTY_GROUP_IDS = ['transform'] as const
  * sheet, while the value-graph workspaces clamp to the item and keep the
  * add-keyframe shortcut for the workspace itself.
  */
-interface EditorSurfaceProfile
-  extends Pick<
-    DopesheetProps,
-    | 'clampViewportToContent'
-    | 'viewportInteractionEnabled'
-    | 'playheadClampToItemBounds'
-    | 'scrubClampToItemBounds'
-    | 'addKeyframeShortcutEnabled'
-    | 'presentation'
-    | 'inlinePropertyGroupIds'
-  > {}
+interface EditorSurfaceProfile extends Pick<
+  DopesheetProps,
+  | 'clampViewportToContent'
+  | 'viewportInteractionEnabled'
+  | 'playheadClampToItemBounds'
+  | 'scrubClampToItemBounds'
+  | 'addKeyframeShortcutEnabled'
+  | 'presentation'
+  | 'inlinePropertyGroupIds'
+> {}
 
 const SURFACE_PROFILES: Record<KeyframeEditorSurface, EditorSurfaceProfile> = {
   edit: {
@@ -281,8 +280,8 @@ function buildDockedSheetProps({
     // The scrubbable span never shrinks below the ten-second floor.
     scrubFrameBounds: {
       minFrame: -itemFrom,
-      maxFrame: Math.floor(Math.max(maxItemEndFrame / editTimelineFps, 10) * editTimelineFps) -
-        itemFrom,
+      maxFrame:
+        Math.floor(Math.max(maxItemEndFrame / editTimelineFps, 10) * editTimelineFps) - itemFrom,
     },
     onSkim: handleSkim,
   }
@@ -480,10 +479,7 @@ export function buildDopesheetEditorProps({
     resolveExpressionReference,
     onSetPropertyExpression: handleSetPropertyExpression,
     onRemovePropertyExpression: handleRemovePropertyExpression,
-    hiddenPropertyRows: buildHiddenPropertyRows(
-      selectedItemForEditor,
-      hiddenVectorPropertyRows,
-    ),
+    hiddenPropertyRows: buildHiddenPropertyRows(selectedItemForEditor, hiddenVectorPropertyRows),
     compoundPropertyRows,
     compoundSecondaryProperties,
     dimensionSeparationByProperty,

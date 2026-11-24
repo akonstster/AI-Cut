@@ -61,10 +61,7 @@ export interface UsePropertyValueEditingReturn {
   valueDraftAtFocusRef: RefObject<Partial<Record<AnimatableProperty, string>>>
   skipNextBlurCommitPropertyRef: RefObject<AnimatableProperty | null>
   handleRowValueChange: (property: AnimatableProperty, value: string) => void
-  handleRowValueCommit: (
-    property: AnimatableProperty,
-    options?: { allowCreate?: boolean },
-  ) => void
+  handleRowValueCommit: (property: AnimatableProperty, options?: { allowCreate?: boolean }) => void
   handleValueScrubStart: (
     event: ReactPointerEvent<HTMLInputElement>,
     property: AnimatableProperty,

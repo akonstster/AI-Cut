@@ -2,7 +2,10 @@ import type { TimelineItem } from '@/types/timeline'
 import { createLogger } from '@/shared/logging/logger'
 import { getCompositeOperation } from '@/types/blend-mode-css'
 import { doesMaskAffectTrack } from '@/shared/utils/mask-scope'
-import { hasCornerPin, type FrameRenderTask } from '@/runtime/renderer/deps/composition-runtime-contract'
+import {
+  hasCornerPin,
+  type FrameRenderTask,
+} from '@/runtime/renderer/deps/composition-runtime-contract'
 import { DEFAULT_LAYER_PARAMS, type CompositeLayer } from '@/infrastructure/gpu-compositor'
 import { applyMasks, type MaskCanvasSettings, type PreparedMask } from './canvas-masks'
 import type { ActiveTransition } from './canvas-transitions'

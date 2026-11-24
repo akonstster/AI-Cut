@@ -344,7 +344,7 @@ describe('TimelineContent playback selection behavior', () => {
     animationFrameSpy.mockRestore()
   })
 
-  it('applies live zoom and its cursor-anchor scroll in the same animation frame', () => {
+  it('applies live zoom and keeps the playhead in place in the same animation frame', () => {
     const { container, unmount } = render(<TimelineContent duration={10} tracks={[VIDEO_TRACK]} />)
     const scrollContainer = container.querySelector('[data-timeline-scroll-container]')
 
@@ -402,8 +402,9 @@ describe('TimelineContent playback selection behavior', () => {
     })
 
     expect(useZoomStore.getState().level).toBeCloseTo(1.15)
-    expect(scrollContainer.scrollLeft).toBeCloseTo(30)
-    expect(useTimelineViewportStore.getState().scrollLeft).toBeCloseTo(30)
+    // The playhead sits at frame 0, so wheel zoom keeps it there instead of running away from it.
+    expect(scrollContainer.scrollLeft).toBeCloseTo(0)
+    expect(useTimelineViewportStore.getState().scrollLeft).toBeCloseTo(0)
     expect(liveScroll).toHaveBeenCalledOnce()
     expect(frameCallbacks).toHaveLength(0)
     expect(container.querySelector('[data-timeline-committed-surface="tracks"]')).toBe(
@@ -416,6 +417,54 @@ describe('TimelineContent playback selection behavior', () => {
       Number.parseFloat(committedSurface.style.getPropertyValue('--timeline-percent-per-frame')),
     ).toBeCloseTo(100 / (10 * 30))
     expect(committedSurface.style.getPropertyValue('--timeline-px-per-frame')).toBe('')
+
+    unmount()
+    animationFrameSpy.mockRestore()
+  })
+
+  it('zooms around the mouse when the playhead is scrolled out of view', () => {
+    const { container, unmount } = render(<TimelineContent duration={10} tracks={[VIDEO_TRACK]} />)
+    const scrollContainer = container.querySelector('[data-timeline-scroll-container]')
+    if (!(scrollContainer instanceof HTMLDivElement)) {
+      throw new Error('Expected timeline scroll container')
+    }
+    Object.defineProperty(scrollContainer, 'clientWidth', { configurable: true, value: 400 })
+    Object.defineProperty(scrollContainer, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: 400,
+        bottom: 200,
+        width: 400,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+
+    const frameCallbacks: FrameRequestCallback[] = []
+    const animationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback)
+        return frameCallbacks.length
+      })
+
+    act(() => usePlaybackStore.getState().setCurrentFrame(200))
+    fireEvent.wheel(scrollContainer, {
+      clientX: 200,
+      clientY: 100,
+      ctrlKey: true,
+      deltaY: -120,
+    })
+    act(() => {
+      frameCallbacks.shift()?.(performance.now())
+    })
+
+    expect(useZoomStore.getState().level).toBeCloseTo(1.15)
+    expect(scrollContainer.scrollLeft).toBeCloseTo(30)
 
     unmount()
     animationFrameSpy.mockRestore()
@@ -448,7 +497,7 @@ describe('TimelineContent playback selection behavior', () => {
     animationFrameSpy.mockRestore()
   })
 
-  it('preserves the mouse pivot when wheel-zooming immediately after zoom to fit', () => {
+  it('keeps the playhead in place when wheel-zooming immediately after zoom to fit', () => {
     let zoomToFit: (() => void) | undefined
     const frameCallbacks: FrameRequestCallback[] = []
     const animationFrameSpy = vi
@@ -502,7 +551,7 @@ describe('TimelineContent playback selection behavior', () => {
     })
 
     expect(useZoomStore.getState().level).toBeCloseTo(0.4025)
-    expect(scrollContainer.scrollLeft).toBeCloseTo(45)
+    expect(scrollContainer.scrollLeft).toBeCloseTo(0)
 
     fireEvent.wheel(scrollContainer, {
       clientX: 300,
@@ -516,7 +565,7 @@ describe('TimelineContent playback selection behavior', () => {
     })
 
     expect(useZoomStore.getState().level).toBeCloseTo(0.463)
-    expect(scrollContainer.scrollLeft).toBeCloseTo(96.75)
+    expect(scrollContainer.scrollLeft).toBeCloseTo(0)
 
     unmount()
     animationFrameSpy.mockRestore()

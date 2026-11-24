@@ -305,8 +305,12 @@ const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
 const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
 
 export const MediaSidebar = memo(function MediaSidebar({ projectId }: { projectId: string }) {
-  const generationReady = useGenerateStore((state) => state.generationProjectId === projectId && state.generationProjectReady)
-  const generationError = useGenerateStore((state) => state.generationProjectId === projectId ? state.generationPersistenceError : null)
+  const generationReady = useGenerateStore(
+    (state) => state.generationProjectId === projectId && state.generationProjectReady,
+  )
+  const generationError = useGenerateStore((state) =>
+    state.generationProjectId === projectId ? state.generationPersistenceError : null,
+  )
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -1202,7 +1206,9 @@ export const MediaSidebar = memo(function MediaSidebar({ projectId }: { projectI
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'generate' ? 'flex flex-col' : 'hidden'}`}
             >
               {activeTab === 'generate' && (!generationReady || generationError) && (
-                <p role="status" className="px-3 py-2 text-sm">{generationError ?? t('generate.form.loading')}</p>
+                <p role="status" className="px-3 py-2 text-sm">
+                  {generationError ?? t('generate.form.loading')}
+                </p>
               )}
               {generateTabActivated && generationReady && (
                 <Suspense fallback={null}>
@@ -1212,9 +1218,13 @@ export const MediaSidebar = memo(function MediaSidebar({ projectId }: { projectI
             </div>
 
             {/* Graphics Tab */}
-            <div className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'blocking' ? 'flex flex-col' : 'hidden'}`}>
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'blocking' ? 'flex flex-col' : 'hidden'}`}
+            >
               {activeTab === 'blocking' && (!generationReady || generationError) && (
-                <p role="status" className="px-3 py-2 text-sm">{generationError ?? t('generate.form.loading')}</p>
+                <p role="status" className="px-3 py-2 text-sm">
+                  {generationError ?? t('generate.form.loading')}
+                </p>
               )}
               {blockingTabActivated && generationReady && (
                 <Suspense fallback={null}>
@@ -1223,10 +1233,12 @@ export const MediaSidebar = memo(function MediaSidebar({ projectId }: { projectI
               )}
             </div>
             <div
-              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'graphics'  ? 'flex flex-col' : 'hidden'}`}
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'graphics' ? 'flex flex-col' : 'hidden'}`}
             >
               {activeTab === 'graphics' && (!generationReady || generationError) && (
-                <p role="status" className="px-3 py-2 text-sm">{generationError ?? t('generate.form.loading')}</p>
+                <p role="status" className="px-3 py-2 text-sm">
+                  {generationError ?? t('generate.form.loading')}
+                </p>
               )}
               {graphicsTabActivated && generationReady && (
                 <Suspense fallback={null}>
@@ -1240,7 +1252,9 @@ export const MediaSidebar = memo(function MediaSidebar({ projectId }: { projectI
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'storyboard' ? 'flex flex-col' : 'hidden'}`}
             >
               {activeTab === 'storyboard' && (!generationReady || generationError) && (
-                <p role="status" className="px-3 py-2 text-sm">{generationError ?? t('generate.form.loading')}</p>
+                <p role="status" className="px-3 py-2 text-sm">
+                  {generationError ?? t('generate.form.loading')}
+                </p>
               )}
               {storyboardTabActivated && generationReady && (
                 <Suspense fallback={null}>

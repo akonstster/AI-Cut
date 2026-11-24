@@ -127,6 +127,28 @@ const page = {
         },
       ],
     },
+    {
+      title: 'Audio skimming',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Hovering the ruler or the timeline plays a short preview of the audio under the pointer, so you can find a moment by ear without playback. It works on the Edit page and on the Color mini timeline.',
+        },
+        {
+          kind: 'list',
+          items: [
+            'By default the preview plays short **grains** that follow the pointer speed — smooth while you creep, crisp when you throw the playhead across the timeline.',
+            'Turn on **Settings → General → Tape-style audio skimming** to keep one buffer playing while its speed follows the pointer, like dragging a reel (including backwards, on a reversed 12 kHz mono proxy).',
+            '`J` shuttles backwards, `K` stops and `L` shuttles forwards; repeat `J` or `L` to go faster, like a jog wheel.',
+          ],
+        },
+        {
+          kind: 'note',
+          tone: 'info',
+          text: 'The audio skimming switch lives in the timeline toolbar. Skimming keeps the workspace light by reusing one decoded source per clip and the stored waveform, so a pass over the timeline no longer reads the media file each frame.',
+        },
+      ],
+    },
   ],
 } satisfies DocPageContent
 

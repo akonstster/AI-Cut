@@ -202,11 +202,9 @@ class SubtitleSidecarService {
   } {
     const { items } = useItemsStore.getState()
     const { fps } = useTimelineSettingsStore.getState()
-    const { segments, consumedItemIds } = consolidateCaptionTextItemsToSegments(
-      items,
-      fps,
-      { onlyClipId: options.clipId },
-    )
+    const { segments, consumedItemIds } = consolidateCaptionTextItemsToSegments(items, fps, {
+      onlyClipId: options.clipId,
+    })
     if (segments.length === 0) return { segmentsCreated: 0, cuesConsolidated: 0 }
 
     removeItems(consumedItemIds)

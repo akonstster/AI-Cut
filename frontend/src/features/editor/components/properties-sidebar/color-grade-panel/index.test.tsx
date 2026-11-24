@@ -26,6 +26,12 @@ vi.mock('@/shared/state/selection', () => ({
     selector({ selectedItemIds: [VIDEO_ITEM.id] }),
 }))
 
+vi.mock('@/shared/state/editor', () => ({
+  useEditorStore: (
+    selector: (state: { colorParamsTab: string; setColorParamsTab: () => void }) => unknown,
+  ) => selector({ colorParamsTab: 'primary', setColorParamsTab: () => undefined }),
+}))
+
 vi.mock('@/features/editor/deps/effects-contract', () => ({
   ColorGradeSection: ({
     layout,
@@ -71,21 +77,28 @@ vi.mock('@/features/editor/deps/timeline-keyframe-ui', () => ({
 }))
 
 describe('ColorGradePanel', () => {
-  it('keeps the original graph lane with Effects as its default parameter filter', async () => {
-    render(<ColorGradePanel layout="dock" />)
+  it('keeps the keyframe lane closed by default and opens it on request', async () => {
+    const { rerender } = render(<ColorGradePanel layout="dock" />)
 
     const gradeSection = await screen.findByTestId('color-grade-section', {}, { timeout: 5000 })
     expect(gradeSection).toHaveAttribute('data-layout', 'dock')
     expect(gradeSection).toHaveTextContent('has adjustment action')
     expect(screen.getByText('Add Effect')).toBeInTheDocument()
 
+    // The grade tabs own the dock until the user asks for the keyframe editor.
+    expect(screen.getByTestId('color-dock-layout')).toHaveAttribute('data-keyframes-lane', 'false')
+    expect(screen.queryByTestId('color-keyframes-lane')).not.toBeInTheDocument()
+
+    rerender(<ColorGradePanel layout="dock" keyframesLaneOpen />)
+
+    expect(screen.getByTestId('color-dock-layout')).toHaveAttribute('data-keyframes-lane', 'true')
     expect(screen.getByTestId('color-keyframes-lane')).toBeInTheDocument()
     const keyframePanel = screen.getByTestId('keyframe-graph-panel')
     expect(keyframePanel).toHaveAttribute('data-open', 'true')
     expect(keyframePanel).toHaveAttribute('data-placement', 'side')
     expect(keyframePanel).toHaveAttribute('data-show-close', 'false')
     expect(keyframePanel).toHaveAttribute('data-initial-groups', 'effects')
-    expect(keyframePanel).toHaveAttribute('data-property-column-width', '336')
+    expect(keyframePanel).toHaveAttribute('data-property-column-width', '220')
   })
 
   it('keeps the sidebar variant stacked without the dock graph lane', async () => {

@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AnimatableProperty, Keyframe } from '@/types/keyframe'
 import type { KeyframeMeta } from './dopesheet-types'
-import {
-  buildSelectedFrameSummary,
-  collectSelectedFrames,
-} from './dopesheet-selection-summary'
+import { buildSelectedFrameSummary, collectSelectedFrames } from './dopesheet-selection-summary'
 
 function meta(property: string, frame: number): KeyframeMeta {
   const keyframe = { id: `${property}-${frame}`, frame } as Keyframe

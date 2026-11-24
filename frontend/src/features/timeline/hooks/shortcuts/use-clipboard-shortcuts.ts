@@ -24,6 +24,7 @@ import {
   wouldCreateCompositionCycle,
 } from '../../utils/composition-graph'
 import { handleTranscriptClipboardCopy } from '../../utils/transcript-copy-bridge'
+import { findCompatibleTrackForItemType } from '../../utils/track-item-compatibility'
 
 function revealPastedItems(itemIds: readonly string[]): void {
   if (itemIds.length === 0) {
@@ -243,12 +244,22 @@ export function useClipboardShortcuts() {
           const newId = crypto.randomUUID()
           newItemIds.push(newId)
 
-          let targetTrackId = preserveSourceTracks ? itemData.trackId : activeTrackId
-          if (!targetTrackId || !tracks.some((t) => t.id === targetTrackId)) {
-            targetTrackId = itemData.trackId
-          }
-          const trackExists = tracks.some((t) => t.id === targetTrackId)
-          if (!trackExists && tracks.length > 0) {
+          // The active track is a hint, not a promise: an audio clip can only live on an audio
+          // track, and a subtitle belongs on its caption track. A linked pair and a subtitle keep
+          // their own tracks; anything else takes the active track when it can host it and the
+          // nearest compatible track otherwise.
+          const keepSourceTrack = preserveSourceTracks || itemData.type === 'subtitle'
+          const preferredTrackId = keepSourceTrack
+            ? itemData.trackId
+            : (activeTrackId ?? itemData.trackId)
+          const compatibleTrack = findCompatibleTrackForItemType({
+            tracks,
+            items: storeItems,
+            itemType: itemData.type,
+            preferredTrackId,
+          })
+          let targetTrackId = compatibleTrack?.id ?? preferredTrackId
+          if (!tracks.some((t) => t.id === targetTrackId) && tracks.length > 0) {
             targetTrackId = tracks[0]!.id
           }
 
@@ -296,13 +307,20 @@ export function useClipboardShortcuts() {
           const pasteTitle =
             newItemIds.length === 1 ? 'Pasted 1 item' : `Pasted ${newItemIds.length} items`
 
-          if (activeTrack) {
+          const usedActiveTrack = Boolean(activeTrack && usedTrackIds.has(activeTrack.id))
+          if (usedActiveTrack && activeTrack) {
             toast.success(pasteTitle, {
               description: `Active Track: ${activeTrack.name.replace(/^Track\s+/i, '')}`,
             })
           } else if (usedTracks.length === 1) {
             toast.success(pasteTitle, {
               description: `Track: ${usedTracks[0]!.name.replace(/^Track\s+/i, '')}`,
+            })
+          } else if (usedTracks.length > 1) {
+            toast.success(pasteTitle, {
+              description: `Tracks: ${usedTracks
+                .map((track) => track.name.replace(/^Track\s+/i, ''))
+                .join(', ')}`,
             })
           } else {
             toast.success(pasteTitle)

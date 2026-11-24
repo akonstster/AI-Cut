@@ -74,6 +74,12 @@
       "gradeComparisonAfter": "После",
       "gradeComparisonWipe": "Настроить границу сравнения"
     },
+    "scopes": {
+      "show": "Показать видеоскопы",
+      "hide": "Скрыть видеоскопы",
+      "title": "Видеоскопы",
+      "close": "Закрыть видеоскопы"
+    },
     "zoom": {
       "ariaLabel": "Масштаб: {{label}}",
       "auto": "Авто",

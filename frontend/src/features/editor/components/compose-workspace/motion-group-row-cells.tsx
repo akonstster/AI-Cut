@@ -38,11 +38,7 @@ interface MotionGroupCollapseToggleProps {
 }
 
 /** Collapses the group's child rows without touching the group's own row. */
-function MotionGroupCollapseToggle({
-  track,
-  t,
-  updateLayerTrack,
-}: MotionGroupCollapseToggleProps) {
+function MotionGroupCollapseToggle({ track, t, updateLayerTrack }: MotionGroupCollapseToggleProps) {
   return (
     <button
       type="button"
@@ -78,7 +74,9 @@ function MotionGroupVisibilityToggle({
       type="button"
       onClick={() => updateLayerTrack(track.id, { visible: !track.visible })}
       className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-      aria-label={track.visible === false ? t('editor.compose.showGroup') : t('editor.compose.hideGroup')}
+      aria-label={
+        track.visible === false ? t('editor.compose.showGroup') : t('editor.compose.hideGroup')
+      }
     >
       {track.visible === false ? (
         <EyeOff className="h-3.5 w-3.5" />
@@ -308,9 +306,7 @@ export function MotionGroupLaneCell({
             onPointerCancel={spanDrag.cancel}
             className={cn(
               'absolute top-1/2 h-6 -translate-y-1/2 touch-none rounded-sm border border-timeline-motion-segment/80 bg-timeline-motion-segment/70 px-1 text-left text-[9px] text-foreground',
-              track.locked
-                ? 'cursor-not-allowed opacity-55'
-                : 'cursor-grab active:cursor-grabbing',
+              track.locked ? 'cursor-not-allowed opacity-55' : 'cursor-grab active:cursor-grabbing',
             )}
             style={{
               left: `${frameToMotionPercent(groupFrom)}%`,

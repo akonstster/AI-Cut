@@ -93,8 +93,16 @@ const analysisMocks = vi.hoisted(() => ({
   captionVideo: vi.fn(),
   captionImage: vi.fn(),
   extractDominantColors: vi.fn(async () => ({ phrase: '', palette: [] })),
-  embeddingsProvider: { ensureReady: vi.fn(async () => { throw new Error('Model not installed') }) },
-  clipProvider: { ensureReady: vi.fn(async () => { throw new Error('Model not installed') }) },
+  embeddingsProvider: {
+    ensureReady: vi.fn(async () => {
+      throw new Error('Model not installed')
+    }),
+  },
+  clipProvider: {
+    ensureReady: vi.fn(async () => {
+      throw new Error('Model not installed')
+    }),
+  },
 }))
 
 const editorStoreState = vi.hoisted(() => ({

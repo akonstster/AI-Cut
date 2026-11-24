@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ZoomIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,19 @@ export function PreviewZoomControls() {
   const { t } = useTranslation()
   const { zoom, zoomPresets, handlePresetZoom } = usePreviewZoom()
   const triggerRef = useRef<HTMLButtonElement>(null)
+  // Fullscreen shows only the monitor element: a menu portalled into <body> would stay behind it.
+  // Inside fullscreen the menu is rendered into that element instead.
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const sync = () => {
+      const fullscreen = document.fullscreenElement
+      setPortalContainer(fullscreen instanceof HTMLElement ? fullscreen : null)
+    }
+    sync()
+    document.addEventListener('fullscreenchange', sync)
+    return () => document.removeEventListener('fullscreenchange', sync)
+  }, [])
 
   const currentLabel =
     zoom === -1
@@ -50,6 +63,7 @@ export function PreviewZoomControls() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
+        container={portalContainer}
         onCloseAutoFocus={(e) => {
           e.preventDefault()
           requestAnimationFrame(blurTrigger)

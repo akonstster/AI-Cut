@@ -12,10 +12,7 @@ function runScheduledUpdates(timestamp: number) {
 
   for (const [key, update] of pendingUpdates) {
     const previousRunAt = lastRunAt.get(key)
-    if (
-      previousRunAt !== undefined &&
-      timestamp - previousRunAt + 0.5 < update.minimumIntervalMs
-    ) {
+    if (previousRunAt !== undefined && timestamp - previousRunAt + 0.5 < update.minimumIntervalMs) {
       continue
     }
 

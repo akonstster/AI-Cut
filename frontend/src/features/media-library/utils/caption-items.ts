@@ -21,6 +21,8 @@ import {
   CAPTION_STYLE_PRESETS,
   resolveCaptionStylePatch,
 } from '@/shared/typography/caption-style-presets'
+import { isDuplicateTranscriptCaptionClip } from '@/shared/timeline/caption-ownership'
+import { getSynchronizedMediaCompanion } from '@/shared/utils/linked-media'
 
 /**
  * Fallback segment duration when AI captions can't infer an `end` time from
@@ -339,6 +341,29 @@ export function buildCaptionTrack(tracks: readonly TimelineTrack[]): TimelineTra
  * Matches the fractional-order pattern used by `insertTrack` in
  * `use-timeline-tracks.ts`.
  */
+/**
+ * A caption track above every existing track. Subtitle segments are drawn in track order, so a
+ * caption track placed next to the audio would sit behind the picture and its burned-in text
+ * would never be seen.
+ */
+export function buildCaptionTrackAtTop(tracks: readonly TimelineTrack[]): TimelineTrack {
+  const minOrder = tracks.length > 0 ? Math.min(...tracks.map((track) => track.order)) : 0
+  return {
+    id: `track-captions-${Date.now()}`,
+    name: getNextClassicTrackName([...tracks], 'video'),
+    kind: 'video',
+    height: DEFAULT_TRACK_HEIGHT,
+    locked: false,
+    syncLock: true,
+    visible: true,
+    muted: false,
+    solo: false,
+    volume: 0,
+    order: minOrder - 1,
+    items: [],
+  }
+}
+
 export function buildCaptionTrackAbove(
   tracks: readonly TimelineTrack[],
   referenceOrder: number,
@@ -1017,11 +1042,27 @@ export function appendVirtualTranscriptCaptionTrack(
     hasSoloTracks ? track.solo === true : track.visible !== false,
   )
   const virtualItems: SubtitleSegmentItem[] = []
+  const visibleTrackItems = sourceTracks.flatMap((track) => track.items ?? [])
+  const clipsWithTranscriptSegments = new Set(
+    visibleTrackItems.flatMap((item) =>
+      item.type === 'subtitle' && item.source.type === 'transcript' && item.source.clipId
+        ? [item.source.clipId]
+        : [],
+    ),
+  )
 
   for (const track of sourceTracks) {
     for (const item of track.items ?? []) {
       if ((item.type !== 'video' && item.type !== 'audio') || !item.mediaId) continue
       if (item.isReversed === true) continue
+      // The clip's transcript already lives on a real subtitle track: drawing the clip copy as
+      // well would show every line twice.
+      if (clipsWithTranscriptSegments.has(item.id)) continue
+      const companion = getSynchronizedMediaCompanion(visibleTrackItems, item)
+      if (companion && clipsWithTranscriptSegments.has(companion.id)) continue
+      // A video/audio pair carries the same captions on both halves; draw only the owner's
+      // copy, so the preview and the export never stack two subtitle lines on each other.
+      if (isDuplicateTranscriptCaptionClip(visibleTrackItems, item)) continue
       const transcriptCaptions = item.transcriptCaptions
       if (
         !transcriptCaptions?.enabled ||

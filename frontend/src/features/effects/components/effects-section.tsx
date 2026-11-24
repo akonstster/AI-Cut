@@ -55,6 +55,11 @@ interface EffectsSectionProps {
   items: TimelineItem[]
   /** Effect types rendered by a parent-specific control surface. */
   hiddenGpuEffectTypes?: readonly string[]
+  /**
+   * Whitelist of GPU effect types to render. Used by the Color page LUT tab so
+   * the same effect stack can be reused as a focused LUT surface.
+   */
+  onlyGpuEffectTypes?: readonly string[]
   /** Sidebar keeps the legacy inspector shell; dock fits inside the Color page lane. */
   layout?: 'sidebar' | 'dock'
   /**
@@ -66,6 +71,13 @@ interface EffectsSectionProps {
 }
 
 const EMPTY_HIDDEN_GPU_EFFECT_TYPES: readonly string[] = []
+const EMPTY_ONLY_GPU_EFFECT_TYPES: readonly string[] = []
+
+/** Picker sizing: a readable minimum width beats mirroring the (sometimes tiny) trigger. */
+const EFFECT_PICKER_MIN_WIDTH = 300
+const EFFECT_PICKER_MAX_HEIGHT = 420
+const EFFECT_PICKER_MIN_HEIGHT = 180
+const EFFECT_PICKER_VIEWPORT_MARGIN = 8
 
 /**
  * Effects section - GPU shader effects for visual items.
@@ -75,6 +87,7 @@ const EMPTY_HIDDEN_GPU_EFFECT_TYPES: readonly string[] = []
 export const EffectsSection = memo(function EffectsSection({
   items,
   hiddenGpuEffectTypes = EMPTY_HIDDEN_GPU_EFFECT_TYPES,
+  onlyGpuEffectTypes = EMPTY_ONLY_GPU_EFFECT_TYPES,
   layout = 'sidebar',
   onEditInColor,
 }: EffectsSectionProps) {
@@ -99,15 +112,29 @@ export const EffectsSection = memo(function EffectsSection({
     () => new Set(hiddenGpuEffectTypes),
     [hiddenGpuEffectTypes],
   )
+  const onlyGpuEffectTypeSet = useMemo(() => new Set(onlyGpuEffectTypes), [onlyGpuEffectTypes])
   const isHiddenEffectEntry = useCallback(
-    (entry: ItemEffect): boolean =>
-      entry.effect.type === 'gpu-effect' && hiddenGpuEffectTypeSet.has(entry.effect.gpuEffectType),
-    [hiddenGpuEffectTypeSet],
+    (entry: ItemEffect): boolean => {
+      if (entry.effect.type !== 'gpu-effect') return false
+      const gpuEffectType = entry.effect.gpuEffectType
+      if (hiddenGpuEffectTypeSet.has(gpuEffectType)) return true
+      if (onlyGpuEffectTypeSet.size === 0) return false
+      return !onlyGpuEffectTypeSet.has(gpuEffectType)
+    },
+    [hiddenGpuEffectTypeSet, onlyGpuEffectTypeSet],
   )
   const hasHiddenGpuEffect = useCallback(
     (presetEffects: readonly VisualEffect[]): boolean =>
       presetEffects.some((effect) => hiddenGpuEffectTypeSet.has(effect.gpuEffectType)),
     [hiddenGpuEffectTypeSet],
+  )
+  // A preset can only be offered when every effect it carries belongs to the
+  // whitelisted range (used by the Color page LUT tab).
+  const hasOutsideOnlyRangeEffect = useCallback(
+    (presetEffects: readonly VisualEffect[]): boolean =>
+      onlyGpuEffectTypeSet.size > 0 &&
+      presetEffects.some((effect) => !onlyGpuEffectTypeSet.has(effect.gpuEffectType)),
+    [onlyGpuEffectTypeSet],
   )
 
   // Get effects from first selected item (for display)
@@ -246,14 +273,7 @@ export const EffectsSection = memo(function EffectsSection({
       })
       queueMicrotask(() => clearPreview())
     },
-    [
-      clearPreview,
-      currentFrame,
-      effects,
-      getMappedEffectEntry,
-      keyframesByItemId,
-      visualItems,
-    ],
+    [clearPreview, currentFrame, effects, getMappedEffectEntry, keyframesByItemId, visualItems],
   )
 
   // Batch update multiple GPU effect params atomically
@@ -328,14 +348,7 @@ export const EffectsSection = memo(function EffectsSection({
       })
       queueMicrotask(() => clearPreview())
     },
-    [
-      clearPreview,
-      currentFrame,
-      effects,
-      getMappedEffectEntry,
-      keyframesByItemId,
-      visualItems,
-    ],
+    [clearPreview, currentFrame, effects, getMappedEffectEntry, keyframesByItemId, visualItems],
   )
 
   // Live preview for GPU effect parameter
@@ -528,13 +541,39 @@ export const EffectsSection = memo(function EffectsSection({
     // Measure the trigger synchronously so the portal mounts already
     // positioned — otherwise the first render flashes a full-width,
     // unconstrained panel before the positioning effect runs.
+    // The list must stay readable even when the effects column is narrow, so the
+    // panel gets its own minimum width and is clamped to the viewport instead of
+    // copying the trigger width (which clipped the dropdown at narrow widths).
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+      const width = Math.min(
+        Math.max(rect.width, EFFECT_PICKER_MIN_WIDTH),
+        Math.max(viewportWidth - EFFECT_PICKER_VIEWPORT_MARGIN * 2, EFFECT_PICKER_MIN_WIDTH),
+      )
+      const left = Math.min(
+        Math.max(rect.left, EFFECT_PICKER_VIEWPORT_MARGIN),
+        Math.max(
+          viewportWidth - width - EFFECT_PICKER_VIEWPORT_MARGIN,
+          EFFECT_PICKER_VIEWPORT_MARGIN,
+        ),
+      )
+      const spaceBelow = viewportHeight - rect.bottom - EFFECT_PICKER_VIEWPORT_MARGIN
+      const spaceAbove = rect.top - EFFECT_PICKER_VIEWPORT_MARGIN
+      const openUp = spaceBelow < EFFECT_PICKER_MIN_HEIGHT && spaceAbove > spaceBelow
+      const maxHeight = Math.max(
+        Math.min(EFFECT_PICKER_MAX_HEIGHT, (openUp ? spaceAbove : spaceBelow) - 4),
+        EFFECT_PICKER_MIN_HEIGHT,
+      )
       setPanelStyle({
         position: 'fixed',
-        top: `${rect.bottom + 4}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
+        ...(openUp
+          ? { bottom: `${viewportHeight - rect.top + 4}px` }
+          : { top: `${rect.bottom + 4}px` }),
+        left: `${left}px`,
+        width: `${width}px`,
+        maxHeight: `${maxHeight}px`,
       })
     }
     setPickerOpen(true)
@@ -576,13 +615,16 @@ export const EffectsSection = memo(function EffectsSection({
 
   // Filter effects and presets by search query
   const filteredCategories = useMemo(() => {
+    const isAllowedDefinition = (def: { id: string }) =>
+      !hiddenGpuEffectTypeSet.has(def.id) &&
+      (onlyGpuEffectTypeSet.size === 0 || onlyGpuEffectTypeSet.has(def.id))
     const visibleCategories =
-      hiddenGpuEffectTypeSet.size === 0
+      hiddenGpuEffectTypeSet.size === 0 && onlyGpuEffectTypeSet.size === 0
         ? gpuCategories
         : gpuCategories
             .map(({ category, effects: catEffects }) => ({
               category,
-              effects: catEffects.filter((def) => !hiddenGpuEffectTypeSet.has(def.id)),
+              effects: catEffects.filter(isAllowedDefinition),
             }))
             .filter(({ effects: catEffects }) => catEffects.length > 0)
 
@@ -594,27 +636,25 @@ export const EffectsSection = memo(function EffectsSection({
         effects: catEffects.filter((def) => getEffectDefinitionName(def).toLowerCase().includes(q)),
       }))
       .filter(({ effects: catEffects }) => catEffects.length > 0)
-  }, [gpuCategories, hiddenGpuEffectTypeSet, searchQuery])
+  }, [gpuCategories, hiddenGpuEffectTypeSet, onlyGpuEffectTypeSet, searchQuery])
 
   const filteredPresets = useMemo(() => {
-    const visiblePresets =
-      hiddenGpuEffectTypeSet.size === 0
-        ? EFFECT_PRESETS
-        : EFFECT_PRESETS.filter((preset) => !hasHiddenGpuEffect(preset.effects))
+    const visiblePresets = EFFECT_PRESETS.filter(
+      (preset) => !hasHiddenGpuEffect(preset.effects) && !hasOutsideOnlyRangeEffect(preset.effects),
+    )
     if (!searchQuery.trim()) return visiblePresets
     const q = searchQuery.toLowerCase()
     return visiblePresets.filter((p) => p.name.toLowerCase().includes(q))
-  }, [hasHiddenGpuEffect, hiddenGpuEffectTypeSet, searchQuery])
+  }, [hasHiddenGpuEffect, hasOutsideOnlyRangeEffect, searchQuery])
 
   const filteredUserPresets = useMemo(() => {
-    const visibleUserPresets =
-      hiddenGpuEffectTypeSet.size === 0
-        ? userPresets
-        : userPresets.filter((preset) => !hasHiddenGpuEffect(preset.effects))
+    const visibleUserPresets = userPresets.filter(
+      (preset) => !hasHiddenGpuEffect(preset.effects) && !hasOutsideOnlyRangeEffect(preset.effects),
+    )
     if (!searchQuery.trim()) return visibleUserPresets
     const q = searchQuery.toLowerCase()
     return visibleUserPresets.filter((p) => p.name.toLowerCase().includes(q))
-  }, [hasHiddenGpuEffect, hiddenGpuEffectTypeSet, searchQuery, userPresets])
+  }, [hasHiddenGpuEffect, hasOutsideOnlyRangeEffect, searchQuery, userPresets])
 
   const hasResults =
     filteredCategories.length > 0 || filteredPresets.length > 0 || filteredUserPresets.length > 0
@@ -636,7 +676,7 @@ export const EffectsSection = memo(function EffectsSection({
           <div
             ref={panelRef}
             style={panelStyle}
-            className="z-50 rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+            className="z-50 flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           >
             {/* Search input */}
             <div className="p-1.5 border-b">
@@ -654,7 +694,7 @@ export const EffectsSection = memo(function EffectsSection({
             </div>
 
             {/* Scrollable effect list */}
-            <div className="max-h-[420px] overflow-y-auto overflow-x-hidden p-1">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-1">
               {/* GPU Shader Effects */}
               {filteredCategories.map(({ category, effects: catEffects }, index) => (
                 <div key={category}>

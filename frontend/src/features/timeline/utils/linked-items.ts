@@ -67,9 +67,10 @@ export function getAttachedCaptionItemIds(items: TimelineItem[], itemId: string)
   return items
     .filter(
       (item) =>
-        item.type === 'text' &&
-        (item.textRole === 'caption' || item.captionSource !== undefined) &&
-        item.captionSource?.clipId === anchor.id,
+        (item.type === 'text' &&
+          (item.textRole === 'caption' || item.captionSource !== undefined) &&
+          item.captionSource?.clipId === anchor.id) ||
+        (item.type === 'subtitle' && 'clipId' in item.source && item.source.clipId === anchor.id),
     )
     .map((item) => item.id)
 }
@@ -243,6 +244,11 @@ function getLinkedSyncOffsetBetweenItems(
 }
 
 function getLinkedSyncCandidates(items: TimelineItem[], anchor: TimelineItem): TimelineItem[] {
+  // Only the two halves of a picture-and-sound pair can drift apart. Captions and text that a
+  // caption copies a clip's group onto must never wear the "out of sync" warning.
+  if (anchor.type !== 'video' && anchor.type !== 'audio' && anchor.type !== 'composition') {
+    return []
+  }
   const linkedItems = getLinkedItems(items, anchor.id)
   const targetTypes =
     anchor.type === 'audio'
@@ -252,30 +258,21 @@ function getLinkedSyncCandidates(items: TimelineItem[], anchor: TimelineItem): T
   return linkedItems.filter((item) => item.id !== anchor.id && targetTypes.has(item.type))
 }
 
-function applyPreviewUpdate(
-  item: TimelineItem,
-  previewUpdate: PreviewItemUpdate | null | undefined,
-): TimelineItem {
-  return previewUpdate ? ({ ...item, ...previewUpdate } as TimelineItem) : item
+interface RankedLinkedSyncCandidate {
+  companion: TimelineItem
+  exactOffset: number
+  roundedOffset: number
+  sameVisibleWindow: boolean
+  sameSourceBounds: boolean
+  sameMediaSource: boolean
 }
 
-export function getLinkedSyncOffsetFrames(
-  items: TimelineItem[],
-  itemId: string,
+function rankLinkedSyncCandidates(
+  anchor: TimelineItem,
+  companions: TimelineItem[],
   timelineFps: number,
-  previewUpdatesById: Readonly<Record<string, PreviewItemUpdate | undefined>> = {},
-): number | null {
-  const anchorBase = items.find((item) => item.id === itemId)
-  if (!anchorBase) return null
-
-  const anchor = applyPreviewUpdate(anchorBase, previewUpdatesById[anchorBase.id])
-  const candidateCompanions = getLinkedSyncCandidates(items, anchorBase).map((candidate) =>
-    applyPreviewUpdate(candidate, previewUpdatesById[candidate.id]),
-  )
-
-  if (candidateCompanions.length === 0) return null
-
-  const rankedCandidates = candidateCompanions
+): RankedLinkedSyncCandidate[] {
+  return companions
     .map((companion) => {
       const exactOffset = getLinkedSyncOffsetBetweenItems(anchor, companion, timelineFps)
       const roundedOffset = Math.round(exactOffset)
@@ -307,11 +304,71 @@ export function getLinkedSyncOffsetFrames(
       if (left.sameMediaSource !== right.sameMediaSource) return left.sameMediaSource ? -1 : 1
       return left.companion.id.localeCompare(right.companion.id)
     })
+}
 
-  const bestCandidate = rankedCandidates[0]
+function applyPreviewUpdate(
+  item: TimelineItem,
+  previewUpdate: PreviewItemUpdate | null | undefined,
+): TimelineItem {
+  return previewUpdate ? ({ ...item, ...previewUpdate } as TimelineItem) : item
+}
+
+export function getLinkedSyncOffsetFrames(
+  items: TimelineItem[],
+  itemId: string,
+  timelineFps: number,
+  previewUpdatesById: Readonly<Record<string, PreviewItemUpdate | undefined>> = {},
+): number | null {
+  const anchorBase = items.find((item) => item.id === itemId)
+  if (!anchorBase) return null
+
+  const anchor = applyPreviewUpdate(anchorBase, previewUpdatesById[anchorBase.id])
+  const candidateCompanions = getLinkedSyncCandidates(items, anchorBase).map((candidate) =>
+    applyPreviewUpdate(candidate, previewUpdatesById[candidate.id]),
+  )
+
+  if (candidateCompanions.length === 0) return null
+
+  const bestCandidate = rankLinkedSyncCandidates(anchor, candidateCompanions, timelineFps)[0]
   if (!bestCandidate) return null
 
   return bestCandidate.roundedOffset === 0 ? null : bestCandidate.roundedOffset
+}
+
+/**
+ * The moves that put a linked picture-and-sound pair back in sync: the sound follows the picture.
+ *
+ * A pair drifts when only one of the two is moved, trimmed, slipped or rippled. The badge on the
+ * clip says by how much; this is the one-step repair the context menu offers. Only the companion
+ * the badge is about moves, so a group that collected extra copies does not get them stacked.
+ */
+export function getLinkedSyncRestoreUpdates(
+  items: TimelineItem[],
+  itemId: string,
+  timelineFps: number,
+): Array<{ id: string; from: number }> {
+  const anchor = items.find((item) => item.id === itemId)
+  if (!anchor) return []
+
+  const candidates = getLinkedSyncCandidates(items, anchor)
+  if (candidates.length === 0) return []
+
+  const ranked = rankLinkedSyncCandidates(anchor, candidates, timelineFps)
+  const best = ranked[0]
+  if (!best || best.roundedOffset === 0) return []
+
+  // The picture is the reference; the sound is moved onto it. From an audio clip that means the
+  // audio itself moves to its own video, from a video clip its audio comes to the picture.
+  const sound = anchor.type === 'audio' ? anchor : best.companion
+  if (sound.type !== 'audio') return []
+  const picture = anchor.type === 'audio' ? best.companion : anchor
+  if (picture.type !== 'video' && picture.type !== 'composition') return []
+
+  const offset = getLinkedSyncOffsetBetweenItems(picture, sound, timelineFps)
+  const from = Math.round(sound.from + offset)
+  if (from === sound.from) return []
+
+  return [{ id: sound.id, from: Math.max(0, from) }]
 }
 
 export function buildSynchronizedLinkedMoveUpdates(
@@ -454,9 +511,22 @@ export function canLinkSelection(items: TimelineItem[], itemIds: string[]): bool
   )
 }
 
+/** Ids a click on `itemId` selects: a subtitle never drags its picture into the selection. */
+export function getSelectionIdsForItem(
+  items: TimelineItem[],
+  itemId: string,
+  linkedSelectionEnabled: boolean,
+): string[] {
+  if (!linkedSelectionEnabled) return [itemId]
+  const item = items.find((candidate) => candidate.id === itemId)
+  if (item?.type === 'subtitle') return [itemId]
+  return getLinkedItemIds(items, itemId)
+}
+
 export function expandSelectionWithLinkedItems(items: TimelineItem[], itemIds: string[]): string[] {
   const expandedIds = new Set<string>()
   for (const itemId of itemIds) {
+    expandedIds.add(itemId)
     for (const linkedId of getLinkedItemIds(items, itemId)) {
       expandedIds.add(linkedId)
     }

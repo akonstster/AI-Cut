@@ -14,8 +14,18 @@
  */
 
 import type { CompositionInputProps } from '@/types/export'
-import type { TimelineItem, VideoItem, ImageItem, LottieItem, ShapeItem, TimelineTrack } from '@/types/timeline'
-import { LottieExportProvider, isRenderableLottieSrc } from '@/infrastructure/lottie/lottie-frame-provider'
+import type {
+  TimelineItem,
+  VideoItem,
+  ImageItem,
+  LottieItem,
+  ShapeItem,
+  TimelineTrack,
+} from '@/types/timeline'
+import {
+  LottieExportProvider,
+  isRenderableLottieSrc,
+} from '@/infrastructure/lottie/lottie-frame-provider'
 import { resolveLottieRenderSpec } from '@/infrastructure/lottie/lottie-text'
 import type { ItemKeyframes } from '@/types/keyframe'
 import type { ItemEffect } from '@/types/effects'
@@ -32,25 +42,66 @@ import { type AdjustmentLayerWithTrackOrder } from './canvas-effects'
 import { GpuPipelineManager } from './gpu-pipeline-manager'
 import type { RenderedTaskResult } from './frame-mask-helpers'
 import { FrameRenderPass, type FrameRenderDeps } from './frame-render-pass'
-import { buildMaskFrameIndex, getActiveMasksForFrame, type MaskCanvasSettings } from './canvas-masks'
-import { type CachedGifFrames, gifFrameCache } from '@/runtime/renderer/deps/timeline-gif-cache-contract'
+import {
+  buildMaskFrameIndex,
+  getActiveMasksForFrame,
+  type MaskCanvasSettings,
+} from './canvas-masks'
+import {
+  type CachedGifFrames,
+  gifFrameCache,
+} from '@/runtime/renderer/deps/timeline-gif-cache-contract'
 import { CanvasPool, TextMeasurementCache } from './canvas-pool'
-import { acquireSharedPreviewVideoExtractorPool, SharedVideoExtractorPool, type VideoFrameSource } from './shared-video-extractor'
-import { useCompositionsStore, type SubComposition } from '@/runtime/renderer/deps/timeline-compositions-contract'
+import {
+  acquireSharedPreviewVideoExtractorPool,
+  SharedVideoExtractorPool,
+  type VideoFrameSource,
+} from './shared-video-extractor'
+import {
+  useCompositionsStore,
+  type SubComposition,
+} from '@/runtime/renderer/deps/timeline-compositions-contract'
 import type { FrameInvalidationRequest } from '@/shared/utils/frame-invalidation'
 import { collectReachableCompositionIdsFromTracks } from '@/runtime/renderer/deps/timeline-compositions-contract'
 import { appendVirtualTranscriptCaptionTrack } from '@/runtime/renderer/deps/caption-items-contract'
 
 // Item renderer
-import { createFrameCompositionSceneCache, type PreviewPathVerticesOverride, resolveCompositionRenderPlan, resolveLiveTransitionRenderPlan, collectFrameVideoCandidates, getVideoTargetTimeSeconds, resolveTrackRenderState } from '@/runtime/renderer/deps/composition-runtime-contract'
-import { renderItem, type CanvasSettings, type WorkerLoadedImage, type ItemRenderContext, type SubCompRenderData } from './canvas-item-renderer'
+import {
+  createFrameCompositionSceneCache,
+  type PreviewPathVerticesOverride,
+  resolveCompositionRenderPlan,
+  resolveLiveTransitionRenderPlan,
+  collectFrameVideoCandidates,
+  getVideoTargetTimeSeconds,
+  resolveTrackRenderState,
+} from '@/runtime/renderer/deps/composition-runtime-contract'
+import {
+  renderItem,
+  type CanvasSettings,
+  type WorkerLoadedImage,
+  type ItemRenderContext,
+  type SubCompRenderData,
+} from './canvas-item-renderer'
 import { ScrubbingCache } from '@/runtime/renderer/deps/preview-contract'
 import { shouldUseScrubbingFrameCache } from './render-path-optimizer'
 import { resolveReverseConformedVideoItem } from '@/shared/utils/reverse-conform-item'
 import { resolveCompositionSourceFrame } from './render-span'
-import { itemHasEnabledGpuEffect, isAnimatedImage, isGifFormat, subCompositionRenderDataHasGpuEffects } from './render-engine-predicates'
-import { buildTransitionTrackOrderById, collectTopLevelMediaItems, collectTopLevelVideoItems, resolveCompositionRenderTracks } from './composition-render-inputs'
-import { CANVAS_POOL_OBSERVER_BY_RENDER_MODE, createRendererCrossFrameCaches } from './render-mode-resources'
+import {
+  itemHasEnabledGpuEffect,
+  isAnimatedImage,
+  isGifFormat,
+  subCompositionRenderDataHasGpuEffects,
+} from './render-engine-predicates'
+import {
+  buildTransitionTrackOrderById,
+  collectTopLevelMediaItems,
+  collectTopLevelVideoItems,
+  resolveCompositionRenderTracks,
+} from './composition-render-inputs'
+import {
+  CANVAS_POOL_OBSERVER_BY_RENDER_MODE,
+  createRendererCrossFrameCaches,
+} from './render-mode-resources'
 
 function getLog() {
   return createLogger('ClientRenderEngine')
@@ -1761,7 +1812,8 @@ export async function createCompositionRenderer(
       fps,
     })
     itemRenderContext.captureDecodedVideoFrames =
-      Boolean(scrubbingCache && frameRenderDeps.scrubbingFrameCacheActive) && renderedFrameCacheMode !== 'skip'
+      Boolean(scrubbingCache && frameRenderDeps.scrubbingFrameCacheActive) &&
+      renderedFrameCacheMode !== 'skip'
     itemRenderContext.nonBlockingVideoFrameToleranceSeconds = nonBlockingVideoFrameToleranceSeconds
     itemRenderContext.workerPredecodeWaitMs =
       nonBlockingVideoFrameToleranceSeconds === undefined

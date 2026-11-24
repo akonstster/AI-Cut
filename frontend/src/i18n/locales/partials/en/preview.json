@@ -74,6 +74,12 @@
       "gradeComparisonAfter": "After",
       "gradeComparisonWipe": "Adjust split comparison"
     },
+    "scopes": {
+      "show": "Show color scopes",
+      "hide": "Hide color scopes",
+      "title": "Color Scopes",
+      "close": "Close color scopes"
+    },
     "zoom": {
       "ariaLabel": "Zoom level: {{label}}",
       "auto": "Auto",

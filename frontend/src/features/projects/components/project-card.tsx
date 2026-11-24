@@ -226,7 +226,12 @@ export function ProjectCard({
 
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center">
-          <Button size="sm" className="gap-2" onClick={handleOpenClick}>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={handleOpenClick}
+            data-tooltip={t('projects.card.openProjectHint')}
+          >
             <PlayCircle className="w-4 h-4" />
             {t('projects.card.openProject')}
           </Button>
@@ -259,6 +264,7 @@ export function ProjectCard({
                 variant="ghost"
                 size="icon"
                 aria-label={t('projects.card.actions')}
+                data-tooltip={t('projects.card.actionsHint')}
                 className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.preventDefault()

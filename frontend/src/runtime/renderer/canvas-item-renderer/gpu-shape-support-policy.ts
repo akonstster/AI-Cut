@@ -218,9 +218,7 @@ function resolveGpuShapePaintGap(shape: ShapeItem): GpuShapeUnsupportedReason | 
   return resolveGpuShapeStrokePaintGap(resolveGpuShapeStrokeParams(shape))
 }
 
-function resolveGpuShapeEffectsGap(
-  flags: GpuShapeSupportFlags,
-): GpuShapeUnsupportedReason | null {
+function resolveGpuShapeEffectsGap(flags: GpuShapeSupportFlags): GpuShapeUnsupportedReason | null {
   if (!flags.hasEffects) return null
   if (flags.hasEffectsPipeline) return null
   return 'gpu-effects-pipeline-unavailable'

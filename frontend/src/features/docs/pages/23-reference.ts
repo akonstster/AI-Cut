@@ -38,8 +38,14 @@ const page = {
             ['Source handle', 'Spare frames beyond a clip edge, needed for trims and transitions.'],
             ['Ripple edit', 'An edit that shifts later material to open or close timeline space.'],
             ['Rolling edit', 'An edit that moves the cut between two neighboring clips.'],
-            ['Slip edit', 'Changes the source frames inside a clip without moving the clip.'],
-            ['Slide edit', 'Moves a clip while adjusting its neighboring cuts.'],
+            [
+              'Slip edit',
+              'Changes the source frames inside a clip without moving the clip. In the Trim edit tool, drag the clip body.',
+            ],
+            [
+              'Slide edit',
+              'Moves a clip while adjusting its neighboring cuts. In the Trim edit tool, drag the top strip of a clip (the row with its name).',
+            ],
           ],
         },
       ],

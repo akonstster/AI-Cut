@@ -31,6 +31,7 @@ vi.mock('@/features/export/deps/projects', () => ({
   useProjectStore: (
     selector: (state: {
       currentProject: { metadata: { width: number; height: number } }
+      setExportDestination: (id: string, destination: { dir?: string; fileName?: string }) => void
     }) => unknown,
   ) =>
     selector({
@@ -40,6 +41,7 @@ vi.mock('@/features/export/deps/projects', () => ({
           height: 1080,
         },
       },
+      setExportDestination: vi.fn(),
     }),
 }))
 

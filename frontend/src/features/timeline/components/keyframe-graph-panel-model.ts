@@ -25,10 +25,7 @@ import {
   type VectorPropertyProxy,
 } from '@/features/timeline/deps/keyframes-contract'
 import { getSourceDimensions, resolveTransform } from '@/features/timeline/deps/composition-runtime'
-import {
-  getDirectPropertyLinks,
-  isTransformAnimatableProperty,
-} from '@/types/keyframe'
+import { getDirectPropertyLinks, isTransformAnimatableProperty } from '@/types/keyframe'
 import type {
   AnimatableProperty,
   DirectLinkableProperty,
@@ -162,11 +159,12 @@ interface VectorPastePayload {
   easingConfig?: EasingConfig
 }
 
-export const VECTOR_COMPOUND_PRIMARY: Record<VectorAnimatableProperty, 'x' | 'width' | 'anchorX'> = {
-  position: 'x',
-  scale: 'width',
-  anchor: 'anchorX',
-}
+export const VECTOR_COMPOUND_PRIMARY: Record<VectorAnimatableProperty, 'x' | 'width' | 'anchorX'> =
+  {
+    position: 'x',
+    scale: 'width',
+    anchor: 'anchorX',
+  }
 
 function isPastePropertySupported(
   availableProperties: AnimatableProperty[],
@@ -504,7 +502,6 @@ export function clampFrameToBlockedRanges(
   }
   return frame
 }
-
 
 /**
  * Where the keyframe editor is docked: the default docked panel, the Edit

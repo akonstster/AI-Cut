@@ -90,7 +90,11 @@ const InlineKeyframesToggle = memo(function InlineKeyframesToggle({
         width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
         height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
       }}
-      className={isOpen ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25' : ''}
+      className={
+        isOpen
+          ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25'
+          : ''
+      }
       onClick={onToggle}
       aria-label={label}
       aria-pressed={isOpen}
@@ -359,12 +363,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         finishSliderZoomInteraction()
       }
     },
-    [
-      commitSliderZoom,
-      finishSliderZoomInteraction,
-      releaseSliderZoomGesture,
-      renderSliderPreview,
-    ],
+    [commitSliderZoom, finishSliderZoomInteraction, releaseSliderZoomGesture, renderSliderPreview],
   )
 
   const controlledSliderValue = zoomToSlider(settledZoomLevel)
@@ -773,7 +772,11 @@ export const TimelineHeader = memo(function TimelineHeader({
             variant="ghost"
             size="icon"
             style={btnSize}
-            className={snapEnabled ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25' : ''}
+            className={
+              snapEnabled
+                ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25'
+                : ''
+            }
             onClick={toggleSnap}
             aria-label={
               snapEnabled
@@ -792,7 +795,9 @@ export const TimelineHeader = memo(function TimelineHeader({
             size="icon"
             style={btnSize}
             className={
-              audioSkimmingEnabled ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25' : ''
+              audioSkimmingEnabled
+                ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25'
+                : ''
             }
             onClick={toggleAudioSkimming}
             aria-label={
@@ -819,7 +824,9 @@ export const TimelineHeader = memo(function TimelineHeader({
             size="icon"
             style={btnSize}
             className={
-              linkedSelectionEnabled ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25' : ''
+              linkedSelectionEnabled
+                ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/25'
+                : ''
             }
             onClick={() => setLinkedSelectionEnabled(!linkedSelectionEnabled)}
             aria-label={

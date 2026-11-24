@@ -39,6 +39,8 @@ import { ExportDialogHeading } from './export-dialog-heading'
 import { ExportSettingsView } from './export-settings-view'
 import { ExportProgressView } from './export-progress-view'
 import { ExportCompleteView } from './export-complete-view'
+import { useProjectStore } from '../deps/projects'
+import { documentsDirectory, isDesktop, pickFolder } from '@/infrastructure/desktop'
 import { ExportNoticeView } from './export-notice-view'
 import { useBrokenMediaIds, useMediaMetadataById } from '../deps/media-library'
 import { assessSmartCopyEligibility } from '../utils/smart-copy'
@@ -302,6 +304,10 @@ export function ExportDialog({ open, onClose, onOpenRenderQueue }: ExportDialogP
     downloadVideo,
     resultFile,
     resetState,
+    savedPath,
+    savedFallback,
+    revealSaved,
+    openSaved,
     getSupportedCodecs,
   } = clientRender
 
@@ -309,6 +315,59 @@ export function ExportDialog({ open, onClose, onOpenRenderQueue }: ExportDialogP
   const [isCheckingVideoSupport, setIsCheckingVideoSupport] = useState(false)
   const [videoSupportError, setVideoSupportError] = useState<string | null>(null)
   const [preflight, setPreflight] = useState<ExportPreflightResult | null>(null)
+
+  const project = useProjectStore((state) => state.currentProject)
+  const setExportDestination = useProjectStore((state) => state.setExportDestination)
+  const [exportDir, setExportDir] = useState('')
+  const [exportFileName, setExportFileName] = useState('')
+  const [defaultExportDir, setDefaultExportDir] = useState<string | null>(null)
+  const [desktopApp, setDesktopApp] = useState(false)
+
+  useEffect(() => {
+    void isDesktop().then(setDesktopApp)
+  }, [])
+
+  // The dialog opens with the project's remembered destination: its folder and file name, or
+  // Documents and the project name the first time.
+  useEffect(() => {
+    if (!open) return
+    setExportDir(project?.metadata.exportDir ?? '')
+    setExportFileName(project?.metadata.exportFileName ?? project?.name ?? '')
+  }, [
+    open,
+    project?.id,
+    project?.name,
+    project?.metadata.exportDir,
+    project?.metadata.exportFileName,
+  ])
+
+  useEffect(() => {
+    if (!open || project?.metadata.exportDir) return
+    let cancelled = false
+    void documentsDirectory().then((dir) => {
+      if (!cancelled) setDefaultExportDir(dir)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, project?.metadata.exportDir])
+
+  const handleChooseExportDir = () => {
+    void (async () => {
+      try {
+        const picked = await pickFolder(exportDir || defaultExportDir || undefined)
+        if (!picked) return
+        setExportDir(picked)
+        setDefaultExportDir(picked)
+      } catch (error) {
+        toast.error(
+          t('export.destination.pickFailed', {
+            reason: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      }
+    })()
+  }
 
   const {
     view,
@@ -335,8 +394,21 @@ export function ExportDialog({ open, onClose, onOpenRenderQueue }: ExportDialogP
 
   // Start export
   const handleStartExport = async () => {
+    // Remember the folder and name with the project, then render straight into them: the file
+    // is written when the render finishes, with no second "Save as" step.
+    const destination = {
+      dir: exportDir || defaultExportDir || undefined,
+      fileName: exportFileName.trim() || project?.name,
+    }
+    if (project) {
+      // Only the chosen folder is remembered; the default Documents folder stays the default.
+      void setExportDestination(project.id, {
+        dir: exportDir || undefined,
+        fileName: destination.fileName,
+      })
+    }
     setView('progress')
-    await startExport(buildExtendedSettings())
+    await startExport(buildExtendedSettings(), destination)
   }
 
   // Close the export dialog and open the queue panel. Called BEFORE building
@@ -604,6 +676,13 @@ export function ExportDialog({ open, onClose, onOpenRenderQueue }: ExportDialogP
               onRenderWholeProjectChange: setRenderWholeProject,
             }}
             preflight={preflight}
+            destination={{
+              dir: exportDir,
+              defaultDir: defaultExportDir,
+              fileName: exportFileName,
+              onChooseDir: handleChooseExportDir,
+              onFileNameChange: setExportFileName,
+            }}
             video={{
               presets: {
                 presets: EXPORT_PRESETS,
@@ -692,6 +771,11 @@ export function ExportDialog({ open, onClose, onOpenRenderQueue }: ExportDialogP
             onClose={handleClose}
             onDownload={downloadVideo}
             resultFile={resultFile}
+            savedPath={savedPath}
+            savedFallback={savedFallback}
+            isDesktop={desktopApp}
+            onRevealSaved={revealSaved}
+            onOpenSaved={openSaved}
           />
         )}
 
