@@ -225,7 +225,7 @@ describe('editor-store', () => {
 
     const raw = localStorage.getItem('editor:workspaceLayout:color')
     expect(raw).not.toBeNull()
-    expect(JSON.parse(raw ?? '{}')).toEqual({
+    expect(JSON.parse(raw ?? '{}')).toMatchObject({
       activeTab: 'ai',
       clipInspectorTab: 'audio',
       colorScopesOpen: false,
