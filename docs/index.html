@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="AI-Cut brings a multitrack editor, storyboard, 3D previs and node-based workflows together on Windows. The editor is free and open source under the MIT license.">
-<title>AI-Cut 2.1.0 · Desktop video studio</title>
+<title>AI-Cut 2.2.0 · Desktop video studio</title>
 <link rel="alternate" hreflang="ru" href="ru/">
 <link rel="icon" href="brand/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="pages.css">
@@ -12,7 +12,7 @@
 <body>
 <header class="bar wrap">
 <a class="brand" href="./"><img src="brand/icon.svg" width="32" height="32" alt="">AI-Cut</a>
-<nav aria-label="Sections"><a href="#features">Features</a><a href="#differences">What’s different</a><a href="#downloads">Downloads</a></nav>
+<nav aria-label="Sections"><a href="#whatsnew">What's new</a><a href="#features">Features</a><a href="#differences">What’s different</a><a href="#downloads">Downloads</a></nav>
 <a class="lang" href="ru/" lang="ru">Русский</a>
 </header>
 <main class="wrap">
@@ -28,6 +28,16 @@
 </div>
 </section>
 <p class="pricing">Free editor. No subscription or AI-Cut account. Optional cloud generation uses your own provider keys and may incur charges.</p>
+<section id="whatsnew"><h2>What's new in 2.2.0</h2><p>A deep pass on the editing core: the timeline, the Color page, audio skimming and export.</p><div class="cards">
+<article><h3>Groups move without damage</h3><p>Dragging a group no longer drops the picture on top of another clip. A linked pair keeps its picture and sound together while each half stays on its own lane, so moving the video up a lane leaves the audio where it is and does not drag captions along. Groups of any size never put an audio clip on a video lane, and a drop that cannot be placed without overlap is refused.</p></article>
+<article><h3>Sync restored in one step</h3><p>A red badge marks a pair whose sound and picture have drifted apart; right-click and choose <strong>Restore sync</strong> to slide the sound back under the picture as one undoable step.</p></article>
+<article><h3>Color page built like a grading desk</h3><p>A scopes button beside the zoom control, <strong>Primary / Curves / LUT</strong> tabs, a resizable clip filmstrip column left of the viewer, the keyframe editor on demand, square curves, and wheels that fit with their channel chips and both parameter rows. Compare, presets, copy/paste and adjustment-layer actions moved into a compact icon rail.</p></article>
+<article><h3>Audio skimming that keeps up</h3><p>Hovering the timeline now costs about sixteen file requests instead of roughly 240. Grains follow the pointer speed and cross-fade instead of clicking, and a new tape mode keeps one buffer playing while its speed follows the pointer, like dragging a reel. The Color mini timeline skims too.</p></article>
+<article><h3>Subtitles edited where they live</h3><p>Clip captions can be moved to a subtitle track, cues added or deleted one by one, and editing a recognised line re-times its words, so word-by-word and karaoke reveals keep working.</p></article>
+<article><h3>Export straight to disk</h3><p>Pick the folder and file name before the render — Documents by default, remembered per project — and the finished file is written there. <strong>Open folder</strong> shows it, <strong>Open</strong> plays it in the system player. The render queue and the saved-exports list use the same buttons instead of a download.</p></article>
+<article><h3>Review generations before they run</h3><p>An option fills the Generate panel with the parameters instead of sending a run immediately, so you confirm the model, prompt and references first. The finished result then returns to the canvas node or the shot that was waiting for it, and clicking a picture result opens it large.</p></article>
+<article><h3>Smaller fixes you will feel</h3><p>Text fields keep the caret where you type, tooltips stay inside the window, <kbd>Ctrl</kbd>+wheel keeps the playhead in place, <kbd>Alt+4</kbd> opens Canvas, <kbd>Ctrl+`</kbd> toggles full screen, <kbd>Shift+J</kbd> joins a cut, <kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> work as a jog wheel, and the Source Monitor takes in/out keys when it has focus.</p></article>
+</div></section>
 <section id="features"><h2>What you can do</h2><div class="cards"><article><h3>Edit on a multitrack timeline</h3><p>Trim and arrange video and audio, add transitions, text, shapes and masks, animate with keyframes and Bézier graphs, and grade color with scopes.</p></article>
 <article><h3>Plan shots and reusable references</h3><p>Reorder shots and edit durations, prompts and titles. Attach a first frame, a 3D scene, or a previs render. Save characters, places and props as project elements and reference them with @name.</p></article>
 <article><h3>Build workflows visually</h3><p>Connect prompts, media and generation nodes, reuse templates and import or export graphs. Model-specific ports, field help and launch checks explain missing inputs and reference limits. Takes help compare alternatives.</p></article>
@@ -44,8 +54,8 @@
 <article><h3>Clearer generation and media controls</h3><p>Inspect model-specific inputs and options, see why a node cannot run, receive reference-limit warnings, and reuse existing project media without duplicating it. Copy file names and paths and preview media at full size.</p></article>
 <article><h3>Independent Windows distribution</h3><p>AI-Cut ships its own installer and portable package, with separate app data, a configurable local MCP port, and no upstream Studio Hub telemetry or updater. The public issue tracker accepts feedback through GitHub.</p></article></div>
 <p><a href="https://github.com/timoncool/videosos/tree/videosos-2-1">VideoSOS 2.1 source</a></p></section>
-<section id="downloads" class="downloads"><h2>Download AI-Cut 2.1.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.1.0">v2.1.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">All releases</a></p>
-<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64-setup.exe">EXE installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64_en-US.msi">MSI installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut-2.1.0-portable-windows-x64.zip">Portable ZIP</a></div></section>
+<section id="downloads" class="downloads"><h2>Download AI-Cut 2.2.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.2.0">v2.2.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">All releases</a></p>
+<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut_2.2.0_x64-setup.exe">EXE installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut_2.2.0_x64_en-US.msi">MSI installer</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut-2.2.0-portable-windows-x64.zip">Portable ZIP</a></div></section>
 </main>
 <footer class="wrap"><p>Maintained by Andrey Konstantinov. Thanks to Ilya Timonin, the VideoSOS contributors and Walter Low for FreeCut.</p><p><a href="https://github.com/akonstster/AI-Cut/blob/main/NOTICE.md">MIT license and upstream notices</a> · <a href="https://github.com/akonstster/AI-Cut/issues/new/choose">Report an issue</a></p></footer>
 </body>

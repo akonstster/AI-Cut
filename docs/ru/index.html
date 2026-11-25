@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="AI-Cut объединяет многодорожечный монтаж, раскадровку, 3D-превиз и узловые сценарии в приложении для Windows. Редактор бесплатный, исходный код открыт по лицензии MIT.">
-<title>AI-Cut 2.1.0 · Настольная видеостудия</title>
+<title>AI-Cut 2.2.0 · Настольная видеостудия</title>
 <link rel="alternate" hreflang="en" href="../">
 <link rel="icon" href="../brand/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../pages.css">
@@ -12,7 +12,7 @@
 <body>
 <header class="bar wrap">
 <a class="brand" href="./"><img src="../brand/icon.svg" width="32" height="32" alt="">AI-Cut</a>
-<nav aria-label="Разделы"><a href="#features">Возможности</a><a href="#differences">Что изменилось</a><a href="#downloads">Скачать</a></nav>
+<nav aria-label="Разделы"><a href="#whatsnew">Новое в 2.2</a><a href="#features">Возможности</a><a href="#differences">Что изменилось</a><a href="#downloads">Скачать</a></nav>
 <a class="lang" href="../" lang="en">English</a>
 </header>
 <main class="wrap">
@@ -28,6 +28,16 @@
 </div>
 </section>
 <p class="pricing">Редактор бесплатен. Подписка и аккаунт AI-Cut не нужны. Облачная генерация подключается по вашим ключам и может тарифицироваться провайдером.</p>
+<section id="whatsnew"><h2>Что нового в 2.2.0</h2><p>Глубокая переработка ядра монтажа: таймлайн, страница «Цвет», перемотка звука и экспорт.</p><div class="cards">
+<article><h3>Группы двигаются без разрушений</h3><p>Перетаскивание группы больше не кладёт картинку поверх чужого клипа. Связанная пара держит видео и звук вместе, а каждая половина остаётся на своей дорожке: подняли видео на дорожку выше — звук остался на месте, субтитры не уехали. Группа любого размера не поставит звук на видеодорожку, а бросок, который нельзя уложить без наложения, отменяется.</p></article>
+<article><h3>Синхронизация в один шаг</h3><p>Красный бейдж отмечает пару, у которой разошлись звук и картинка; правый клик → <strong>Вернуть синхронизацию</strong> ставит звук под картинку одной отменяемой операцией.</p></article>
+<article><h3>«Цвет» как грейдинговая станция</h3><p>Кнопка видеоскопов рядом с зумом, вкладки <strong>Основные / Кривые / LUT</strong>, лента кадров слева от просмотра с регулируемой шириной, редактор ключевых кадров по требованию, квадратные кривые и колёса целиком вместе с каналами и обеими строками параметров. Сравнение, пресеты, копирование и корректирующий слой собраны в компактную иконочную панель.</p></article>
+<article><h3>Перемотка звука, которая успевает</h3><p>Наведение на таймлайн теперь стоит около шестнадцати обращений к файлам вместо ~240. Гранулы следуют за скоростью курсора и перекрываются вместо щелчков, а новый режим «как плёнка» держит один буфер и меняет его скорость вслед за курсором — как при перемотке бобины. Мини-таймлайн на странице «Цвет» тоже звучит.</p></article>
+<article><h3>Субтитры правятся там, где живут</h3><p>Реплики клипа можно перенести на дорожку субтитров, добавлять и удалять их по одной, а правка распознанной строки переразмечает слова — пословное появление и караоке продолжают работать.</p></article>
+<article><h3>Экспорт сразу на диск</h3><p>Папку и имя файла выбираете до рендера — по умолчанию «Документы», запоминается в проекте — и готовый файл пишется туда. <strong>Открыть папку</strong> показывает его, <strong>Открыть</strong> запускает системным плеером. В очереди рендера и в списке сохранённых экспортов те же кнопки вместо «Скачать».</p></article>
+<article><h3>Проверка генерации до запуска</h3><p>Опция заполняет панель «Генерация» параметрами вместо немедленной отправки, так что модель, промпт и референсы можно проверить заранее. Готовый результат возвращается в узел холста или в шот, который его ждал, а клик по картинке открывает её крупно.</p></article>
+<article><h3>Мелкие исправления, которые заметны</h3><p>Курсор в текстовых полях остаётся на месте, подсказки не вылезают за окно, <kbd>Ctrl</kbd>+колесо держит плейхед, <kbd>Alt+4</kbd> открывает «Холст», <kbd>Ctrl+`</kbd> включает полный экран, <kbd>Shift+J</kbd> склеивает разрез, <kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> работают как монтажное колесо, а Source Monitor забирает I/O, когда в нём фокус.</p></article>
+</div></section>
 <section id="features"><h2>Что можно делать</h2><div class="cards"><article><h3>Монтировать на многодорожечном таймлайне</h3><p>Подрезайте и собирайте видео и звук, добавляйте переходы, текст, фигуры и маски. Анимируйте параметры ключевыми кадрами и кривыми Безье, корректируйте цвет по скопам.</p></article>
 <article><h3>Планировать шоты и сохранять референсы</h3><p>Меняйте порядок, длительность, названия и промпты шотов. Привязывайте первый кадр, 3D-сцену или рендер превиза. Сохраняйте персонажей, локации и реквизит в элементах проекта и используйте @имя.</p></article>
 <article><h3>Создавать узловые сценарии</h3><p>Соединяйте промпты, медиа и карточки генерации, используйте шаблоны, импортируйте и экспортируйте графы. Входы зависят от модели, подсказки объясняют параметры, а проверки показывают, что блокирует запуск. Takes помогают сравнивать дубли.</p></article>
@@ -44,8 +54,8 @@
 <article><h3>Понятнее управление генерацией и медиа</h3><p>Входы и поля подстраиваются под модель. Workflow показывает причину блокировки и предупреждает о лимитах референсов. Можно использовать медиа проекта без дублирования, копировать имена и пути и открывать крупный предпросмотр.</p></article>
 <article><h3>Отдельная сборка для Windows</h3><p>У AI-Cut собственные установщики и portable-пакет, отдельная папка данных и настраиваемый локальный порт MCP. Телеметрия Studio Hub и автообновление upstream удалены. Обратная связь доступна через публичный GitHub Issues.</p></article></div>
 <p><a href="https://github.com/timoncool/videosos/tree/videosos-2-1">Исходники VideoSOS 2.1</a></p></section>
-<section id="downloads" class="downloads"><h2>Скачать AI-Cut 2.1.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.1.0">v2.1.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">Все релизы</a></p>
-<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64-setup.exe">Установщик EXE</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut_2.1.0_x64_en-US.msi">Установщик MSI</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.1.0/AI-Cut-2.1.0-portable-windows-x64.zip">Портативный ZIP</a></div></section>
+<section id="downloads" class="downloads"><h2>Скачать AI-Cut 2.2.0</h2><p>Windows x64 · <a href="https://github.com/akonstster/AI-Cut/releases/tag/v2.2.0">v2.2.0</a> · <a href="https://github.com/akonstster/AI-Cut/releases">Все релизы</a></p>
+<div class="actions"><a class="button primary" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut_2.2.0_x64-setup.exe">Установщик EXE</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut_2.2.0_x64_en-US.msi">Установщик MSI</a><a class="button" href="https://github.com/akonstster/AI-Cut/releases/download/v2.2.0/AI-Cut-2.2.0-portable-windows-x64.zip">Портативный ZIP</a></div></section>
 </main>
 <footer class="wrap"><p>Проект поддерживает Andrey Konstantinov. Спасибо Илье Тимонину и участникам VideoSOS, а также Уолтеру Лоу за FreeCut.</p><p><a href="https://github.com/akonstster/AI-Cut/blob/main/NOTICE.md">Лицензия MIT и сведения об авторстве</a> · <a href="https://github.com/akonstster/AI-Cut/issues/new/choose">Сообщить об ошибке</a></p></footer>
 </body>
