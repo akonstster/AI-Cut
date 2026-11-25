@@ -80,6 +80,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // The suite is heavy on jsdom + WebAudio. At one worker per core the slow files
+    // (GPU panels, loudness, compositing timeline) overshoot the default 5 s timeout
+    // and abort the release gate, while passing in isolation. Capping the pool and
+    // widening the timeout keeps the gate deterministic instead of flaky.
+    maxWorkers: 4,
+    testTimeout: 15000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
